@@ -314,6 +314,6 @@ keda:
       queueLength: "3"
       maxReplicas: 10
     qa:
-      queueName: agent-qa-queue
+      queueName: agent-qa-worker
       queueLength: "3"
       maxReplicas: 10
