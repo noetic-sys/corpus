@@ -38,9 +38,14 @@ class TestK8sExecutor:
 
                 yield executor
 
+    @patch("common.execution.executors.k8s.settings")
     @patch("common.execution.executors.k8s.client")
-    def test_launch_job(self, mock_client, executor):
+    def test_launch_job(self, mock_client, mock_settings, executor):
         """Test launching a Kubernetes job."""
+        # Mock settings
+        mock_settings.google_project_id = "test-project"
+        mock_settings.api_endpoint = "http://test:8000"
+
         # Mock the API client deserialize (external K8s service)
         mock_job = MagicMock()
         mock_client.ApiClient().deserialize.return_value = mock_job
@@ -48,11 +53,11 @@ class TestK8sExecutor:
         # Mock successful job creation
         executor.batch_v1.create_namespaced_job.return_value = mock_job
 
-        # Create JobSpec
+        # Create JobSpec - use corpus/ prefix like production code
         job_spec = JobSpec(
             container_name="workflow-exec-123",
             template_name="workflow_job.yaml.j2",
-            image_name="workflow-agent",
+            image_name="corpus/workflow-agent",
             image_tag="latest",
             env_vars={
                 "API_ENDPOINT": "http://test:8000",
@@ -77,24 +82,39 @@ class TestK8sExecutor:
         call_kwargs = executor.batch_v1.create_namespaced_job.call_args[1]
         assert call_kwargs["namespace"] == "corpus"
 
+        # Verify image path is correctly constructed
+        # The body is a dict parsed from rendered YAML
+        job_body = call_kwargs["body"]
+        container_image = job_body["spec"]["template"]["spec"]["containers"][0]["image"]
+        expected_image = (
+            "us-central1-docker.pkg.dev/test-project/corpus/workflow-agent:latest"
+        )
+        assert (
+            container_image == expected_image
+        ), f"Expected image {expected_image}, got {container_image}"
+
+    @patch("common.execution.executors.k8s.settings")
     @patch("common.execution.executors.k8s.client")
-    def test_launch_job_failure(self, mock_client, executor):
+    def test_launch_job_failure(self, mock_client, mock_settings, executor):
         """Test launch failure when K8s API fails."""
+        # Mock settings
+        mock_settings.google_project_id = "test-project"
+        mock_settings.api_endpoint = "http://test:8000"
+
         # Mock the API client deserialize
         mock_job = MagicMock()
         mock_client.ApiClient().deserialize.return_value = mock_job
 
         # Mock job creation failure (external K8s service)
-
         executor.batch_v1.create_namespaced_job.side_effect = ApiException(
             status=500, reason="Internal Server Error"
         )
 
-        # Create JobSpec
+        # Create JobSpec - use corpus/ prefix like production code
         job_spec = JobSpec(
             container_name="workflow-exec-123",
             template_name="workflow_job.yaml.j2",
-            image_name="workflow-agent",
+            image_name="corpus/workflow-agent",
             image_tag="latest",
             env_vars={
                 "API_ENDPOINT": "http://test:8000",
