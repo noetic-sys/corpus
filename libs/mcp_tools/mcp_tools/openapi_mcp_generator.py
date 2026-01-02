@@ -6,6 +6,7 @@ This allows dynamic creation of API tools without manual editing.
 
 import json
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -39,8 +40,8 @@ def create_mcp_tools_from_openapi(
     """
     headers = {"X-API-Key": api_key}
 
-    # Fetch OpenAPI spec
-    spec = _fetch_openapi_spec(api_endpoint)
+    # Load OpenAPI spec from bundled file
+    spec = _load_openapi_spec()
 
     # Transform spec to scope it to workspace if requested
     if workspace_id:
@@ -100,25 +101,25 @@ def create_mcp_tools_from_openapi(
     return server, tool_names
 
 
-def _fetch_openapi_spec(api_endpoint: str) -> Dict[str, Any]:
-    """Fetch OpenAPI specification from API endpoint.
-
-    Args:
-        api_endpoint: Base URL for the API
+def _load_openapi_spec() -> Dict[str, Any]:
+    """Load OpenAPI specification from bundled file.
 
     Returns:
         OpenAPI specification as dict
 
     Raises:
-        Exception: If spec cannot be fetched
+        FileNotFoundError: If bundled spec not found
     """
-    try:
-        response = requests.get(f"{api_endpoint}/openapi.json", timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"ERROR: Could not fetch OpenAPI spec: {e}")
-        raise
+    bundled_spec_path = Path(__file__).parent / "openapi.json"
+    if not bundled_spec_path.exists():
+        raise FileNotFoundError(
+            f"Bundled OpenAPI spec not found at {bundled_spec_path}. "
+            "Run scripts/generate-client.sh to generate it."
+        )
+
+    print(f"Loading OpenAPI spec from bundled file: {bundled_spec_path}")
+    with open(bundled_spec_path) as f:
+        return json.load(f)
 
 
 def _scope_spec_to_workspace(spec: Dict[str, Any], workspace_id: int) -> Dict[str, Any]:

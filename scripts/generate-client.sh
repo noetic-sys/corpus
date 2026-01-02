@@ -9,20 +9,38 @@ echo "Generating API client..."
 cd backend
 
 # Generate OpenAPI JSON by importing the FastAPI app and extracting its OpenAPI spec
+# Suppress stdout during import to avoid telemetry/logging messages in output
 poetry run python -c "
-import json
 import sys
+import io
+import json
+
+# Capture stdout during import
+old_stdout = sys.stdout
+sys.stdout = io.StringIO()
+
 sys.path.append('.')
 from api.main import app
+
+# Restore stdout and print only the JSON
+sys.stdout = old_stdout
 print(json.dumps(app.openapi(), indent=2))
 " > openapi.json
 
 echo "Generated OpenAPI specification"
 
-# Move the OpenAPI JSON to the frontend directory
-mv openapi.json ../vite/
+# Copy the OpenAPI JSON to the frontend directory
+cp openapi.json ../vite/
 
-echo "Moved OpenAPI spec to frontend directory"
+echo "Copied OpenAPI spec to frontend directory"
+
+# Copy the OpenAPI JSON to libs/mcp_tools/mcp_tools for agent builds
+cp openapi.json ../libs/mcp_tools/mcp_tools/
+
+echo "Copied OpenAPI spec to libs/mcp_tools/mcp_tools for agents"
+
+# Clean up
+rm openapi.json
 
 # Change to the frontend directory (from backend, go back to root then to vite)
 cd ../vite
