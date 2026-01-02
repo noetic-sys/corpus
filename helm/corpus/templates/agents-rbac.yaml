@@ -1,0 +1,79 @@
+{{/*
+RBAC for agent pods to create/manage K8s jobs
+*/}}
+{{- if .Values.agents.enabled }}
+{{- $fullname := include "corpus.fullname" . -}}
+{{- $labels := include "corpus.labels" . -}}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}-agent-role
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: agents
+spec:
+  rules:
+    - apiGroups: [""]
+      resources: ["pods", "pods/log"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["batch"]
+      resources: ["jobs"]
+      verbs: ["create", "get", "list", "watch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}-agent-rolebinding
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: agents
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "corpus.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ $fullname }}-agent-role
+  apiGroup: rbac.authorization.k8s.io
+
+{{- if .Values.agents.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullname }}-agent-network-policy
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: agents
+spec:
+  podSelector:
+    matchLabels:
+      corpus.io/agent-job: "true"
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: corpus
+      ports:
+        - protocol: TCP
+          port: 8000
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+{{- end }}
+{{- end }}

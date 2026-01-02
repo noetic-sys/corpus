@@ -1,0 +1,19 @@
+{
+  "name": "workflow-agent-dependencies",
+  "version": "1.0.0",
+  "description": "Node.js dependencies for workflow agent skills (installed globally)",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest",
+    "docx": "latest",
+    "pptxgenjs": "latest",
+    "pdf-lib": "latest",
+    "xlsx": "latest",
+    "pandoc": "latest",
+    "sharp": "latest",
+    "playwright": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-icons": "latest"
+  }
+}

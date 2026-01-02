@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ job_name }}
+  namespace: {{ namespace }}
+  labels:
+    app: agent
+    agent-type: qa
+    {% if qa_job_id %}
+    qa_job_id: "{{ qa_job_id }}"
+    {% endif %}
+spec:
+  ttlSecondsAfterFinished: 300  # Auto-delete after 5 minutes
+  activeDeadlineSeconds: 900  # 15 minute timeout (agent QA should be faster)
+  backoffLimit: 0  # No retries (Temporal handles that)
+  template:
+    metadata:
+      labels:
+        app: agent
+        agent-type: qa
+    spec:
+      runtimeClassName: gvisor
+      restartPolicy: Never
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: workflow-agent
+          effect: NoSchedule
+        - key: sandbox.gke.io/runtime
+          operator: Equal
+          value: gvisor
+          effect: NoSchedule
+      nodeSelector:
+        workload: agent-execution
+      containers:
+        - name: agent
+          image: {{ image }}
+          env:
+            {% for env_var in env_vars %}
+            - name: {{ env_var.name }}
+              value: "{{ env_var.value }}"
+            {% endfor %}
+            {% if execution_mode == 'k8s' %}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-env
+                  key: ANTHROPIC_API_KEY
+            {% endif %}
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+              ephemeral-storage: 1Gi  # Lighter than workflow execution
+            requests:
+              cpu: "250m"
+              memory: 512Mi

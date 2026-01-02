@@ -1,0 +1,67 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log*
+package-lock.json
+yarn.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+._*
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!skills/**/*.md
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build outputs
+dist/
+build/
+
+# Cache
+.cache/
+.turbo/
+.eslintcache

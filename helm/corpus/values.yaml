@@ -1,0 +1,319 @@
+# Corpus Helm Chart - Default Values
+# Override these in your own values file
+
+# =============================================================================
+# Global Settings
+# =============================================================================
+global:
+  # -- Environment name (used in labels)
+  environment: dev
+
+# =============================================================================
+# Image Settings
+# =============================================================================
+image:
+  # -- Container registry URL (e.g., us-central1-docker.pkg.dev/my-project/corpus)
+  registry: ""
+  # -- Default image tag for all components
+  tag: latest
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# =============================================================================
+# Service Account
+# =============================================================================
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account name
+  name: ""
+  # -- Annotations (e.g., for Workload Identity)
+  annotations: {}
+
+# =============================================================================
+# API
+# =============================================================================
+api:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    name: api
+    tag: ""  # Defaults to global tag
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  ingress:
+    enabled: false
+    className: nginx
+    host: ""
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
+
+  # -- Websocket ingress (if different from main API)
+  websocket:
+    enabled: false
+    host: ""
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  # -- Secret names to mount as envFrom
+  secrets:
+    - corpus-database-env
+    - corpus-project-env
+    - corpus-api-keys-env
+    - corpus-infrastructure-env
+
+  # -- Extra environment variables
+  env: []
+
+  # -- Health check paths
+  health:
+    path: /api/v1/health/
+    port: 8000
+
+# =============================================================================
+# Frontend
+# =============================================================================
+frontend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    name: frontend
+    tag: ""
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  ingress:
+    enabled: false
+    className: nginx
+    host: ""
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+  secrets:
+    - corpus-frontend-env
+
+# =============================================================================
+# Workers (RabbitMQ-based)
+# =============================================================================
+workers:
+  # -- Shared worker settings
+  image:
+    name: worker
+    tag: ""
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+  secrets:
+    - corpus-database-env
+    - corpus-project-env
+    - corpus-api-keys-env
+    - corpus-infrastructure-env
+
+  # -- QA Worker
+  qa:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_qa_worker"]
+
+  # -- Document Indexing Worker
+  documentIndexing:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_document_indexing_worker"]
+
+# =============================================================================
+# Temporal Workers
+# =============================================================================
+temporalWorkers:
+  # -- Shared settings
+  image:
+    name: worker
+    tag: ""
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "400m"
+
+  secrets:
+    - corpus-database-env
+    - corpus-project-env
+    - corpus-api-keys-env
+    - corpus-infrastructure-env
+
+  routing:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_temporal_worker", "--queue", "document-routing-queue"]
+
+  pdf:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_temporal_worker", "--queue", "pdf-processing-queue"]
+
+  page:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_temporal_worker", "--queue", "page-conversion-queue"]
+
+  generic:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_temporal_worker", "--queue", "generic-extraction-queue"]
+
+  chunking:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_temporal_worker", "--queue", "document-chunking-queue"]
+
+  workflow:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_workflow_worker"]
+
+  qa:
+    enabled: true
+    replicaCount: 1
+    command: ["python", "-m", "workers.run_agent_qa_worker"]
+
+# =============================================================================
+# Migrations
+# =============================================================================
+migrations:
+  # -- Run migrations as init container
+  enabled: true
+  image:
+    name: migrate
+    tag: ""
+
+# =============================================================================
+# Agents (RBAC for K8s job execution)
+# =============================================================================
+agents:
+  # -- Enable agent RBAC
+  enabled: true
+
+  # -- Network policy for agent pods
+  networkPolicy:
+    enabled: true
+
+# =============================================================================
+# KEDA Autoscaling (disabled by default)
+# =============================================================================
+keda:
+  # -- Enable KEDA ScaledObjects
+  enabled: false
+
+  # -- Polling interval in seconds
+  pollingInterval: 30
+
+  # -- Cooldown period before scaling down
+  cooldownPeriod: 300
+
+  # -- TriggerAuthentication name (must exist in cluster)
+  triggerAuthName: keda-rabbitmq-auth
+
+  # -- RabbitMQ connection settings
+  rabbitmq:
+    host: amqp://rabbitmq.rabbitmq.svc.cluster.local:5672/
+    vhost: "/"
+
+  # -- Temporal connection settings
+  temporal:
+    endpoint: temporal-frontend.temporal.svc.cluster.local:7233
+
+  # -- Per-worker scaling config
+  workers:
+    qa:
+      queueName: qa_worker
+      queueLength: "5"
+      activationValue: "1"
+      maxReplicas: 20
+    documentIndexing:
+      queueName: document_indexing
+      queueLength: "3"
+      activationValue: "1"
+      maxReplicas: 20
+
+  temporalWorkers:
+    routing:
+      queueName: document-routing-queue
+      queueLength: "5"
+      maxReplicas: 10
+    pdf:
+      queueName: pdf-processing-queue
+      queueLength: "5"
+      maxReplicas: 10
+    page:
+      queueName: page-conversion-queue
+      queueLength: "10"
+      maxReplicas: 20
+    generic:
+      queueName: generic-extraction-queue
+      queueLength: "5"
+      maxReplicas: 10
+    chunking:
+      queueName: document-chunking-queue
+      queueLength: "5"
+      maxReplicas: 10
+    workflow:
+      queueName: workflow-execution-queue
+      queueLength: "3"
+      maxReplicas: 10
+    qa:
+      queueName: agent-qa-queue
+      queueLength: "3"
+      maxReplicas: 10

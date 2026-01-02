@@ -1,0 +1,70 @@
+[tool.poetry]
+name = "agent-workflow"
+version = "0.1.0"
+description = "Workflow execution agent service"
+authors = ["Kyle Sandell"]
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+# Core agent SDK
+claude-agent-sdk = "^0.1.4"
+anthropic = "0.39.0"
+pydantic = "2.10.3"
+# PDF processing
+pypdf = "*"
+pdfplumber = "*"
+reportlab = "*"
+pytesseract = "*"
+pdf2image = "*"
+pypdfium2 = "*"
+# Excel processing
+openpyxl = "3.1.2"
+xlsxwriter = "*"
+# Word processing
+python-docx = "1.1.0"
+# PowerPoint processing
+python-pptx = "0.6.23"
+# Data manipulation
+pandas = "2.2.0"
+numpy = "1.26.4"
+# Image processing
+pillow = "10.2.0"
+# Utilities
+requests = "2.31.0"
+six = "*"
+# XML parsing
+defusedxml = "0.7.1"
+lxml = "*"
+# Document conversion
+markitdown = "0.0.1a2"
+# In-memory databases for agent data processing
+kuzu = "0.6.0"
+# Shared libs
+workflows = {path = "../../libs/workflows", develop = true}
+mcp-tools = {path = "../../libs/mcp_tools", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.2"
+pytest-asyncio = "^1.2.0"
+black = "^25.1.0"
+ruff = "^0.12.4"
+nox = "^2025.5.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    "skills",
+]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+ignore = ["E501"]

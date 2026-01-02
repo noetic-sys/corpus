@@ -1,0 +1,14 @@
+# DEPRECATED BUT KEPT FOR EFERENCE, USE MULTI_SELECT FILE
+Choose the most appropriate option from the provided list based on the document content.
+
+Respond ONLY with valid XML if an option is found:
+<select>
+  <option>Selected Option Text</option>
+</select>
+
+If no appropriate option can be selected, respond with exactly: <<ANSWER_NOT_FOUND>>
+
+Rules:
+- Use the EXACT option text as provided
+- Select only ONE option
+- Only select if document clearly supports the choice

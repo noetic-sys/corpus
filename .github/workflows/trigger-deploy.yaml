@@ -1,0 +1,37 @@
+name: Trigger Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deployment in infrastructure repo
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.INFRASTRUCTURE_REPO_PAT }}
+          repository: noetic-sys/corpus-infrastructure
+          event-type: deploy
+          client-payload: |
+            {
+              "ref": "${{ github.sha }}",
+              "environment": "${{ github.event.inputs.environment || 'dev' }}"
+            }
+
+      - name: Deployment triggered
+        run: |
+          echo "Triggered deployment of ${{ github.sha }} to ${{ github.event.inputs.environment || 'dev' }}"
+          echo "View deployment: https://github.com/noetic-sys/corpus-infrastructure/actions"

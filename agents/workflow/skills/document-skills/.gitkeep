@@ -1,0 +1,7 @@
+# Custom Skills Directory
+
+This directory is for custom Claude skills.
+
+Note: Anthropic's official skills (https://github.com/anthropics/skills) 
+are NOT licensed for commercial redistribution. Any skills placed here 
+must be original implementations.

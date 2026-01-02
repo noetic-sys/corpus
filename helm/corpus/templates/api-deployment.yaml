@@ -1,0 +1,70 @@
+{{- if .Values.api.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "corpus.fullname" . }}-api
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  {{- if not .Values.api.autoscaling.enabled }}
+  replicas: {{ .Values.api.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "corpus.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "corpus.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "corpus.serviceAccountName" . }}
+      {{- if .Values.migrations.enabled }}
+      initContainers:
+        - name: migrations
+          image: "{{ .Values.image.registry }}/{{ .Values.migrations.image.name }}:{{ .Values.migrations.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            {{- range .Values.api.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+      {{- end }}
+      containers:
+        - name: api
+          image: "{{ .Values.image.registry }}/{{ .Values.api.image.name }}:{{ .Values.api.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.api.health.path }}
+              port: {{ .Values.api.health.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.api.health.path }}
+              port: {{ .Values.api.health.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.api.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          {{- with .Values.api.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

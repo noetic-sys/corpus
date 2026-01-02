@@ -1,0 +1,68 @@
+{{/*
+KEDA ScaledObjects for RabbitMQ-based workers
+*/}}
+{{- if .Values.keda.enabled }}
+{{- $fullname := include "corpus.fullname" . -}}
+{{- $labels := include "corpus.labels" . -}}
+
+{{- if .Values.workers.qa.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-qa-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: qa-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-qa-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.workers.qa.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: rabbitmq
+      metadata:
+        host: {{ .Values.keda.rabbitmq.host }}
+        protocol: auto
+        mode: QueueLength
+        value: {{ .Values.keda.workers.qa.queueLength | quote }}
+        activationValue: {{ .Values.keda.workers.qa.activationValue | default "1" | quote }}
+        queueName: {{ .Values.keda.workers.qa.queueName }}
+        vhostName: {{ .Values.keda.rabbitmq.vhost | quote }}
+      authenticationRef:
+        name: {{ .Values.keda.triggerAuthName }}
+{{- end }}
+
+{{- if .Values.workers.documentIndexing.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-document-indexing-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: document-indexing-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-document-indexing-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.workers.documentIndexing.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: rabbitmq
+      metadata:
+        host: {{ .Values.keda.rabbitmq.host }}
+        protocol: auto
+        mode: QueueLength
+        value: {{ .Values.keda.workers.documentIndexing.queueLength | quote }}
+        activationValue: {{ .Values.keda.workers.documentIndexing.activationValue | default "1" | quote }}
+        queueName: {{ .Values.keda.workers.documentIndexing.queueName }}
+        vhostName: {{ .Values.keda.rabbitmq.vhost | quote }}
+      authenticationRef:
+        name: {{ .Values.keda.triggerAuthName }}
+{{- end }}
+
+{{- end }}

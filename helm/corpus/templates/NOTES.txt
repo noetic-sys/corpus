@@ -1,0 +1,40 @@
+Corpus has been deployed!
+
+{{- if .Values.api.enabled }}
+
+API:
+{{- if .Values.api.ingress.enabled }}
+  URL: https://{{ .Values.api.ingress.host }}
+{{- else }}
+  kubectl port-forward svc/{{ include "corpus.fullname" . }}-api 8000:{{ .Values.api.service.port }}
+{{- end }}
+
+{{- if .Values.api.websocket.enabled }}
+WebSocket:
+  URL: wss://{{ .Values.api.websocket.host }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.frontend.enabled }}
+
+Frontend:
+{{- if .Values.frontend.ingress.enabled }}
+  URL: https://{{ .Values.frontend.ingress.host }}
+{{- else }}
+  kubectl port-forward svc/{{ include "corpus.fullname" . }}-frontend 3000:{{ .Values.frontend.service.port }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.keda.enabled }}
+
+KEDA Autoscaling: Enabled
+  Workers will scale based on queue depth.
+  Ensure TriggerAuthentication '{{ .Values.keda.triggerAuthName }}' exists in the cluster.
+{{- else }}
+
+KEDA Autoscaling: Disabled
+  Workers are running with fixed replica counts.
+  Enable KEDA for production workloads: --set keda.enabled=true
+{{- end }}
+
+For more information, visit: https://github.com/noetic-sys/corpus

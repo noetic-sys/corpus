@@ -1,0 +1,89 @@
+{{/*
+RabbitMQ-based Workers
+*/}}
+{{- $fullname := include "corpus.fullname" . -}}
+{{- $labels := include "corpus.labels" . -}}
+{{- $selectorLabels := include "corpus.selectorLabels" . -}}
+{{- $serviceAccountName := include "corpus.serviceAccountName" . -}}
+
+{{- if .Values.workers.qa.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-qa-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: qa-worker
+spec:
+  replicas: {{ .Values.workers.qa.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: qa-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: qa-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.workers.image.name }}:{{ .Values.workers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.workers.qa.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.workers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.workers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.workers.documentIndexing.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-document-indexing-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: document-indexing-worker
+spec:
+  replicas: {{ .Values.workers.documentIndexing.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: document-indexing-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: document-indexing-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.workers.image.name }}:{{ .Values.workers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.workers.documentIndexing.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.workers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.workers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}

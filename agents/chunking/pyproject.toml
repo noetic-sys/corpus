@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "agent-chunking"
+version = "0.1.0"
+description = "Document chunking agent service"
+authors = ["Kyle Sandell"]
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+claude-agent-sdk = "^0.1.4"
+anthropic = "0.39.0"
+pydantic = "2.10.3"
+requests = "2.32.3"
+# PageIndex dependencies
+tiktoken = "^0.11.0"
+pymupdf = "^1.26.4"
+pypdf2 = "^3.0.1"
+pyyaml = "^6.0.2"
+# Shared libs
+documents = {path = "../../libs/documents", develop = true}
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+ruff = "^0.12.4"
+nox = "^2025.5.1"
+pytest = "^8.3.4"
+pytest-asyncio = "^0.24.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+ignore = ["E501"]

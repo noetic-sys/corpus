@@ -1,0 +1,9 @@
+{
+  "name": "agent-qa",
+  "version": "0.1.0",
+  "description": "Agent-based QA execution service",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest"
+  }
+}

@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+#.terraform.lock.hcl
+#*.tfvars
+
+# Docker
+docker-compose.override.yml
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Alembic
+alembic/versions/*.pyc
+test_doc*.txt
+.ruff_cache/
+.nox/
+.tox/
+docs
+
+gen-lang-client-creds.json
+test.py
+test2.py
+
+
+Chart.lock
+**/*.tgz
+cloud-sql-proxy
+
+
+**.logs
+**/.vite
+*.xlsx
+scratch
+*.pdf
+*.docx
+*.pages
+logs

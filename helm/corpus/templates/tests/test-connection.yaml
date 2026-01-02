@@ -1,0 +1,17 @@
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "corpus.fullname" . }}-test-connection"
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "corpus.fullname" . }}-api:{{ .Values.api.service.port }}{{ .Values.api.health.path }}']
+  restartPolicy: Never
+{{- end }}

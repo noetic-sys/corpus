@@ -1,0 +1,294 @@
+{{/*
+Temporal Workers
+*/}}
+{{- $fullname := include "corpus.fullname" . -}}
+{{- $labels := include "corpus.labels" . -}}
+{{- $selectorLabels := include "corpus.selectorLabels" . -}}
+{{- $serviceAccountName := include "corpus.serviceAccountName" . -}}
+
+{{- if .Values.temporalWorkers.routing.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-routing-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-routing-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.routing.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-routing-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-routing-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.routing.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.temporalWorkers.pdf.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-pdf-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-pdf-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.pdf.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-pdf-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-pdf-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.pdf.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.temporalWorkers.page.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-page-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-page-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.page.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-page-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-page-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.page.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.temporalWorkers.generic.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-generic-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-generic-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.generic.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-generic-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-generic-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.generic.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.temporalWorkers.chunking.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-chunking-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-chunking-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.chunking.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-chunking-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-chunking-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.chunking.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.temporalWorkers.workflow.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-workflow-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-workflow-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.workflow.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-workflow-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-workflow-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.workflow.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}
+
+{{- if .Values.temporalWorkers.qa.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $fullname }}-temporal-qa-worker
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-qa-worker
+spec:
+  replicas: {{ .Values.temporalWorkers.qa.replicaCount }}
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+      app.kubernetes.io/component: temporal-qa-worker
+  template:
+    metadata:
+      labels:
+        {{- $selectorLabels | nindent 8 }}
+        app.kubernetes.io/component: temporal-qa-worker
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      containers:
+        - name: worker
+          image: "{{ .Values.image.registry }}/{{ .Values.temporalWorkers.image.name }}:{{ .Values.temporalWorkers.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.temporalWorkers.qa.command | nindent 12 }}
+          resources:
+            {{- toYaml .Values.temporalWorkers.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.temporalWorkers.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+{{- end }}

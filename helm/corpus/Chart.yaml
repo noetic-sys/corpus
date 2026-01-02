@@ -1,0 +1,17 @@
+apiVersion: v2
+name: corpus
+description: Document Q&A platform with AI-powered workflows
+home: https://github.com/noetic-sys/corpus
+sources:
+  - https://github.com/noetic-sys/corpus
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - document
+  - qa
+  - ai
+  - workflows
+  - temporal
+maintainers:
+  - name: Noetic Systems

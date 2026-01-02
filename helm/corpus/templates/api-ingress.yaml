@@ -1,0 +1,69 @@
+{{- if and .Values.api.enabled .Values.api.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "corpus.fullname" . }}-api
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+  {{- with .Values.api.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.api.ingress.className }}
+  ingressClassName: {{ .Values.api.ingress.className }}
+  {{- end }}
+  {{- if .Values.api.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.api.ingress.host }}
+      secretName: {{ .Values.api.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.api.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "corpus.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.service.port }}
+{{- end }}
+---
+{{- if and .Values.api.enabled .Values.api.websocket.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "corpus.fullname" . }}-websocket
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+  {{- with .Values.api.websocket.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.api.ingress.className }}
+  ingressClassName: {{ .Values.api.ingress.className }}
+  {{- end }}
+  {{- if .Values.api.websocket.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.api.websocket.host }}
+      secretName: {{ .Values.api.websocket.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.api.websocket.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "corpus.fullname" . }}-api
+                port:
+                  number: {{ .Values.api.service.port }}
+{{- end }}

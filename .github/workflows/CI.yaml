@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - name: Backend
+            path: ./backend
+            test_path: tests/unit
+          - name: Workflow Agent
+            path: ./agents/workflow
+            test_path: tests
+          - name: QA Agent
+            path: ./agents/qa
+            test_path: tests
+          - name: Chunking Agent
+            path: ./agents/chunking
+            test_path: tests
+    env:
+      PYTHON_VERSION: '3.11'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Copy .env file (Backend only)
+        if: matrix.project.name == 'Backend'
+        working-directory: ${{ matrix.project.path }}
+        run: cp .env.example .env
+
+      - name: Install Dependencies
+        working-directory: ${{ matrix.project.path }}
+        run: poetry install --no-interaction --no-root
+
+      - name: Run Tests
+        working-directory: ${{ matrix.project.path }}
+        run: |
+          if [ -d "${{ matrix.project.test_path }}" ]; then
+            poetry run pytest -v ${{ matrix.project.test_path }}
+          else
+            echo "No tests found at ${{ matrix.project.test_path }}, skipping"
+          fi
+
+  validate-migrations:
+    runs-on: ubuntu-latest
+    env:
+      PYTHON_VERSION: '3.11'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Copy .env file
+        working-directory: ./backend
+        run: cp .env.example .env
+
+      - name: Install Dependencies
+        working-directory: ./backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Validate Alembic Migrations
+        working-directory: ./backend
+        run: |
+          # Check for multiple heads (revision divergence)
+          HEADS_COUNT=$(poetry run alembic heads | wc -l)
+          if [ "$HEADS_COUNT" -gt 1 ]; then
+            echo "ERROR: Multiple migration heads detected (revision divergence)!"
+            echo "This indicates a split in the migration history."
+            echo ""
+            echo "Current heads:"
+            poetry run alembic heads
+            echo ""
+            echo "Migration branches:"
+            poetry run alembic branches
+            exit 1
+          fi
+
+          # Check for branches in revision tree
+          BRANCHES=$(poetry run alembic branches)
+          if [ -n "$BRANCHES" ]; then
+            echo "ERROR: Migration branches detected!"
+            echo "$BRANCHES"
+            exit 1
+          fi
+
+          echo "Alembic migration tree is valid (single head, no branches)"
+          poetry run alembic heads
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'  # Or your preferred version
+          cache: 'npm'
+          cache-dependency-path: vite/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./vite
+        run: npm install
+
+      - name: Build frontend
+        working-directory: ./vite
+        run: npm run build --if-present
+
+  # Verify all Docker images build successfully
+  test-docker-builds:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: api
+            context: .
+            dockerfile: ./backend/api/Dockerfile
+          - name: worker
+            context: .
+            dockerfile: ./backend/workers/Dockerfile
+          - name: migrate
+            context: .
+            dockerfile: ./backend/alembic/Dockerfile
+          - name: frontend
+            context: ./vite
+            dockerfile: ./vite/Dockerfile
+          - name: workflow-agent
+            context: .
+            dockerfile: ./agents/workflow/Dockerfile
+          - name: agent-qa
+            context: .
+            dockerfile: ./agents/qa/Dockerfile
+          - name: document-chunker
+            context: .
+            dockerfile: ./agents/chunking/Dockerfile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Generate dummy .env.production for frontend build
+        if: matrix.image.name == 'frontend'
+        run: |
+          cat > vite/.env.production << EOF
+          VITE_API_URL=https://api.example.com
+          VITE_WS_URL=wss://ws.example.com
+          VITE_FIREBASE_API_KEY=test-key
+          VITE_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID=test-project
+          EOF
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.image.name }} image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          push: false
+          tags: corpus/${{ matrix.image.name }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  validate-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint Helm chart
+        run: helm lint ./helm/corpus
+
+      - name: Template Helm chart (validate syntax)
+        run: helm template corpus ./helm/corpus

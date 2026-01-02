@@ -1,0 +1,9 @@
+{
+  "name": "agent-chunking",
+  "version": "0.1.0",
+  "description": "Document chunking agent service",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/claude-code": "latest"
+  }
+}

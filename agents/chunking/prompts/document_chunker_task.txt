@@ -1,0 +1,134 @@
+# Document Chunking Task
+
+Chunk the document at `{document_path}` into semantic segments for agent-based retrieval.
+
+---
+
+## Task Parameters
+
+- **Document Path:** `{document_path}`
+- **Document ID:** `{document_id}`
+- **Output Directory:** `{output_dir}`
+
+---
+
+## Specifications
+
+| Parameter | Value |
+|-----------|-------|
+| Target chunk size | 2000-4000 tokens (8000-16000 characters) |
+| Overlap between chunks | 200 tokens (~800 characters) |
+| Output format | Markdown (.md) |
+
+---
+
+## Output Requirements
+
+### Chunk Files
+
+Save to: `{output_dir}/chunk_NNN.md` (zero-padded, e.g., chunk_001.md)
+
+### Metadata Files
+
+Save to: `{output_dir}/chunk_NNN.meta.json`
+
+**Required metadata structure:**
+
+```json
+{{
+    "chunk_id": "chunk_001",
+    "page_start": 1,
+    "page_end": 3,
+    "section": "Introduction",
+    "char_start": 0,
+    "char_end": 12000,
+    "overlap_prev": false,
+    "overlap_next": true
+}}
+```
+
+**Field requirements:**
+- `chunk_id`: Must match filename (chunk_001, chunk_002, etc.)
+- `page_start`/`page_end`: Integer or null if unknown
+- `section`: String or null if no clear section
+- `char_start`/`char_end`: Integer positions in original document (REQUIRED)
+- `overlap_prev`/`overlap_next`: Boolean flags (REQUIRED)
+
+### Manifest File
+
+Save to: `{output_dir}/manifest.json`
+
+**Required structure:**
+
+```json
+{{
+    "document_id": {document_id},
+    "total_chunks": 15,
+    "chunks": [
+        {{
+            "chunk_id": "chunk_001",
+            "section": "Introduction",
+            "page_range": "1-3"
+        }},
+        {{
+            "chunk_id": "chunk_002",
+            "section": "Terms and Conditions",
+            "page_range": "3-7"
+        }}
+    ],
+    "created_at": "2024-03-15T10:30:00Z"
+}}
+```
+
+---
+
+## Chunking Rules
+
+### MUST Do
+
+- Maintain semantic coherence—each chunk should cover one topic/section
+- Create 200-token overlap between consecutive chunks
+- Preserve document structure in metadata
+- Keep tables, lists, and code blocks intact
+- Keep headings with their following content
+
+### MUST NOT Do
+
+- Split mid-sentence
+- Split mid-paragraph
+- Split mid-table or mid-list
+- Create chunks smaller than 1000 tokens
+- Create chunks larger than 5000 tokens
+- Orphan headings from their content
+
+---
+
+## Process
+
+1. **Read** the full document at `{document_path}`
+2. **Identify** natural boundaries (headings, section breaks, topic changes)
+3. **Create chunks** at boundaries, targeting 2000-4000 tokens each
+4. **Add overlap** by including last 200 tokens of each chunk in the next
+5. **Generate metadata** for each chunk with accurate positions and sections
+6. **Create manifest** listing all chunks with summary information
+7. **Validate** all JSON files are properly formatted
+
+---
+
+## Validation Checklist
+
+Before completing, verify:
+
+- [ ] All chunks are 2000-4000 tokens (exceptions documented)
+- [ ] All consecutive chunks have overlap
+- [ ] No splits mid-sentence or mid-paragraph
+- [ ] All metadata files are valid JSON
+- [ ] All char_start/char_end values are accurate
+- [ ] Manifest chunk count matches actual files
+- [ ] All chunk_ids are sequential and zero-padded
+
+---
+
+## Begin
+
+Start chunking the document now. Output files to `{output_dir}`.

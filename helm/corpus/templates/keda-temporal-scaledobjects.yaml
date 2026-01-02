@@ -1,0 +1,218 @@
+{{/*
+KEDA ScaledObjects for Temporal workers
+*/}}
+{{- if .Values.keda.enabled }}
+{{- $fullname := include "corpus.fullname" . -}}
+{{- $labels := include "corpus.labels" . -}}
+
+{{- if .Values.temporalWorkers.routing.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-routing-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-routing-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-routing-worker
+  minReplicaCount: 1
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.routing.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.routing.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.routing.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- if .Values.temporalWorkers.pdf.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-pdf-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-pdf-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-pdf-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.pdf.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.pdf.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.pdf.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- if .Values.temporalWorkers.page.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-page-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-page-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-page-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.page.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.page.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.page.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- if .Values.temporalWorkers.generic.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-generic-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-generic-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-generic-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.generic.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.generic.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.generic.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- if .Values.temporalWorkers.chunking.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-chunking-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-chunking-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-chunking-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.chunking.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.chunking.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.chunking.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- if .Values.temporalWorkers.workflow.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-workflow-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-workflow-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-workflow-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.workflow.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.workflow.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.workflow.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- if .Values.temporalWorkers.qa.enabled }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $fullname }}-temporal-qa-worker-scaler
+  labels:
+    {{- $labels | nindent 4 }}
+    app.kubernetes.io/component: temporal-qa-worker
+spec:
+  scaleTargetRef:
+    name: {{ $fullname }}-temporal-qa-worker
+  minReplicaCount: 0
+  maxReplicaCount: {{ .Values.keda.temporalWorkers.qa.maxReplicas }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: temporal
+      metadata:
+        namespace: default
+        taskQueue: {{ .Values.keda.temporalWorkers.qa.queueName }}
+        targetQueueSize: {{ .Values.keda.temporalWorkers.qa.queueLength | quote }}
+        activationTargetQueueSize: "1"
+        endpoint: {{ .Values.keda.temporal.endpoint | default "temporal-frontend.temporal.svc.cluster.local:7233" }}
+        queueTypes: workflow,activity
+        selectAllActive: "false"
+        selectUnversioned: "true"
+        unsafeSsl: "false"
+{{- end }}
+
+{{- end }}

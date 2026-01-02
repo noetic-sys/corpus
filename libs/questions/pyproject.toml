@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "questions"
+version = "0.1.0"
+description = "Question domain models"
+authors = ["Kyle Sandell"]
+packages = [{include = "questions"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = "^2.10.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+ruff = "^0.12.4"
+nox = "^2025.5.1"
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+ignore = ["E501"]

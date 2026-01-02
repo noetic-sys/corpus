@@ -1,0 +1,637 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: corpus
+    command:
+      - "postgres"
+      - "-c"
+      - "log_statement=all"
+      - "-c"
+      - "log_duration=on"
+      - "-c"
+      - "log_min_duration_statement=0"
+      - "-c"
+      - "log_line_prefix=%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+      - "-c"
+      - "log_connections=on"
+      - "-c"
+      - "log_disconnections=on"
+    ports:
+      - "5437:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres_temporal:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: temporal
+    ports:
+      - "5438:5432"
+    volumes:
+      - postgres_temporal_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  corpus-redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6380:6379"
+      - "8001:8001" # RedisInsight web UI
+    volumes:
+      - corpus_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+      - "4571:4571"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - PERSISTENCE=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  temporal:
+    image: temporalio/auto-setup:1.22.0
+    ports:
+      - "7233:7233"
+      - "8233:8233"
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=password
+      - POSTGRES_SEEDS=postgres_temporal
+    depends_on:
+      postgres_temporal:
+        condition: service_healthy
+    volumes:
+      - temporal_data:/etc/temporal
+
+  temporal-ui:
+    image: temporalio/ui:2.21.3
+    ports:
+      - "8080:8080"
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    depends_on:
+      - temporal
+
+  corpus-migrate:
+    build:
+      context: .
+      dockerfile: backend/alembic/Dockerfile
+      target: production
+    env_file:
+      - ./backend/.env
+    environment:
+      # Docker-specific overrides
+      - DB_HOST=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic upgrade head
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/api/Dockerfile
+      target: development
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Docker-specific overrides
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      corpus-redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      temporal:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/common:/app/common
+      - ./backend/packages:/app/packages
+      - ./libs:/app/libs
+      - ./prompts:/app/prompts
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+    #healthcheck:
+    #  test: ["CMD", "curl", "-f", "http://backend:8000/api/v1/health"]
+    #  interval: 10s
+    #  timeout: 5s
+    #  retries: 5
+
+  vite:
+    build:
+      context: ./vite
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./vite/.env.development:/app/.env.development
+      - ./vite/src:/app/src
+      - ./vite/public:/app/public
+      - ./vite/index.html:/app/index.html
+      - ./vite/vite.config.ts:/app/vite.config.ts
+      - ./vite/tsconfig.json:/app/tsconfig.json
+      - ./vite/tsconfig.app.json:/app/tsconfig.app.json
+      - ./vite/tsconfig.node.json:/app/tsconfig.node.json
+    depends_on:
+      backend:
+        condition: service_started
+
+  qa_worker:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      # Docker-specific overrides
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      corpus-redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./prompts:/app/prompts
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: python -m workers.run_qa_worker
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # Change this to scale workers
+
+  document_indexing_worker:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      # Docker-specific overrides
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      corpus-redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/common:/app/common
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: python -m workers.run_document_indexing_worker
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # Change this to scale workers
+
+  # Temporal worker for document routing (main queue)
+  temporal_worker_routing:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      # Database Components
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: python -m workers.run_temporal_worker --queue document-routing-queue
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # Main routing workers
+
+  # Temporal worker for PDF processing
+  temporal_worker_pdf:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      # Database Components
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      # Python settings
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/worker
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: python -m workers.run_temporal_worker --queue pdf-processing-queue
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # PDF processing workers
+
+  # Temporal worker for page conversion (highest parallelism)
+  temporal_worker_page:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: python -m workers.run_temporal_worker --queue page-conversion-queue
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # High parallelism for page processing
+
+  # Temporal worker for generic document extraction
+  temporal_worker_generic:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      # Database Components
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - REDIS_HOST=corpus-redis
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - ELASTICSEARCH_HOST=elasticsearch
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/api:/app/api
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./gen-lang-client-creds.json:/app/gen-lang-client-creds.json
+    command: python -m workers.run_temporal_worker --queue generic-extraction-queue
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # Generic document processing workers
+
+  # Temporal worker for document chunking (manages chunking agent jobs)
+  temporal_worker_chunking:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - API_ENDPOINT=http://backend:8000
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./backend/common:/app/common
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    command: python -m workers.run_temporal_worker --queue document-chunking-queue
+    restart: unless-stopped
+    # Deploy configuration for scaling
+    deploy:
+      replicas: 1 # Chunking workers
+
+  # Temporal worker for workflow execution (manages workflow agents)
+  temporal_worker_workflows:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=local
+      - DB_HOST=postgres
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - API_ENDPOINT=http://backend:8000
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./backend/common:/app/common
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    command: python -m workers.run_workflow_worker
+    restart: unless-stopped
+
+  # Temporal worker for agent QA (manages agent QA jobs)
+  temporal_worker_agent_qa:
+    build:
+      context: .
+      dockerfile: backend/workers/Dockerfile
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      - DB_HOST=postgres
+      - S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - TEMPORAL_HOST=temporal:7233
+      - WORKFLOW_EXECUTION_MODE=docker
+      - API_ENDPOINT=http://backend:8000
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - DEBUG=0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      corpus-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./backend/packages:/app/packages
+      - ./backend/workers:/app/workers
+      - ./backend/common:/app/common
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    command: python -m workers.run_agent_qa_worker
+    restart: unless-stopped
+
+  agent-qa:
+    build:
+      context: .
+      dockerfile: agents/qa/Dockerfile
+    image: corpus/agent-qa:latest
+    profiles:
+      - build-only
+
+  document-chunker:
+    build:
+      context: .
+      dockerfile: agents/chunking/Dockerfile
+    image: corpus/document-chunker:latest
+    profiles:
+      - build-only
+
+  workflow-agent:
+    build:
+      context: .
+      dockerfile: agents/workflow/Dockerfile
+    image: corpus/workflow-agent:latest
+    profiles:
+      - build-only
+
+volumes:
+  postgres_data:
+  postgres_temporal_data:
+  rabbitmq_data:
+  corpus_redis_data:
+  elasticsearch_data:
+  localstack_data:
+  temporal_data:
