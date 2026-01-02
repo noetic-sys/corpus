@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
@@ -247,8 +247,12 @@ function LandingPage() {
       <div className="border-t relative z-10 mt-auto">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>Corpus</span>
-            <span>&copy; {new Date().getFullYear()}</span>
+            <div className="flex items-center gap-4">
+              <span>Corpus</span>
+              <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+              <Link to="/terms" className="hover:text-foreground">Terms</Link>
+            </div>
+            <span>&copy; {new Date().getFullYear()} Noetic Systems, LLC</span>
           </div>
         </div>
       </div>

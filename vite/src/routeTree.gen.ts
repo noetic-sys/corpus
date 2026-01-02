@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkspacesRouteImport } from './routes/workspaces'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LandingRouteImport } from './routes/landing'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,6 +21,16 @@ import { Route as WorkspacesWorkspaceIdRouteImport } from './routes/workspaces.$
 const WorkspacesRoute = WorkspacesRouteImport.update({
   id: '/workspaces',
   path: '/workspaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LandingRoute = LandingRouteImport.update({
@@ -51,6 +63,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/billing': typeof BillingRoute
   '/landing': typeof LandingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/workspaces/$workspaceId': typeof WorkspacesWorkspaceIdRoute
   '/workspaces/': typeof WorkspacesIndexRoute
@@ -59,6 +73,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/billing': typeof BillingRoute
   '/landing': typeof LandingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/workspaces/$workspaceId': typeof WorkspacesWorkspaceIdRoute
   '/workspaces': typeof WorkspacesIndexRoute
 }
@@ -67,6 +83,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/billing': typeof BillingRoute
   '/landing': typeof LandingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/workspaces/$workspaceId': typeof WorkspacesWorkspaceIdRoute
   '/workspaces/': typeof WorkspacesIndexRoute
@@ -77,16 +95,27 @@ export interface FileRouteTypes {
     | '/'
     | '/billing'
     | '/landing'
+    | '/privacy'
+    | '/terms'
     | '/workspaces'
     | '/workspaces/$workspaceId'
     | '/workspaces/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/billing' | '/landing' | '/workspaces/$workspaceId' | '/workspaces'
+  to:
+    | '/'
+    | '/billing'
+    | '/landing'
+    | '/privacy'
+    | '/terms'
+    | '/workspaces/$workspaceId'
+    | '/workspaces'
   id:
     | '__root__'
     | '/'
     | '/billing'
     | '/landing'
+    | '/privacy'
+    | '/terms'
     | '/workspaces'
     | '/workspaces/$workspaceId'
     | '/workspaces/'
@@ -96,6 +125,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BillingRoute: typeof BillingRoute
   LandingRoute: typeof LandingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   WorkspacesRoute: typeof WorkspacesRouteWithChildren
 }
 
@@ -106,6 +137,20 @@ declare module '@tanstack/react-router' {
       path: '/workspaces'
       fullPath: '/workspaces'
       preLoaderRoute: typeof WorkspacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/landing': {
@@ -164,6 +209,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BillingRoute: BillingRoute,
   LandingRoute: LandingRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   WorkspacesRoute: WorkspacesRouteWithChildren,
 }
 export const routeTree = rootRouteImport
