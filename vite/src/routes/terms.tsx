@@ -17,8 +17,8 @@ function TermsOfServicePage() {
             Terms of Service
           </h1>
           <p className="text-muted-foreground">
-            Effective Date: January 1, 2025<br />
-            Last Modified: January 1, 2025
+            Effective Date: January 1, 2026<br />
+            Last Modified: January 1, 2026
           </p>
         </div>
 
