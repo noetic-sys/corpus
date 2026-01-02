@@ -31,7 +31,7 @@ spec:
         workload: agent-execution
       containers:
         - name: chunker
-          image: us-central1-docker.pkg.dev/corpus-prod/corpus/document-chunker:{{ image_tag | default('latest') }}
+          image: {{ image }}
           imagePullPolicy: IfNotPresent
           resources:
             requests:
