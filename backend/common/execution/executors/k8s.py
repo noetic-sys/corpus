@@ -47,7 +47,7 @@ class K8sExecutor(JobExecutor):
         job_name = job_spec.container_name
 
         # Build image path (Artifact Registry format)
-        image_full = f"us-central1-docker.pkg.dev/{settings.google_project_id}/corpus/{job_spec.image_name}:{job_spec.image_tag}"
+        image_full = f"us-central1-docker.pkg.dev/{settings.google_project_id}/{job_spec.image_name}:{job_spec.image_tag}"
 
         # Prepare template variables
         template_context = {
