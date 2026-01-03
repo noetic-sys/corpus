@@ -12,7 +12,7 @@ class TestDocumentRepository:
     @pytest.fixture
     async def repo(self, test_db: AsyncSession):
         """Create a DocumentRepository instance."""
-        return DocumentRepository(test_db)
+        return DocumentRepository()
 
     @pytest.fixture
     async def sample_document(self, test_db: AsyncSession, sample_company):

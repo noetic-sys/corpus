@@ -24,7 +24,7 @@ class TestCellEntityReferenceRepository:
     @pytest.fixture
     async def reference_repo(self, test_db):
         """Create a CellEntityReferenceRepository instance."""
-        return CellEntityReferenceRepository(test_db)
+        return CellEntityReferenceRepository()
 
     @pytest.fixture(autouse=True)
     def setup_span_mock(self):

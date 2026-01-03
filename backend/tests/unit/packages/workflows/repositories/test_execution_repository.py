@@ -17,7 +17,7 @@ class TestWorkflowExecutionRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return WorkflowExecutionRepository(test_db)
+        return WorkflowExecutionRepository()
 
     async def test_get_execution_by_id(self, repository, sample_workflow_execution):
         """Test getting an execution by ID."""

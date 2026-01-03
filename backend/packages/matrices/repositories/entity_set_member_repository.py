@@ -6,7 +6,6 @@ Manages the matrix_entity_set_members table, which links entities
 """
 
 from typing import List, Optional, Dict
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
 
@@ -29,31 +28,30 @@ class EntitySetMemberRepository(
 ):
     """Repository for managing entity set members."""
 
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(
-            MatrixEntitySetMemberEntity, MatrixEntitySetMemberModel, db_session
-        )
+    def __init__(self):
+        super().__init__(MatrixEntitySetMemberEntity, MatrixEntitySetMemberModel)
 
     @trace_span
     async def get_by_entity_set_id(
         self, entity_set_id: int, company_id: Optional[int] = None
     ) -> List[MatrixEntitySetMemberModel]:
         """Get all members of an entity set, ordered by member_order."""
-        query = (
-            select(self.entity_class)
-            .where(
-                self.entity_class.entity_set_id == entity_set_id,
-                self.entity_class.deleted == False,  # noqa
+        async with self._get_session() as session:
+            query = (
+                select(self.entity_class)
+                .where(
+                    self.entity_class.entity_set_id == entity_set_id,
+                    self.entity_class.deleted == False,  # noqa
+                )
+                .order_by(self.entity_class.member_order)
             )
-            .order_by(self.entity_class.member_order)
-        )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_member_by_entity_id(
@@ -64,19 +62,20 @@ class EntitySetMemberRepository(
         company_id: Optional[int] = None,
     ) -> Optional[MatrixEntitySetMemberModel]:
         """Get a specific member by entity_set_id, entity_id, and entity_type."""
-        query = select(self.entity_class).where(
-            self.entity_class.entity_set_id == entity_set_id,
-            self.entity_class.entity_id == entity_id,
-            self.entity_class.entity_type == entity_type.value,
-            self.entity_class.deleted == False,  # noqa
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class).where(
+                self.entity_class.entity_set_id == entity_set_id,
+                self.entity_class.entity_id == entity_id,
+                self.entity_class.entity_type == entity_type.value,
+                self.entity_class.deleted == False,  # noqa
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entity = result.scalar_one_or_none()
-        return self._entity_to_domain(entity) if entity else None
+            result = await session.execute(query)
+            entity = result.scalar_one_or_none()
+            return self._entity_to_domain(entity) if entity else None
 
     @trace_span
     async def add_member(
@@ -116,17 +115,18 @@ class EntitySetMemberRepository(
         if not member_ids:
             return []
 
-        query = select(self.entity_class).where(
-            self.entity_class.id.in_(member_ids),
-            self.entity_class.deleted == False,  # noqa
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class).where(
+                self.entity_class.id.in_(member_ids),
+                self.entity_class.deleted == False,  # noqa
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_member_ids_by_entity_ids(
@@ -143,17 +143,18 @@ class EntitySetMemberRepository(
         if not entity_ids:
             return []
 
-        query = select(self.entity_class.id).where(
-            self.entity_class.entity_set_id == entity_set_id,
-            self.entity_class.entity_id.in_(entity_ids),
-            self.entity_class.deleted == False,  # noqa
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class.id).where(
+                self.entity_class.entity_set_id == entity_set_id,
+                self.entity_class.entity_id.in_(entity_ids),
+                self.entity_class.deleted == False,  # noqa
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        return [row[0] for row in result.fetchall()]
+            result = await session.execute(query)
+            return [row[0] for row in result.fetchall()]
 
     @trace_span
     async def get_members_by_entity_id(
@@ -166,18 +167,19 @@ class EntitySetMemberRepository(
 
         Used for finding which matrices contain a specific document/question.
         """
-        query = select(self.entity_class).where(
-            self.entity_class.entity_id == entity_id,
-            self.entity_class.entity_type == entity_type.value,
-            self.entity_class.deleted == False,  # noqa
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class).where(
+                self.entity_class.entity_id == entity_id,
+                self.entity_class.entity_type == entity_type.value,
+                self.entity_class.deleted == False,  # noqa
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def update_label(
@@ -187,18 +189,19 @@ class EntitySetMemberRepository(
         company_id: Optional[int] = None,
     ) -> Optional[MatrixEntitySetMemberModel]:
         """Update the label of an entity set member."""
-        query = (
-            update(self.entity_class)
-            .where(self.entity_class.id == member_id)
-            .values(label=label)
-            .returning(self.entity_class)
-        )
+        async with self._get_session() as session:
+            query = (
+                update(self.entity_class)
+                .where(self.entity_class.id == member_id)
+                .values(label=label)
+                .returning(self.entity_class)
+            )
 
-        if company_id is not None:
-            query = query.where(self.entity_class.company_id == company_id)
+            if company_id is not None:
+                query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        entity = result.scalar_one_or_none()
-        await self.db_session.flush()
+            result = await session.execute(query)
+            entity = result.scalar_one_or_none()
+            await session.flush()
 
-        return self._entity_to_domain(entity) if entity else None
+            return self._entity_to_domain(entity) if entity else None

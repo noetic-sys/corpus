@@ -23,7 +23,7 @@ class TestEntitySetMemberRepository:
     @pytest.fixture
     async def member_repo(self, test_db):
         """Create an EntitySetMemberRepository instance."""
-        return EntitySetMemberRepository(test_db)
+        return EntitySetMemberRepository()
 
     @pytest.fixture(autouse=True)
     def setup_span_mock(self):

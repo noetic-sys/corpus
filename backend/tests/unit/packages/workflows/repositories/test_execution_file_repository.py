@@ -19,7 +19,7 @@ class TestExecutionFileRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return ExecutionFileRepository(test_db)
+        return ExecutionFileRepository()
 
     async def test_get_execution_file_by_id(
         self, repository, sample_workflow_execution_file

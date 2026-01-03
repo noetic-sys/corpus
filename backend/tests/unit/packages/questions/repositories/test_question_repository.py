@@ -11,7 +11,7 @@ class TestQuestionRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return QuestionRepository(test_db)
+        return QuestionRepository()
 
     @pytest.fixture
     async def second_matrix(
@@ -29,7 +29,7 @@ class TestQuestionRepository:
         return matrix
 
     async def test_get_by_matrix_id(
-        self, repository, sample_matrix, second_matrix, sample_company
+        self, repository, sample_matrix, second_matrix, sample_company, test_db
     ):
         """Test getting questions by matrix ID."""
         # Create questions in first matrix
@@ -54,8 +54,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([question1, question2, question3])
-        await repository.db_session.commit()
+        test_db.add_all([question1, question2, question3])
+        await test_db.commit()
 
         # Get questions for first matrix
         questions = await repository.get_by_matrix_id(sample_matrix.id)
@@ -77,7 +77,7 @@ class TestQuestionRepository:
         assert len(questions) == 0
 
     async def test_search_by_text(
-        self, repository, sample_matrix, second_matrix, sample_company
+        self, repository, sample_matrix, second_matrix, sample_company, test_db
     ):
         """Test searching questions by text content."""
         # Create questions with different text
@@ -100,8 +100,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([question1, question2, question3])
-        await repository.db_session.commit()
+        test_db.add_all([question1, question2, question3])
+        await test_db.commit()
 
         # Search for "contract" (case insensitive)
         results = await repository.search_by_text("contract")
@@ -113,7 +113,7 @@ class TestQuestionRepository:
         assert "How much does it cost?" not in question_texts
 
     async def test_search_by_text_with_matrix_filter(
-        self, repository, sample_matrix, second_matrix, sample_company
+        self, repository, sample_matrix, second_matrix, sample_company, test_db
     ):
         """Test searching questions by text with matrix ID filter."""
         # Create questions with same search term in different matrices
@@ -130,8 +130,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([question1, question2])
-        await repository.db_session.commit()
+        test_db.add_all([question1, question2])
+        await test_db.commit()
 
         # Search for "contract" in specific matrix
         results = await repository.search_by_text("contract", sample_matrix.id)
@@ -141,7 +141,7 @@ class TestQuestionRepository:
         assert results[0].matrix_id == sample_matrix.id
 
     async def test_search_by_text_case_insensitive(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that text search is case insensitive."""
         question = QuestionEntity(
@@ -151,8 +151,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add(question)
-        await repository.db_session.commit()
+        test_db.add(question)
+        await test_db.commit()
 
         # Search with different cases
         results_lower = await repository.search_by_text("contract")
@@ -165,7 +165,7 @@ class TestQuestionRepository:
         assert results_lower[0].id == results_upper[0].id == results_mixed[0].id
 
     async def test_search_by_text_partial_match(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that search finds partial matches."""
         question = QuestionEntity(
@@ -175,8 +175,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add(question)
-        await repository.db_session.commit()
+        test_db.add(question)
+        await test_db.commit()
 
         # Search for partial words
         results_effective = await repository.search_by_text("effective")
@@ -188,7 +188,7 @@ class TestQuestionRepository:
         assert len(results_date) == 1
 
     async def test_search_by_text_no_results(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test search with no matching results."""
         question = QuestionEntity(
@@ -198,8 +198,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add(question)
-        await repository.db_session.commit()
+        test_db.add(question)
+        await test_db.commit()
 
         # Search for non-existent term
         results = await repository.search_by_text("nonexistent")
@@ -207,7 +207,7 @@ class TestQuestionRepository:
 
     @pytest.mark.skip(reason="This test is flaky and needs to be fixed")
     async def test_search_by_text_empty_query(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test search with empty query string."""
         question = QuestionEntity(
@@ -217,15 +217,15 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add(question)
-        await repository.db_session.commit()
+        test_db.add(question)
+        await test_db.commit()
 
         # Search with empty string should return no results
         results = await repository.search_by_text("")
         assert len(results) == 0
 
     async def test_entity_to_domain_conversion_with_question_types(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that entity to domain conversion properly handles question type IDs."""
         # Create questions with different question types
@@ -262,8 +262,8 @@ class TestQuestionRepository:
             ),
         ]
 
-        repository.db_session.add_all(questions)
-        await repository.db_session.commit()
+        test_db.add_all(questions)
+        await test_db.commit()
 
         # Get questions and verify type IDs are preserved
         retrieved = await repository.get_by_matrix_id(sample_matrix.id)
@@ -278,7 +278,7 @@ class TestQuestionRepository:
 
     # Soft delete related tests
     async def test_get_by_matrix_id_excludes_deleted(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that get_by_matrix_id excludes soft deleted questions."""
         # Create questions, one deleted
@@ -296,8 +296,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([question1, question2])
-        await repository.db_session.commit()
+        test_db.add_all([question1, question2])
+        await test_db.commit()
 
         # Get questions by matrix ID
         result = await repository.get_by_matrix_id(sample_matrix.id)
@@ -306,7 +306,7 @@ class TestQuestionRepository:
         assert result[0].question_text == "Active question?"
 
     async def test_search_by_text_excludes_deleted(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that search_by_text excludes soft deleted questions."""
         # Create questions, one deleted
@@ -324,8 +324,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([question1, question2])
-        await repository.db_session.commit()
+        test_db.add_all([question1, question2])
+        await test_db.commit()
 
         # Search for questions containing "France"
         result = await repository.search_by_text("France")
@@ -334,7 +334,7 @@ class TestQuestionRepository:
         assert result[0].question_text == "What is the capital of France?"
 
     async def test_get_valid_ids_for_matrix(
-        self, repository, sample_matrix, second_matrix, sample_company
+        self, repository, sample_matrix, second_matrix, sample_company, test_db
     ):
         """Test getting valid question IDs for a matrix."""
         # Create questions in the matrix
@@ -356,11 +356,11 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all(questions + [other_question])
-        await repository.db_session.commit()
+        test_db.add_all(questions + [other_question])
+        await test_db.commit()
 
         for question in questions + [other_question]:
-            await repository.db_session.refresh(question)
+            await test_db.refresh(question)
 
         # Test with valid IDs from correct matrix
         valid_ids = await repository.get_valid_ids_for_matrix(
@@ -378,7 +378,7 @@ class TestQuestionRepository:
         assert other_question.id not in valid_ids
 
     async def test_get_valid_ids_for_matrix_excludes_deleted(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that get_valid_ids_for_matrix excludes soft deleted questions."""
         # Create questions, one deleted
@@ -396,11 +396,11 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([question1, question2])
-        await repository.db_session.commit()
+        test_db.add_all([question1, question2])
+        await test_db.commit()
 
         for q in [question1, question2]:
-            await repository.db_session.refresh(q)
+            await test_db.refresh(q)
 
         # Test with both IDs
         valid_ids = await repository.get_valid_ids_for_matrix(
@@ -412,7 +412,7 @@ class TestQuestionRepository:
         assert question2.id not in valid_ids
 
     async def test_bulk_soft_delete_by_matrix_ids(
-        self, repository, sample_workspace, sample_company
+        self, repository, sample_workspace, sample_company, test_db
     ):
         """Test bulk soft deleting questions by matrix IDs."""
         # Create matrices
@@ -431,11 +431,11 @@ class TestQuestionRepository:
             workspace_id=sample_workspace.id,
             company_id=sample_company.id,
         )
-        repository.db_session.add_all([matrix1, matrix2, matrix3])
-        await repository.db_session.commit()
-        await repository.db_session.refresh(matrix1)
-        await repository.db_session.refresh(matrix2)
-        await repository.db_session.refresh(matrix3)
+        test_db.add_all([matrix1, matrix2, matrix3])
+        await test_db.commit()
+        await test_db.refresh(matrix1)
+        await test_db.refresh(matrix2)
+        await test_db.refresh(matrix3)
 
         # Create questions in different matrices
         questions_m1 = [
@@ -469,8 +469,8 @@ class TestQuestionRepository:
             )
         ]
 
-        repository.db_session.add_all(questions_m1 + questions_m2 + questions_m3)
-        await repository.db_session.commit()
+        test_db.add_all(questions_m1 + questions_m2 + questions_m3)
+        await test_db.commit()
 
         # Soft delete questions in matrix1 and matrix2
         deleted_count = await repository.bulk_soft_delete_by_matrix_ids(
@@ -499,7 +499,7 @@ class TestQuestionRepository:
         assert result == 0
 
     async def test_bulk_soft_delete_by_matrix_ids_already_deleted(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test bulk soft delete on already deleted questions."""
         # Create a deleted question
@@ -511,8 +511,8 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add(question)
-        await repository.db_session.commit()
+        test_db.add(question)
+        await test_db.commit()
 
         # Try to soft delete again
         result = await repository.bulk_soft_delete_by_matrix_ids([sample_matrix.id])
@@ -520,7 +520,7 @@ class TestQuestionRepository:
         assert result == 0  # No questions were affected
 
     async def test_soft_delete_functionality_inheritance(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that inherited soft delete methods work correctly."""
         # Create a test question
@@ -531,9 +531,9 @@ class TestQuestionRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add(question)
-        await repository.db_session.commit()
-        await repository.db_session.refresh(question)
+        test_db.add(question)
+        await test_db.commit()
+        await test_db.refresh(question)
 
         # Test soft_delete method from base repository
         result = await repository.soft_delete(question.id)
@@ -544,7 +544,7 @@ class TestQuestionRepository:
         assert retrieved is None
 
     async def test_bulk_soft_delete_functionality_inheritance(
-        self, repository, sample_matrix, sample_company
+        self, repository, sample_matrix, sample_company, test_db
     ):
         """Test that inherited bulk_soft_delete method works correctly."""
         # Create multiple questions
@@ -558,11 +558,11 @@ class TestQuestionRepository:
             )
             questions.append(question)
 
-        repository.db_session.add_all(questions)
-        await repository.db_session.commit()
+        test_db.add_all(questions)
+        await test_db.commit()
 
         for question in questions:
-            await repository.db_session.refresh(question)
+            await test_db.refresh(question)
 
         # Test bulk_soft_delete method from base repository
         question_ids = [question.id for question in questions]

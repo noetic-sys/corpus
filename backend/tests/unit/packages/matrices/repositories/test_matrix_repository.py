@@ -13,7 +13,7 @@ class TestMatrixRepository:
     @pytest.fixture
     async def matrix_repo(self, test_db):
         """Create a MatrixRepository instance."""
-        return MatrixRepository(test_db)
+        return MatrixRepository()
 
     @pytest.fixture(autouse=True)
     def setup_span_mock(self):
