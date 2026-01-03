@@ -28,7 +28,7 @@ class QAJobService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.qa_job_repo = QAJobRepository(db_session)
+        self.qa_job_repo = QAJobRepository()
         self.document_repo = DocumentRepository(db_session)
         self.question_repo = QuestionRepository(db_session)
         self.message_queue = get_message_queue()

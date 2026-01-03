@@ -50,7 +50,7 @@ class BatchProcessingService(TransactionMixin):
         self.entity_set_member_repo = EntitySetMemberRepository(db_session)
         self.entity_set_service = EntitySetService(db_session)
         # TODO: i think this actually needs to be a service call here
-        self.qa_job_repo = QAJobRepository(db_session)
+        self.qa_job_repo = QAJobRepository()
         self.message_queue = get_message_queue()
         self._queue_declared = False
 
