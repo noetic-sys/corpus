@@ -14,7 +14,7 @@ class TestInputFileRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return InputFileRepository(test_db)
+        return InputFileRepository()
 
     async def test_get_input_file_by_id(self, repository, sample_workflow_input_file):
         """Test getting an input file by ID."""

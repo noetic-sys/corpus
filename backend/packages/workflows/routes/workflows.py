@@ -61,8 +61,8 @@ def get_execution_file_service(
     return ExecutionFileService(db)
 
 
-def get_input_file_service(db: AsyncSession = Depends(get_db)) -> InputFileService:
-    return InputFileService(db)
+def get_input_file_service() -> InputFileService:
+    return InputFileService()
 
 
 @router.post("/workflows", response_model=WorkflowResponse, status_code=201)
@@ -406,11 +406,10 @@ async def delete_input_file(
 ):
     """Delete an input file."""
     try:
-        async with transaction(input_file_service.db_session):
-            await input_file_service.delete_file(
-                file_id=file_id,
-                company_id=current_user.company_id,
-            )
+        await input_file_service.delete_file(
+            file_id=file_id,
+            company_id=current_user.company_id,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

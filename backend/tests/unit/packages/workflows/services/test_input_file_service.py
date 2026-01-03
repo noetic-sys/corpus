@@ -25,7 +25,7 @@ class TestInputFileService:
             "packages.workflows.services.input_file_service.WorkflowStorageService",
             return_value=mock_storage_service,
         ):
-            return InputFileService(test_db)
+            return InputFileService()
 
     async def test_upload_file(
         self, service, sample_workflow, sample_company, mock_storage_service
