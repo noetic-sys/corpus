@@ -80,7 +80,7 @@ class MatrixService:
         self.member_repo = EntitySetMemberRepository(db_session)
         self.answer_set_service = AnswerSetService()
         self.answer_service = AnswerService()
-        self.citation_service = CitationService(db_session)
+        self.citation_service = CitationService()
 
     @trace_span
     async def create_matrix(self, matrix_data: MatrixCreateModel) -> MatrixModel:

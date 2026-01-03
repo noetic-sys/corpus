@@ -21,7 +21,7 @@ class DocumentHighlightingService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.citation_service = CitationService(db_session)
+        self.citation_service = CitationService()
         self.document_service = DocumentService(db_session)
         self.answer_service = AnswerService()
         self.answer_set_service = AnswerSetService()
