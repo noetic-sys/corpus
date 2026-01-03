@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.ai_model.repositories.ai_provider_repository import AIProviderRepository
 from packages.ai_model.repositories.ai_model_repository import AIModelRepository
@@ -17,10 +16,9 @@ logger = get_logger(__name__)
 class AIModelService:
     """Service for handling AI provider and model operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.provider_repo = AIProviderRepository(db_session)
-        self.model_repo = AIModelRepository(db_session)
+    def __init__(self):
+        self.provider_repo = AIProviderRepository()
+        self.model_repo = AIModelRepository()
 
     @trace_span
     async def get_provider(self, provider_id: int) -> Optional[AIProviderModel]:

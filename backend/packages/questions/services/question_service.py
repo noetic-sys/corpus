@@ -60,7 +60,7 @@ class QuestionService:
         self.option_repo = QuestionOptionRepository(db_session)
         self.question_option_service = QuestionOptionService(db_session)
         self.reprocessing_service = ReprocessingService(db_session)
-        self.ai_model_repo = AIModelRepository(db_session)
+        self.ai_model_repo = AIModelRepository()
 
     async def _get_available_template_variables(self, matrix_id: int) -> List[str]:
         """Get list of available template variable names for a matrix."""

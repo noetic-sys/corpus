@@ -264,7 +264,7 @@ async def get_ai_service_for_question(
 
     # If question has a specific AI model configured, use it
     if question.ai_model_id:
-        ai_model_repo = AIModelRepository(db_session)
+        ai_model_repo = AIModelRepository()
         ai_model = await ai_model_repo.get_with_provider(question.ai_model_id)
 
         if (
