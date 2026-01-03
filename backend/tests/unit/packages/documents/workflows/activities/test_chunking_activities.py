@@ -205,7 +205,7 @@ class TestRefundAgenticChunkingCreditActivity:
         document_id = 123
 
         # First create the original reservation
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         original_event = await usage_service.track_agentic_chunking(
             company_id=sample_company.id,
             document_id=document_id,
@@ -226,7 +226,7 @@ class TestRefundAgenticChunkingCreditActivity:
         assert refund_event_id != original_event_id
 
         # Verify both events exist and net to zero
-        usage_repo = UsageEventRepository(test_db)
+        usage_repo = UsageEventRepository()
         now = datetime.now(timezone.utc)
         total = await usage_repo.get_monthly_count(
             sample_company.id,
@@ -254,7 +254,7 @@ class TestRefundAgenticChunkingCreditActivity:
         document_id = 456
 
         # Create original reservation
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         original_event = await usage_service.track_agentic_chunking(
             company_id=sample_company.id,
             document_id=document_id,
@@ -272,7 +272,7 @@ class TestRefundAgenticChunkingCreditActivity:
         )
 
         # Check both events exist
-        usage_repo = UsageEventRepository(test_db)
+        usage_repo = UsageEventRepository()
         now = datetime.now(timezone.utc)
         events = await usage_repo.get_by_company_date_range(
             sample_company.id,
@@ -309,7 +309,7 @@ class TestUpdateAgenticChunkingMetadataActivity:
         document_id = 789
 
         # Create usage event first using service
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         event = await usage_service.track_agentic_chunking(
             company_id=sample_company.id,
             document_id=document_id,
@@ -326,7 +326,7 @@ class TestUpdateAgenticChunkingMetadataActivity:
         )
 
         # Verify metadata was updated
-        usage_repo = UsageEventRepository(test_db)
+        usage_repo = UsageEventRepository()
         now = datetime.now(timezone.utc)
         events = await usage_repo.get_by_company_date_range(
             sample_company.id,

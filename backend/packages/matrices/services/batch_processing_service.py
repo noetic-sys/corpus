@@ -107,7 +107,7 @@ class BatchProcessingService(TransactionMixin):
         if not cell_models:
             return
 
-        usage_service = UsageService(self.db_session)
+        usage_service = UsageService()
 
         # Track all cell operations
         await usage_service.track_cell_operation(

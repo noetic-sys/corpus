@@ -20,7 +20,7 @@ class TestUsageServiceAgenticChunking:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that track_agentic_chunking creates a usage event."""
-        service = UsageService(test_db)
+        service = UsageService()
 
         event = await service.track_agentic_chunking(
             company_id=sample_company.id,
@@ -41,7 +41,7 @@ class TestUsageServiceAgenticChunking:
         self, test_db, sample_company
     ):
         """Test tracking agentic chunking without chunk count (reservation)."""
-        service = UsageService(test_db)
+        service = UsageService()
 
         event = await service.track_agentic_chunking(
             company_id=sample_company.id,
@@ -62,7 +62,7 @@ class TestUsageServiceRefund:
         self, test_db, sample_company
     ):
         """Test that refund creates an event with quantity=-1."""
-        service = UsageService(test_db)
+        service = UsageService()
 
         # First create a reservation
         reservation = await service.track_agentic_chunking(
@@ -88,8 +88,8 @@ class TestUsageServiceRefund:
 
     async def test_refund_nets_to_zero_usage(self, test_db, sample_company):
         """Test that reservation + refund nets to zero usage."""
-        service = UsageService(test_db)
-        repo = UsageEventRepository(test_db)
+        service = UsageService()
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -128,8 +128,8 @@ class TestUsageServiceRefund:
 
     async def test_partial_refund_scenario(self, test_db, sample_company):
         """Test scenario where some reservations succeed and some are refunded."""
-        service = UsageService(test_db)
-        repo = UsageEventRepository(test_db)
+        service = UsageService()
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -167,8 +167,8 @@ class TestUsageServiceRefund:
 
     async def test_refund_preserves_audit_trail(self, test_db, sample_company):
         """Test that refund creates a separate event (audit trail preserved)."""
-        service = UsageService(test_db)
-        repo = UsageEventRepository(test_db)
+        service = UsageService()
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)

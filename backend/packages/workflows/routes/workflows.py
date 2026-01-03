@@ -179,7 +179,7 @@ async def execute_workflow(
             )
 
             # Track workflow usage
-            usage_service = UsageService(execution_service.db_session)
+            usage_service = UsageService()
             await usage_service.track_workflow(
                 company_id=current_user.company_id,
                 user_id=current_user.user_id,

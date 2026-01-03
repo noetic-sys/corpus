@@ -445,7 +445,7 @@ class QuestionService:
 
             # Track agentic QA usage if question uses agentic mode
             if question.use_agent_qa and reprocessed_count > 0:
-                usage_service = UsageService(self.db_session)
+                usage_service = UsageService()
                 await usage_service.track_agentic_qa(
                     company_id=company_id,
                     quantity=reprocessed_count,

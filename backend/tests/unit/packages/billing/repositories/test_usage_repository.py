@@ -20,7 +20,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test creating a usage event."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         event_data = UsageEventCreateModel(
             company_id=sample_company.id,
@@ -39,7 +39,7 @@ class TestUsageEventRepository:
 
     async def test_get_monthly_count(self, test_db, sample_company, sample_user_entity):
         """Test getting monthly usage count."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         # Create several usage events
         now = datetime.now(timezone.utc)
@@ -64,7 +64,7 @@ class TestUsageEventRepository:
 
     async def test_get_period_count(self, test_db, sample_company, sample_user_entity):
         """Test getting usage count for a billing period."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -94,7 +94,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that monthly count filters by event type."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
 
@@ -142,7 +142,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test getting total storage bytes for a billing period."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -174,7 +174,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test getting events by company and date range."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         # Create events
         for i in range(5):
@@ -203,7 +203,7 @@ class TestUsageEventRepository:
 
     async def test_get_by_user(self, test_db, sample_company, sample_user_entity):
         """Test getting events by user."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         # Create events for user
         for i in range(3):
@@ -225,7 +225,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, second_company, sample_user_entity
     ):
         """Test that usage events are properly isolated by company."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
 
@@ -272,7 +272,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that quantity field is properly summed for batch operations."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -324,7 +324,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that monthly count properly sums quantities."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
 
@@ -362,7 +362,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that negative quantity events reduce the total count (refund pattern)."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -405,7 +405,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that multiple refunds correctly reduce the count."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -449,7 +449,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that refunds can bring the count back to zero."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -489,7 +489,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test counting STORAGE_UPLOAD events for document quota."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -521,7 +521,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, sample_user_entity
     ):
         """Test that document count only counts STORAGE_UPLOAD events."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)
@@ -570,7 +570,7 @@ class TestUsageEventRepository:
         self, test_db, sample_company, second_company, sample_user_entity
     ):
         """Test that document count is properly isolated by company."""
-        repo = UsageEventRepository(test_db)
+        repo = UsageEventRepository()
 
         now = datetime.now(timezone.utc)
         period_start = now - timedelta(days=15)

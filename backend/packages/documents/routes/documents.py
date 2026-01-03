@@ -252,7 +252,7 @@ async def upload_document(
 
         # Track usage for billing (skip if duplicate)
         if not is_duplicate:
-            usage_service = UsageService(db)
+            usage_service = UsageService()
             await usage_service.track_storage_upload(
                 company_id=current_user.company_id,
                 file_size_bytes=file.size,
@@ -517,7 +517,7 @@ async def upload_standalone_document(
 
         # Track usage for billing (skip if duplicate)
         if not is_duplicate:
-            usage_service = UsageService(db)
+            usage_service = UsageService()
             await usage_service.track_storage_upload(
                 company_id=current_user.company_id,
                 file_size_bytes=file.size,

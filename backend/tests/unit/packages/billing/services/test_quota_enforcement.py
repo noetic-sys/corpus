@@ -283,7 +283,7 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that cell operation quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         quota_service = QuotaService(test_db)
 
         # FREE tier has 100 cell operations limit
@@ -309,7 +309,7 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that agentic QA quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         quota_service = QuotaService(test_db)
 
         # FREE tier has 5 agentic QA limit
@@ -335,7 +335,7 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that workflow quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         quota_service = QuotaService(test_db)
 
         # FREE tier has 1 workflow limit
@@ -359,7 +359,7 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that storage quota raises 429 when limit would be exceeded."""
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         quota_service = QuotaService(test_db)
 
         # FREE tier has 100 MB storage limit
@@ -387,7 +387,7 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that agentic chunking quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         quota_service = QuotaService(test_db)
 
         # FREE tier has 0 agentic chunking limit
@@ -413,7 +413,7 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that document quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
+        usage_service = UsageService()
         quota_service = QuotaService(test_db)
 
         # FREE tier has 10 documents limit

@@ -382,7 +382,7 @@ async def refund_agentic_chunking_credit_activity(
     )
 
     async for db_session in get_db():
-        usage_service = UsageService(db_session)
+        usage_service = UsageService()
         refund_event = await usage_service.refund_agentic_chunking(
             company_id=company_id,
             document_id=document_id,
