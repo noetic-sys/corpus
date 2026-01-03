@@ -49,7 +49,7 @@ class DocumentService:
         self.storage = get_storage()
         self.bloom_filter = get_bloom_filter_provider()
         self.search_provider = get_document_search_provider(db_session)
-        self.indexing_job_service = DocumentIndexingJobService(db_session)
+        self.indexing_job_service = DocumentIndexingJobService()
 
     async def _calculate_checksum_from_stream(self, file: UploadFile) -> str:
         """Calculate SHA256 checksum of file content using streaming."""

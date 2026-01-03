@@ -47,7 +47,7 @@ class DocumentIndexingWorker(BaseWorker[DocumentIndexingMessage]):
 
         # Initialize services
         document_service = get_document_service(db_session)
-        indexing_job_service = DocumentIndexingJobService(db_session)
+        indexing_job_service = DocumentIndexingJobService()
         search_provider = get_document_search_provider(db_session)
 
         try:

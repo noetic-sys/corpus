@@ -18,7 +18,7 @@ class TestDocumentIndexingJobRepository:
     @pytest.fixture
     def doc_indexing_job_repo(self, test_db):
         """Create a DocumentIndexingJobRepository instance with real database session."""
-        return DocumentIndexingJobRepository(test_db)
+        return DocumentIndexingJobRepository()
 
     @pytest.fixture(autouse=True)
     def setup_span_mock(self):
