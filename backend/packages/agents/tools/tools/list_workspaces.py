@@ -16,7 +16,6 @@ from packages.agents.tools.base import (
 )
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.workspaces.models.schemas.workspace import WorkspaceResponse
-from packages.workspaces.routes.workspaces import get_workspaces
 from packages.workspaces.services.workspace_service import WorkspaceService
 
 
@@ -64,15 +63,15 @@ class ListWorkspacesTool(Tool[ListWorkspacesParameters]):
         as_user: AuthenticatedUser,
     ) -> ToolResult:
         try:
-            # Call the get_workspaces route function directly
-            workspace_responses = await get_workspaces(
+            workspace_service = WorkspaceService()
+            workspaces = await workspace_service.get_workspaces(
+                company_id=as_user.company_id,
                 skip=parameters.skip,
                 limit=parameters.limit,
-                current_user=as_user,
-                workspace_service=WorkspaceService(session),
             )
-
-            # Convert responses back to domain models
+            workspace_responses = [
+                WorkspaceResponse.model_validate(ws) for ws in workspaces
+            ]
 
             return ToolResult.ok(
                 ListWorkspacesSuccessResult(workspaces=workspace_responses)

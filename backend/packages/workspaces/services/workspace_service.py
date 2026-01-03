@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.workspaces.repositories.workspace_repository import WorkspaceRepository
@@ -16,9 +15,8 @@ logger = get_logger(__name__)
 class WorkspaceService:
     """Service for handling workspace operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.workspace_repo = WorkspaceRepository(db_session)
+    def __init__(self):
+        self.workspace_repo = WorkspaceRepository()
 
     @trace_span
     async def create_workspace(self, workspace_data: WorkspaceCreateModel) -> Workspace:
