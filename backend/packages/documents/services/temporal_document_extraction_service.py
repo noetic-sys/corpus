@@ -35,7 +35,7 @@ class TemporalDocumentExtractionService:
         self, db_session: AsyncSession, temporal_client: Optional[Client] = None
     ):
         self.db_session = db_session
-        self.extraction_job_repo = DocumentExtractionJobRepository(db_session)
+        self.extraction_job_repo = DocumentExtractionJobRepository()
         self.document_repo = DocumentRepository(db_session)
         self._temporal_client = temporal_client
 

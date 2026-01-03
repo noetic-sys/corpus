@@ -27,7 +27,7 @@ class DocumentExtractionJobService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.extraction_job_repo = DocumentExtractionJobRepository(db_session)
+        self.extraction_job_repo = DocumentExtractionJobRepository()
         self.document_repo = DocumentRepository(db_session)
         self.message_queue = get_message_queue()
 

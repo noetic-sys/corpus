@@ -44,7 +44,7 @@ class TestUpdateExtractionStatusActivity:
 
         # Create test data in the database
         document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a document
         document_create = DocumentCreateModel(
@@ -104,7 +104,7 @@ class TestUpdateExtractionStatusActivity:
 
         # Create test data in the database
         document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a document
         document_create = DocumentCreateModel(
@@ -164,7 +164,7 @@ class TestUpdateExtractionStatusActivity:
 
         # Create test data in the database
         document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a document
         document_create = DocumentCreateModel(
@@ -244,7 +244,7 @@ class TestUpdateDocumentCompletionActivity:
         # Create test data in the database
         matrix_repo = MatrixRepository(test_db)
         document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a workspace first
         workspace = sample_workspace
@@ -322,7 +322,7 @@ class TestUpdateDocumentCompletionActivity:
         # Create test data in the database
         matrix_repo = MatrixRepository(test_db)
         document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a workspace first
         workspace = sample_workspace

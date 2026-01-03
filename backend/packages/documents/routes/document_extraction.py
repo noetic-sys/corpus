@@ -72,7 +72,7 @@ async def get_document_extraction_status(
 
     # Get extraction jobs
 
-    job_repo = DocumentExtractionJobRepository(db)
+    job_repo = DocumentExtractionJobRepository()
     jobs = await job_repo.get_by_document_id(document_id)
 
     return {

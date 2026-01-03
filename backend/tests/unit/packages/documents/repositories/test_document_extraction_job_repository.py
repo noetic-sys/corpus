@@ -16,7 +16,7 @@ class TestDocumentExtractionJobRepository:
     @pytest.fixture
     def doc_extraction_job_repo(self, test_db):
         """Create a DocumentExtractionJobRepository instance with real database session."""
-        return DocumentExtractionJobRepository(test_db)
+        return DocumentExtractionJobRepository()
 
     @pytest.fixture(autouse=True)
     def setup_span_mock(self):
