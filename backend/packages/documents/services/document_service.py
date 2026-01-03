@@ -15,6 +15,7 @@ from packages.documents.providers.document_search.interface import (
 )
 from packages.documents.repositories.document_repository import DocumentRepository
 from packages.documents.models.domain.document import DocumentModel, DocumentCreateModel
+from packages.documents.models.schemas.document import DocumentUploadOptions
 from packages.documents.models.domain.document_types import DocumentType
 from packages.documents.models.database.document import ExtractionStatus
 from packages.documents.services.document_indexing_job_service import (
@@ -92,10 +93,18 @@ class DocumentService:
 
     @trace_span
     async def upload_document(
-        self, file: UploadFile, company_id: int
+        self,
+        file: UploadFile,
+        company_id: int,
+        options: DocumentUploadOptions,
     ) -> Tuple[DocumentModel, bool]:
         """
         Upload a document as a standalone entity within a company.
+
+        Args:
+            file: The uploaded file
+            company_id: Company ID
+            options: Upload options (chunking preferences, etc.)
 
         Returns:
             Tuple of (document, is_duplicate) where is_duplicate indicates if this was a duplicate
@@ -140,6 +149,7 @@ class DocumentService:
                 checksum=checksum,
                 company_id=company_id,
                 extraction_status=ExtractionStatus.PENDING,
+                use_agentic_chunking=options.use_agentic_chunking,
             )
             document = await self.document_repo.create(document_create)
 
@@ -359,10 +369,15 @@ class DocumentService:
 
     @trace_span
     async def upload_documents_from_urls(
-        self, urls: List[str], company_id: int
+        self, urls: List[str], company_id: int, options: DocumentUploadOptions
     ) -> Tuple[List[DocumentModel], List[str]]:
         """
         Upload multiple documents from URLs in parallel.
+
+        Args:
+            urls: List of URLs to download and upload
+            company_id: Company ID
+            options: Upload options (chunking preferences, etc.)
 
         Returns:
             Tuple of (successful_documents, error_messages)
@@ -393,7 +408,7 @@ class DocumentService:
 
             try:
                 document = await self._upload_from_temp_file(
-                    temp_file_path, filename, content_type, company_id
+                    temp_file_path, filename, content_type, company_id, options
                 )
                 documents.append(document)
 
@@ -410,7 +425,12 @@ class DocumentService:
         return documents, errors
 
     async def _upload_from_temp_file(
-        self, temp_file_path: str, filename: str, content_type: str, company_id: int
+        self,
+        temp_file_path: str,
+        filename: str,
+        content_type: str,
+        company_id: int,
+        options: DocumentUploadOptions,
     ) -> DocumentModel:
         """Upload a document from a temporary file."""
         file_size = os.path.getsize(temp_file_path)
@@ -432,7 +452,7 @@ class DocumentService:
             )
             upload_file.size = file_size
 
-            document, _ = await self.upload_document(upload_file, company_id)
+            document, _ = await self.upload_document(upload_file, company_id, options)
             return document
 
     @trace_span

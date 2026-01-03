@@ -58,13 +58,12 @@ async def get_chunking_strategy_activity(
     company_id: int, document_id: int
 ) -> Dict[str, Any]:
     """
-    Determine chunking strategy and atomically reserve credit if agentic.
+    Determine chunking strategy based on document preference.
 
-    Uses QuotaService.reserve_agentic_chunking_if_available which:
-    1. Acquires advisory lock for this company (serializes concurrent requests)
-    2. Checks quota
-    3. If available: reserves credit and returns agentic
-    4. If exceeded: returns sentence (no reservation)
+    If document.use_agentic_chunking is False: use sentence chunking (default)
+    If document.use_agentic_chunking is True: check quota and reserve credit
+        - If quota available: use agentic chunking
+        - If quota exceeded: raise exception (user explicitly requested agentic)
 
     Args:
         company_id: Company ID
@@ -77,7 +76,30 @@ async def get_chunking_strategy_activity(
         f"Determining chunking strategy for company {company_id}, document {document_id}"
     )
 
-    # QuotaService handles its own transaction internally
+    # Check document preference
+    document_service = get_document_service()
+    document = await document_service.get_document(document_id, company_id)
+
+    if not document:
+        raise Exception(f"Document {document_id} not found")
+
+    # If user didn't opt-in to agentic, use sentence chunking
+    if not document.use_agentic_chunking:
+        activity.logger.info(
+            f"Using sentence chunking for document {document_id} "
+            f"(use_agentic_chunking=False)"
+        )
+        return {
+            "strategy": ChunkingStrategy.SENTENCE.value,
+            "tier": None,
+            "usage_event_id": None,
+            "quota_exceeded": False,
+        }
+
+    # User requested agentic - check quota
+    activity.logger.info(
+        f"Document {document_id} requested agentic chunking, checking quota"
+    )
     quota_service = QuotaService()
     result = await quota_service.reserve_agentic_chunking_if_available(
         company_id=company_id,
@@ -97,16 +119,15 @@ async def get_chunking_strategy_activity(
             "quota_exceeded": False,
         }
     else:
-        activity.logger.info(
-            f"Agentic quota exceeded for company {company_id}, "
-            f"falling back to sentence ({result.current_usage}/{result.limit})"
+        # User explicitly requested agentic but quota exceeded - fail
+        activity.logger.error(
+            f"Agentic chunking quota exceeded for company {company_id}, "
+            f"document {document_id} ({result.current_usage}/{result.limit})"
         )
-        return {
-            "strategy": ChunkingStrategy.SENTENCE.value,
-            "tier": result.tier.value,
-            "usage_event_id": None,
-            "quota_exceeded": True,
-        }
+        raise Exception(
+            f"Agentic chunking quota exceeded ({result.current_usage}/{result.limit}). "
+            "Please upgrade your plan or wait until next billing period."
+        )
 
 
 # ============================================================================

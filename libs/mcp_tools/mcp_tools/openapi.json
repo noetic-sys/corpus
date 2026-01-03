@@ -858,6 +858,18 @@
         "operationId": "upload_standalone_document_api_v1_documents__post",
         "parameters": [
           {
+            "name": "useAgenticChunking",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to use AI-powered chunking",
+              "default": false,
+              "title": "Useagenticchunking"
+            },
+            "description": "Whether to use AI-powered chunking"
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1252,6 +1264,18 @@
               "title": "Entitysetid"
             },
             "description": "Entity set ID to add document to"
+          },
+          {
+            "name": "useAgenticChunking",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to use AI-powered chunking",
+              "default": false,
+              "title": "Useagenticchunking"
+            },
+            "description": "Whether to use AI-powered chunking"
           },
           {
             "name": "authorization",
@@ -11427,6 +11451,11 @@
               }
             ],
             "title": "Extractioncompletedat"
+          },
+          "useAgenticChunking": {
+            "type": "boolean",
+            "title": "Useagenticchunking",
+            "default": false
           },
           "createdAt": {
             "type": "string",

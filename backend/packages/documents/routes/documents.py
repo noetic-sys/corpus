@@ -18,6 +18,7 @@ from packages.documents.models.schemas.document import (
     HybridDocumentSearchResponse,
     DocumentSearchHitResponse,
     DocumentMatchSnippetResponse,
+    DocumentUploadOptions,
 )
 from packages.documents.models.domain.document import ExtractionStatus
 from packages.matrices.services.batch_processing_service import (
@@ -211,6 +212,13 @@ async def upload_document(
     entity_set_id: Annotated[
         int, Query(alias="entitySetId", description="Entity set ID to add document to")
     ],
+    use_agentic_chunking: Annotated[
+        bool,
+        Query(
+            alias="useAgenticChunking",
+            description="Whether to use AI-powered chunking",
+        ),
+    ] = False,
     file: UploadFile = File(...),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
 ):
@@ -240,8 +248,9 @@ async def upload_document(
         member_repo = EntitySetMemberRepository()
 
         # Upload document as standalone entity
+        options = DocumentUploadOptions(use_agentic_chunking=use_agentic_chunking)
         document, is_duplicate = await document_service.upload_document(
-            file, current_user.company_id
+            file, current_user.company_id, options
         )
 
         # Track usage for billing (skip if duplicate)
@@ -405,10 +414,12 @@ async def upload_documents_from_urls(
         )
 
     # Download and upload documents (happens outside transaction)
+    # Use default options (no agentic chunking) for bulk URL uploads
     urls_list = [str(url) for url in request.urls]
+    default_options = DocumentUploadOptions()
     uploaded_documents, upload_errors = (
         await document_service.upload_documents_from_urls(
-            urls_list, current_user.company_id
+            urls_list, current_user.company_id, default_options
         )
     )
 
@@ -475,6 +486,13 @@ async def upload_documents_from_urls(
 
 @router.post("/documents/", response_model=DocumentResponse)
 async def upload_standalone_document(
+    use_agentic_chunking: Annotated[
+        bool,
+        Query(
+            alias="useAgenticChunking",
+            description="Whether to use AI-powered chunking",
+        ),
+    ] = False,
     file: UploadFile = File(...),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
 ):
@@ -500,8 +518,9 @@ async def upload_standalone_document(
         document_service = get_document_service()
 
         # Upload document as standalone entity
+        options = DocumentUploadOptions(use_agentic_chunking=use_agentic_chunking)
         document, is_duplicate = await document_service.upload_document(
-            file, current_user.company_id
+            file, current_user.company_id, options
         )
 
         # Track usage for billing (skip if duplicate)

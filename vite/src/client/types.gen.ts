@@ -863,6 +863,10 @@ export type DocumentResponse = {
      */
     extractionCompletedAt?: string | null;
     /**
+     * Useagenticchunking
+     */
+    useAgenticChunking?: boolean;
+    /**
      * Createdat
      */
     createdAt: string;
@@ -3686,7 +3690,13 @@ export type UploadStandaloneDocumentApiV1DocumentsPostData = {
         'x-api-key'?: string | null;
     };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Useagenticchunking
+         * Whether to use AI-powered chunking
+         */
+        useAgenticChunking?: boolean;
+    };
     url: '/api/v1/documents/';
 };
 
@@ -3900,6 +3910,11 @@ export type UploadDocumentApiV1MatricesMatrixIdDocumentsPostData = {
          * Entity set ID to add document to
          */
         entitySetId: number;
+        /**
+         * Useagenticchunking
+         * Whether to use AI-powered chunking
+         */
+        useAgenticChunking?: boolean;
     };
     url: '/api/v1/matrices/{matrixId}/documents/';
 };
