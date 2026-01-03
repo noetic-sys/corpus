@@ -43,7 +43,9 @@ async def scoped_session_factory(scoped_test_engine):
 async def patch_session_factories(scoped_session_factory, monkeypatch):
     """Patch the session factories in scoped.py to use test database."""
     monkeypatch.setattr("common.db.scoped.AsyncSessionLocal", scoped_session_factory)
-    monkeypatch.setattr("common.db.scoped.AsyncSessionLocalReadonly", scoped_session_factory)
+    monkeypatch.setattr(
+        "common.db.scoped.AsyncSessionLocalReadonly", scoped_session_factory
+    )
     yield
 
 
@@ -62,7 +64,9 @@ class TestTransaction:
         # Verify it was committed by reading with a fresh session
         async with scoped_session_factory() as verify_session:
             result = await verify_session.execute(
-                text("SELECT name FROM companies WHERE name = 'Transaction Test Company'")
+                text(
+                    "SELECT name FROM companies WHERE name = 'Transaction Test Company'"
+                )
             )
             row = result.fetchone()
             assert row is not None
@@ -124,7 +128,9 @@ class TestGetSession:
         # Verify it was committed
         async with scoped_session_factory() as verify_session:
             result = await verify_session.execute(
-                text("SELECT name FROM companies WHERE name = 'GetSession Test Company'")
+                text(
+                    "SELECT name FROM companies WHERE name = 'GetSession Test Company'"
+                )
             )
             row = result.fetchone()
             assert row is not None
@@ -143,12 +149,16 @@ class TestGetSession:
         # Verify it was NOT committed
         async with scoped_session_factory() as verify_session:
             result = await verify_session.execute(
-                text("SELECT name FROM companies WHERE name = 'GetSession Rollback Company'")
+                text(
+                    "SELECT name FROM companies WHERE name = 'GetSession Rollback Company'"
+                )
             )
             row = result.fetchone()
             assert row is None
 
-    async def test_get_session_reuses_transaction_session(self, patch_session_factories):
+    async def test_get_session_reuses_transaction_session(
+        self, patch_session_factories
+    ):
         """Test get_session reuses existing transaction session."""
         sessions_seen = []
 
@@ -217,7 +227,9 @@ class TestSessionReuse:
         # All three should be committed together
         async with scoped_session_factory() as verify_session:
             result = await verify_session.execute(
-                text("SELECT COUNT(*) FROM companies WHERE name LIKE 'Multi Op Company%'")
+                text(
+                    "SELECT COUNT(*) FROM companies WHERE name LIKE 'Multi Op Company%'"
+                )
             )
             count = result.scalar()
             assert count == 3
@@ -290,7 +302,9 @@ class TestConcurrentTransactions:
         # Verify only successful ones are in DB
         async with scoped_session_factory() as verify_session:
             result = await verify_session.execute(
-                text("SELECT name FROM companies WHERE name LIKE 'Concurrent Company%' ORDER BY name")
+                text(
+                    "SELECT name FROM companies WHERE name LIKE 'Concurrent Company%' ORDER BY name"
+                )
             )
             rows = result.fetchall()
             names = [r[0] for r in rows]

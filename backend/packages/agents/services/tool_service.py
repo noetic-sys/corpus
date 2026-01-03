@@ -1,5 +1,4 @@
 from typing import Dict, Any, List
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import ValidationError
 
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
@@ -19,8 +18,7 @@ logger = get_logger(__name__)
 class ToolService:
     """Service for executing tools safely."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.registry = registry
 
     @trace_span
@@ -123,6 +121,6 @@ class ToolService:
         return tools
 
 
-def get_tool_service(db_session: AsyncSession) -> ToolService:
+def get_tool_service() -> ToolService:
     """Get tool service instance."""
-    return ToolService(db_session)
+    return ToolService()

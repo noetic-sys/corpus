@@ -6,8 +6,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 from common.db.session import get_db
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.auth.dependencies import get_current_active_user_from_token
-from packages.agents.services.conversation_service import get_conversation_service
-from packages.agents.services.agent_service import get_agent_service
+from packages.agents.services.conversation_service import ConversationService
+from packages.agents.services.agent_service import AgentService
 from packages.agents.models.schemas.conversation import ConversationCreate
 from packages.agents.models.schemas.websocket import (
     ClientMessage,
@@ -109,23 +109,22 @@ async def websocket_chat_endpoint(
         return
 
     try:
-        # Get a fresh connection for initial setup
-        async for db in get_db():
-            conversation_service = get_conversation_service(db)
+        # Services use lazy sessions - no need to manage db connections here
+        conversation_service = ConversationService()
 
-            # Verify conversation exists or create it
-            conversation = await conversation_service.get_conversation(
-                conversation_id, user.company_id
+        # Verify conversation exists or create it
+        conversation = await conversation_service.get_conversation(
+            conversation_id, user.company_id
+        )
+        if not conversation:
+            # For simplicity, create a new conversation if it doesn't exist
+            conversation_data = ConversationCreate(
+                title=f"Chat Session {conversation_id}"
             )
-            if not conversation:
-                # For simplicity, create a new conversation if it doesn't exist
-                conversation_data = ConversationCreate(
-                    title=f"Chat Session {conversation_id}"
-                )
-                conversation = await conversation_service.create_conversation(
-                    conversation_data, user.company_id
-                )
-                logger.info(f"Created new conversation {conversation.id}")
+            conversation = await conversation_service.create_conversation(
+                conversation_data, user.company_id
+            )
+            logger.info(f"Created new conversation {conversation.id}")
 
         # Send initial connection confirmation
         connected_response = ConnectedResponse(
@@ -207,19 +206,18 @@ async def handle_user_message(
             )
             await ws_manager.send_message(conversation_id, agent_msg_response)
 
-        # Get a fresh DB connection for processing this message
-        async for db in get_db():
-            agent_service = get_agent_service(db)
+        # Agent service uses lazy sessions - no need to manage db connections
+        agent_service = AgentService()
 
-            # Process message with streaming callback, passing permission mode
-            generated_messages = await agent_service.process_user_message(
-                conversation.id,
-                user_content,
-                user,
-                permission_mode=message.permission_mode,
-                extra_data=message.extra_data,
-                message_callback=message_stream_callback,
-            )
+        # Process message with streaming callback, passing permission mode
+        generated_messages = await agent_service.process_user_message(
+            conversation.id,
+            user_content,
+            user,
+            permission_mode=message.permission_mode,
+            extra_data=message.extra_data,
+            message_callback=message_stream_callback,
+        )
 
         # Send completion signal
         complete_response = ResponseCompleteResponse()
@@ -240,12 +238,11 @@ async def handle_get_history(
 ):
     """Handle a get history request."""
     try:
-        # Get a fresh DB connection for retrieving history
-        async for db in get_db():
-            conversation_service = get_conversation_service(db)
-            messages = await conversation_service.get_conversation_messages(
-                conversation.id, None, user.company_id
-            )
+        # Conversation service uses lazy sessions
+        conversation_service = ConversationService()
+        messages = await conversation_service.get_conversation_messages(
+            conversation.id, None, user.company_id
+        )
 
         # Convert messages to response format
         message_responses = [

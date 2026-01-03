@@ -1,10 +1,10 @@
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
-from common.db.session import get_db, get_db_readonly
-from packages.agents.services.tool_service import get_tool_service
+from packages.auth.dependencies import get_current_active_user
+from packages.auth.models.domain.authenticated_user import AuthenticatedUser
+from packages.agents.services.tool_service import ToolService
 from packages.agents.tools.base import ToolDefinition
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
@@ -24,20 +24,16 @@ class ToolExecutionResponse(BaseModel):
 
 
 @router.get("/tools/", response_model=List[ToolDefinition])
-async def get_available_tools(
-    db: AsyncSession = Depends(get_db_readonly),
-):
+async def get_available_tools():
     """Get all available tools."""
-    tool_service = get_tool_service(db)
+    tool_service = ToolService()
     return tool_service.get_available_tools()
 
 
 @router.get("/tools/openai-format/")
-async def get_tools_openai_format(
-    db: AsyncSession = Depends(get_db_readonly),
-):
+async def get_tools_openai_format():
     """Get tools in OpenAI function calling format."""
-    tool_service = get_tool_service(db)
+    tool_service = ToolService()
     return tool_service.format_tools_for_openai()
 
 
@@ -45,14 +41,16 @@ async def get_tools_openai_format(
 @trace_span
 async def execute_tool(
     request: ToolExecutionRequest,
-    db: AsyncSession = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_active_user),
 ):
     """Execute a tool with the given parameters (for testing)."""
-    tool_service = get_tool_service(db)
+    tool_service = ToolService()
 
     logger.info(f"Executing tool: {request.tool_name}")
 
-    result = await tool_service.execute_tool(request.tool_name, request.parameters)
+    result = await tool_service.execute_tool(
+        request.tool_name, request.parameters, current_user
+    )
 
     if result.error:
         return ToolExecutionResponse(

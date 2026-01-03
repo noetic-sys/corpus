@@ -1,6 +1,7 @@
 # Shared pytest configuration and fixtures for all test types
 import hashlib
 import pytest_asyncio
+from contextlib import asynccontextmanager
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import select
@@ -72,6 +73,33 @@ from packages.billing.models.domain.subscription import Subscription
 
 # Test database URL
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest_asyncio.fixture(scope="function", autouse=True)
+async def patch_lazy_sessions(test_db: AsyncSession, monkeypatch):
+    """
+    Patch lazy session factories to use the test database.
+
+    This is critical for repositories that use the new lazy session pattern
+    via get_session() instead of dependency-injected sessions.
+    """
+
+    @asynccontextmanager
+    async def mock_get_session(readonly: bool = False):
+        """Mock get_session that returns the test_db session."""
+        yield test_db
+
+    @asynccontextmanager
+    async def mock_transaction(readonly: bool = False):
+        """Mock transaction that returns the test_db session."""
+        yield test_db
+
+    # Patch the lazy session functions where they're imported
+    # Must patch at the usage site, not the definition site, due to Python import semantics
+    monkeypatch.setattr("common.db.scoped.get_session", mock_get_session)
+    monkeypatch.setattr("common.db.scoped.transaction", mock_transaction)
+    # Patch where BaseRepository imports it
+    monkeypatch.setattr("common.repositories.base.get_session", mock_get_session)
 
 
 @pytest_asyncio.fixture(scope="function")

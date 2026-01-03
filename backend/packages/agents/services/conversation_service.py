@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.agents.repositories.conversation_repository import ConversationRepository
@@ -23,10 +22,9 @@ logger = get_logger(__name__)
 class ConversationService:
     """Service for handling conversation operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.conversation_repo = ConversationRepository(db_session)
-        self.message_repo = MessageRepository(db_session)
+    def __init__(self):
+        self.conversation_repo = ConversationRepository()
+        self.message_repo = MessageRepository()
 
     @trace_span
     async def create_conversation(
@@ -162,6 +160,6 @@ class ConversationService:
         )
 
 
-def get_conversation_service(db_session: AsyncSession) -> ConversationService:
+def get_conversation_service() -> ConversationService:
     """Get conversation service instance."""
-    return ConversationService(db_session)
+    return ConversationService()

@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.agents.repositories.message_repository import MessageRepository
 from packages.agents.models.database.message import MessageEntity
@@ -12,9 +11,9 @@ class TestMessageRepository:
     """Test MessageRepository methods."""
 
     @pytest.fixture
-    async def repository(self, test_db: AsyncSession):
+    async def repository(self):
         """Create repository instance."""
-        return MessageRepository(test_db)
+        return MessageRepository()
 
     async def test_create_message_success(
         self, repository, sample_conversation, sample_company
@@ -168,7 +167,7 @@ class TestMessageRepository:
         assert len(results) == 0
 
     async def test_get_messages_for_conversation_different_conversations(
-        self, repository, sample_ai_model, sample_company
+        self, repository, sample_ai_model, sample_company, test_db
     ):
         """Test that messages are filtered by conversation."""
         # Create two conversations
@@ -182,10 +181,10 @@ class TestMessageRepository:
             ai_model_id=sample_ai_model.id,
             company_id=sample_company.id,
         )
-        repository.db_session.add_all([conv1, conv2])
-        await repository.db_session.commit()
-        await repository.db_session.refresh(conv1)
-        await repository.db_session.refresh(conv2)
+        test_db.add_all([conv1, conv2])
+        await test_db.commit()
+        await test_db.refresh(conv1)
+        await test_db.refresh(conv2)
 
         # Create messages in both conversations
         msg1 = MessageEntity(
@@ -210,8 +209,8 @@ class TestMessageRepository:
             sequence_number=2,
         )
 
-        repository.db_session.add_all([msg1, msg2, msg3])
-        await repository.db_session.commit()
+        test_db.add_all([msg1, msg2, msg3])
+        await test_db.commit()
 
         # Get messages for first conversation only
         results = await repository.get_by_conversation_id(conv1.id)
@@ -223,7 +222,7 @@ class TestMessageRepository:
         assert "Message in conv2" not in contents
 
     async def test_get_messages_ordered_by_sequence_number(
-        self, repository, sample_conversation, sample_company
+        self, repository, sample_conversation, sample_company, test_db
     ):
         """Test that messages are ordered by sequence_number."""
         # Create messages with non-sequential order values
@@ -253,9 +252,9 @@ class TestMessageRepository:
 
         for data in messages_data:
             message = MessageEntity(**data)
-            repository.db_session.add(message)
+            test_db.add(message)
 
-        await repository.db_session.commit()
+        await test_db.commit()
 
         # Get messages - should be ordered by sequence_number
         results = await repository.get_by_conversation_id(sample_conversation.id)
@@ -269,7 +268,7 @@ class TestMessageRepository:
         assert results[2].sequence_number == 5
 
     async def test_get_latest_messages_with_limit(
-        self, repository, sample_conversation, sample_company
+        self, repository, sample_conversation, sample_company, test_db
     ):
         """Test getting latest messages with limit."""
         # Create multiple messages
@@ -281,9 +280,9 @@ class TestMessageRepository:
                 content=f"Message {i + 1}",
                 sequence_number=i + 1,
             )
-            repository.db_session.add(message)
+            test_db.add(message)
 
-        await repository.db_session.commit()
+        await test_db.commit()
 
         # Get latest 3 messages
         results = await repository.get_latest_by_conversation_id(
@@ -297,7 +296,7 @@ class TestMessageRepository:
         assert results[2].content == "Message 5"
 
     async def test_get_latest_messages_no_limit(
-        self, repository, sample_conversation, sample_company
+        self, repository, sample_conversation, sample_company, test_db
     ):
         """Test getting all messages when no limit specified."""
         # Create multiple messages
@@ -309,9 +308,9 @@ class TestMessageRepository:
                 content=f"Message {i + 1}",
                 sequence_number=i + 1,
             )
-            repository.db_session.add(message)
+            test_db.add(message)
 
-        await repository.db_session.commit()
+        await test_db.commit()
 
         # Get all messages (no limit)
         results = await repository.get_latest_by_conversation_id(sample_conversation.id)

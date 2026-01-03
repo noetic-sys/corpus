@@ -28,6 +28,7 @@ See also:
     - common/db/context.py: Decorators (@readonly, @transactional)
     - common/db/session.py: Legacy request-scoped sessions (get_db)
 """
+
 import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -76,7 +77,9 @@ async def transaction(readonly: bool = False) -> AsyncGenerator[AsyncSession, No
         Exception: Re-raises any exception after rollback
     """
     effective_readonly = readonly or is_readonly_forced()
-    session_factory = AsyncSessionLocalReadonly if effective_readonly else AsyncSessionLocal
+    session_factory = (
+        AsyncSessionLocalReadonly if effective_readonly else AsyncSessionLocal
+    )
 
     start = time.perf_counter()
     async with session_factory() as session:
@@ -142,7 +145,9 @@ async def get_session(readonly: bool = False) -> AsyncGenerator[AsyncSession, No
         yield existing
     else:
         # Standalone operation - acquire, commit, release
-        session_factory = AsyncSessionLocalReadonly if effective_readonly else AsyncSessionLocal
+        session_factory = (
+            AsyncSessionLocalReadonly if effective_readonly else AsyncSessionLocal
+        )
 
         start = time.perf_counter()
         async with session_factory() as session:

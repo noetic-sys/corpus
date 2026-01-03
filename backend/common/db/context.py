@@ -22,10 +22,10 @@ Usage:
     async def read_heavy_operation():
         ...  # All DB ops use read session
 """
+
 from contextvars import ContextVar
-from contextlib import asynccontextmanager
 from functools import wraps
-from typing import Optional, Callable, TypeVar, ParamSpec, AsyncGenerator
+from typing import Optional, Callable, TypeVar, ParamSpec
 from enum import Enum
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +37,7 @@ logger = get_logger(__name__)
 
 class SessionMode(Enum):
     """Session mode for the current context."""
+
     WRITE = "write"
     READ = "read"
 
@@ -47,23 +48,22 @@ class SessionMode(Enum):
 
 # Holds the current write session (if inside a write transaction)
 _write_session: ContextVar[Optional[AsyncSession]] = ContextVar(
-    'db_write_session', default=None
+    "db_write_session", default=None
 )
 
 # Holds the current read session (if inside a read transaction)
 _read_session: ContextVar[Optional[AsyncSession]] = ContextVar(
-    'db_read_session', default=None
+    "db_read_session", default=None
 )
 
 # Forces all operations in this context to use readonly
-_force_readonly: ContextVar[bool] = ContextVar(
-    'db_force_readonly', default=False
-)
+_force_readonly: ContextVar[bool] = ContextVar("db_force_readonly", default=False)
 
 
 # =============================================================================
 # Context Accessors
 # =============================================================================
+
 
 def is_readonly_forced() -> bool:
     """Check if current context is forced to readonly."""
@@ -134,8 +134,8 @@ def in_transaction(readonly: bool = False) -> bool:
 # Decorators
 # =============================================================================
 
-P = ParamSpec('P')
-T = TypeVar('T')
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 def readonly(func: Callable[P, T]) -> Callable[P, T]:
@@ -153,6 +153,7 @@ def readonly(func: Callable[P, T]) -> Callable[P, T]:
             stats = await stats_repo.get_summary(company_id)
             return {"users": users, "stats": stats}
     """
+
     @wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         token = _force_readonly.set(True)
@@ -160,6 +161,7 @@ def readonly(func: Callable[P, T]) -> Callable[P, T]:
             return await func(*args, **kwargs)
         finally:
             _force_readonly.reset(token)
+
     return wrapper
 
 
@@ -186,12 +188,15 @@ def transactional(readonly: bool = False):
             data = await report_repo.get_all_data(company_id)
             return process_report(data)
     """
+
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
         @wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            # Import here to avoid circular imports
-            from common.db.scoped import transaction as tx
+            from common.db.scoped import transaction as tx  # noqa: PLC0415
+
             async with tx(readonly=readonly):
                 return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
