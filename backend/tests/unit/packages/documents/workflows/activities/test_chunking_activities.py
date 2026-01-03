@@ -24,17 +24,19 @@ from packages.billing.models.database.subscription import SubscriptionEntity
 class TestGetChunkingStrategyActivity:
     """Unit tests for get_chunking_strategy_activity.
 
-    The activity now atomically checks quota and reserves credit in one operation.
+    The activity checks document.use_agentic_chunking preference:
+    - If False: returns sentence chunking (default, no quota check)
+    - If True: checks quota, returns agentic if available, raises exception if exceeded
     """
 
     @pytest.mark.asyncio
-    async def test_returns_agentic_when_quota_available(
+    async def test_returns_sentence_when_use_agentic_false(
         self,
         mock_get_db,
         test_db,
         sample_company,
     ):
-        """Test returns AGENTIC strategy and reserves credit when quota available."""
+        """Test returns SENTENCE strategy when document.use_agentic_chunking=False."""
 
         def fresh_db_generator():
             async def gen():
@@ -44,24 +46,58 @@ class TestGetChunkingStrategyActivity:
 
         mock_get_db.side_effect = fresh_db_generator
 
-        # Create FREE subscription
-        subscription = SubscriptionEntity(
-            company_id=sample_company.id,
-            tier=SubscriptionTier.FREE.value,
-            status=SubscriptionStatus.ACTIVE.value,
-            payment_provider=PaymentProvider.STRIPE.value,
-            current_period_start=datetime.now(timezone.utc),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=30),
-        )
-        test_db.add(subscription)
-        await test_db.commit()
+        document_id = 123
+
+        # Mock document service to return document with use_agentic_chunking=False
+        with patch(
+            "packages.documents.workflows.activities.chunking_activities.get_document_service"
+        ) as mock_get_doc_service:
+            mock_doc_service = MagicMock()
+            mock_document = MagicMock()
+            mock_document.use_agentic_chunking = False
+            mock_doc_service.get_document = AsyncMock(return_value=mock_document)
+            mock_get_doc_service.return_value = mock_doc_service
+
+            result = await get_chunking_strategy_activity(
+                sample_company.id, document_id
+            )
+
+        assert result["strategy"] == ChunkingStrategy.SENTENCE.value
+        assert result["tier"] is None
+        assert result["usage_event_id"] is None
+        assert result["quota_exceeded"] is False
+
+    @pytest.mark.asyncio
+    async def test_returns_agentic_when_opted_in_and_quota_available(
+        self,
+        mock_get_db,
+        test_db,
+        sample_company,
+    ):
+        """Test returns AGENTIC strategy when opted in and quota available."""
+
+        def fresh_db_generator():
+            async def gen():
+                yield test_db
+
+            return gen()
+
+        mock_get_db.side_effect = fresh_db_generator
 
         document_id = 123
 
-        # Mock QuotaService to return successful reservation
+        # Mock document service to return document with use_agentic_chunking=True
         with patch(
+            "packages.documents.workflows.activities.chunking_activities.get_document_service"
+        ) as mock_get_doc_service, patch(
             "packages.documents.workflows.activities.chunking_activities.QuotaService"
         ) as mock_quota_class:
+            mock_doc_service = MagicMock()
+            mock_document = MagicMock()
+            mock_document.use_agentic_chunking = True
+            mock_doc_service.get_document = AsyncMock(return_value=mock_document)
+            mock_get_doc_service.return_value = mock_doc_service
+
             mock_quota = MagicMock()
             mock_quota.reserve_agentic_chunking_if_available = AsyncMock(
                 return_value=QuotaReservationResult(
@@ -84,13 +120,13 @@ class TestGetChunkingStrategyActivity:
         assert result["quota_exceeded"] is False
 
     @pytest.mark.asyncio
-    async def test_falls_back_to_sentence_when_quota_exceeded(
+    async def test_raises_exception_when_opted_in_but_quota_exceeded(
         self,
         mock_get_db,
         test_db,
         sample_company,
     ):
-        """Test falls back to SENTENCE when quota exceeded."""
+        """Test raises exception when opted in but quota exceeded."""
 
         def fresh_db_generator():
             async def gen():
@@ -100,24 +136,20 @@ class TestGetChunkingStrategyActivity:
 
         mock_get_db.side_effect = fresh_db_generator
 
-        # Create FREE subscription
-        subscription = SubscriptionEntity(
-            company_id=sample_company.id,
-            tier=SubscriptionTier.FREE.value,
-            status=SubscriptionStatus.ACTIVE.value,
-            payment_provider=PaymentProvider.STRIPE.value,
-            current_period_start=datetime.now(timezone.utc),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=30),
-        )
-        test_db.add(subscription)
-        await test_db.commit()
-
         document_id = 123
 
-        # Mock QuotaService to return quota exceeded (no reservation)
+        # Mock document service to return document with use_agentic_chunking=True
         with patch(
+            "packages.documents.workflows.activities.chunking_activities.get_document_service"
+        ) as mock_get_doc_service, patch(
             "packages.documents.workflows.activities.chunking_activities.QuotaService"
         ) as mock_quota_class:
+            mock_doc_service = MagicMock()
+            mock_document = MagicMock()
+            mock_document.use_agentic_chunking = True
+            mock_doc_service.get_document = AsyncMock(return_value=mock_document)
+            mock_get_doc_service.return_value = mock_doc_service
+
             mock_quota = MagicMock()
             mock_quota.reserve_agentic_chunking_if_available = AsyncMock(
                 return_value=QuotaReservationResult(
@@ -130,23 +162,19 @@ class TestGetChunkingStrategyActivity:
             )
             mock_quota_class.return_value = mock_quota
 
-            result = await get_chunking_strategy_activity(
-                sample_company.id, document_id
-            )
+            with pytest.raises(Exception) as exc_info:
+                await get_chunking_strategy_activity(sample_company.id, document_id)
 
-        assert result["strategy"] == ChunkingStrategy.SENTENCE.value
-        assert result["tier"] == SubscriptionTier.FREE.value
-        assert result["usage_event_id"] is None
-        assert result["quota_exceeded"] is True
+            assert "quota exceeded" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_no_subscription_returns_sentence(
+    async def test_raises_exception_when_document_not_found(
         self,
         mock_get_db,
         test_db,
         sample_company,
     ):
-        """Test company without subscription gets SENTENCE strategy."""
+        """Test raises exception when document not found."""
 
         def fresh_db_generator():
             async def gen():
@@ -156,32 +184,20 @@ class TestGetChunkingStrategyActivity:
 
         mock_get_db.side_effect = fresh_db_generator
 
-        document_id = 123
+        document_id = 999
 
-        # Don't create any subscription - QuotaService returns not reserved
+        # Mock document service to return None
         with patch(
-            "packages.documents.workflows.activities.chunking_activities.QuotaService"
-        ) as mock_quota_class:
-            mock_quota = MagicMock()
-            mock_quota.reserve_agentic_chunking_if_available = AsyncMock(
-                return_value=QuotaReservationResult(
-                    reserved=False,
-                    usage_event_id=None,
-                    current_usage=0,
-                    limit=0,
-                    tier=SubscriptionTier.FREE,
-                )
-            )
-            mock_quota_class.return_value = mock_quota
+            "packages.documents.workflows.activities.chunking_activities.get_document_service"
+        ) as mock_get_doc_service:
+            mock_doc_service = MagicMock()
+            mock_doc_service.get_document = AsyncMock(return_value=None)
+            mock_get_doc_service.return_value = mock_doc_service
 
-            result = await get_chunking_strategy_activity(
-                sample_company.id, document_id
-            )
+            with pytest.raises(Exception) as exc_info:
+                await get_chunking_strategy_activity(sample_company.id, document_id)
 
-        assert result["strategy"] == ChunkingStrategy.SENTENCE.value
-        assert result["tier"] == SubscriptionTier.FREE.value
-        assert result["usage_event_id"] is None
-        assert result["quota_exceeded"] is True
+            assert "not found" in str(exc_info.value).lower()
 
 
 @patch("packages.documents.workflows.activities.chunking_activities.get_db")

@@ -1,11 +1,13 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FileText, Upload } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { FileText, Upload, Sparkles } from "lucide-react"
 import { uploadDocumentApiV1MatricesMatrixIdDocumentsPost } from '@/client'
 import { apiClient } from '@/lib/api'
+import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, AGENTIC_CHUNKING_SIZE_THRESHOLD } from '@/lib/file-constants'
 import type { DocumentResponse } from '@/client'
 import { toast } from "sonner"
 
@@ -15,13 +17,18 @@ interface DocumentUploadProps {
   onDocumentUploaded: (document: DocumentResponse) => void
 }
 
-const ACCEPTED_FILE_TYPES = ['.pdf', '.doc', '.docx', '.txt', '.md', '.xlsx', '.xls', '.pptx', '.ppt', '.csv', '.mp3', '.wav', '.flac', '.ogg', '.webm', '.m4a', '.aac']
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
 export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: DocumentUploadProps) {
   const { getToken } = useAuth()
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [useAgenticChunking, setUseAgenticChunking] = useState(false)
+
+  // Auto-set agentic chunking based on file size
+  useEffect(() => {
+    if (file) {
+      setUseAgenticChunking(file.size >= AGENTIC_CHUNKING_SIZE_THRESHOLD)
+    }
+  }, [file])
 
   const validateFile = useCallback((file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
@@ -61,7 +68,7 @@ export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: Do
 
       const response = await uploadDocumentApiV1MatricesMatrixIdDocumentsPost({
         path: { matrixId },
-        query: { entitySetId },
+        query: { entitySetId, useAgenticChunking },
         body: { file },
         headers: {
           authorization: `Bearer ${token}`
@@ -116,7 +123,26 @@ export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: Do
           </div>
         </div>
       )}
-      
+
+      <div className="flex items-center justify-between p-3 rounded border bg-secondary/10">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <div>
+            <Label htmlFor="agentic-chunking" className="text-sm font-medium">
+              AI-powered chunking
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Uses your quota for better document processing
+            </p>
+          </div>
+        </div>
+        <Switch
+          id="agentic-chunking"
+          checked={useAgenticChunking}
+          onCheckedChange={setUseAgenticChunking}
+          disabled={isUploading}
+        />
+      </div>
 
       <Button
         style="blocky"
