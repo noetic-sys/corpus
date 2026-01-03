@@ -79,7 +79,7 @@ class MatrixService:
         self.cell_entity_ref_repo = CellEntityReferenceRepository(db_session)
         self.member_repo = EntitySetMemberRepository(db_session)
         self.answer_set_service = AnswerSetService(db_session)
-        self.answer_service = AnswerService(db_session)
+        self.answer_service = AnswerService()
         self.citation_service = CitationService(db_session)
 
     @trace_span

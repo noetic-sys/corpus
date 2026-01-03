@@ -23,7 +23,7 @@ class DocumentHighlightingService:
         self.db_session = db_session
         self.citation_service = CitationService(db_session)
         self.document_service = DocumentService(db_session)
-        self.answer_service = AnswerService(db_session)
+        self.answer_service = AnswerService()
         self.answer_set_service = AnswerSetService(db_session)
         self.matrix_service = MatrixService(db_session)
 
