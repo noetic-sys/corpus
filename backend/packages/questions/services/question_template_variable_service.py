@@ -29,7 +29,7 @@ class QuestionTemplateVariableService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.question_template_var_repo = QuestionTemplateVariableRepository(db_session)
+        self.question_template_var_repo = QuestionTemplateVariableRepository()
         self.question_repo = QuestionRepository(db_session)
         self.template_var_repo = MatrixTemplateVariableRepository(db_session)
         self.template_processing_service = TemplateProcessingService(db_session)

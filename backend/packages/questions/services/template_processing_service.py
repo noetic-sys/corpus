@@ -35,7 +35,7 @@ class TemplateProcessingService:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
         self.template_var_repo = MatrixTemplateVariableRepository(db_session)
-        self.question_template_var_repo = QuestionTemplateVariableRepository(db_session)
+        self.question_template_var_repo = QuestionTemplateVariableRepository()
 
     @trace_span
     def extract_template_variable_ids(self, text: str) -> Set[int]:
