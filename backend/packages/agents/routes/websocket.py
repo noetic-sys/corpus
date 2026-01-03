@@ -3,7 +3,6 @@ from typing import Dict, Union, Optional
 from pydantic import ValidationError
 from fastapi import WebSocket, WebSocketDisconnect
 
-from common.db.session import get_db
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.auth.dependencies import get_current_active_user_from_token
 from packages.agents.services.conversation_service import ConversationService
@@ -96,9 +95,7 @@ async def websocket_chat_endpoint(
     user: Optional[AuthenticatedUser] = None
     if token:
         try:
-            async for db in get_db():
-                user = await get_current_active_user_from_token(token, db)
-                break
+            user = await get_current_active_user_from_token(token)
         except Exception as e:
             logger.error(f"Authentication failed for websocket: {e}")
             await ws_manager.send_error(conversation_id, "Authentication failed")

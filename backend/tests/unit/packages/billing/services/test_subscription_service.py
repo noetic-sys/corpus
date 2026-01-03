@@ -53,7 +53,7 @@ def mock_payment_provider():
 
 
 @pytest.fixture
-def subscription_service(test_db, mock_metering_provider, mock_payment_provider):
+def subscription_service(mock_metering_provider, mock_payment_provider):
     """Create SubscriptionService with mocked providers."""
     with patch(
         "packages.billing.services.subscription_service.get_metering_provider",
@@ -62,7 +62,7 @@ def subscription_service(test_db, mock_metering_provider, mock_payment_provider)
         "packages.billing.services.subscription_service.get_payment_provider",
         return_value=mock_payment_provider,
     ):
-        return SubscriptionService(test_db)
+        return SubscriptionService()
 
 
 @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")
@@ -253,7 +253,7 @@ class TestSubscriptionService:
         await test_db.refresh(company_no_stripe)
 
         # Create subscription for this company
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
         await repo.create(
             SubscriptionCreateModel(
                 company_id=company_no_stripe.id,

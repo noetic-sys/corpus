@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.companies.services.company_service import CompanyService
@@ -14,9 +13,9 @@ class TestCompanyService:
     """Test CompanyService methods."""
 
     @pytest.fixture
-    async def service(self, test_db: AsyncSession):
+    async def service(self):
         """Create service instance."""
-        return CompanyService(test_db)
+        return CompanyService()
 
     async def test_create_company_success(self, service):
         """Test successful company creation."""
@@ -166,10 +165,9 @@ class TestCompanyService:
         success = await service.delete_company(999)
         assert success is False
 
-    async def test_service_initialization(self, test_db):
+    async def test_service_initialization(self):
         """Test service properly initializes."""
-        service = CompanyService(test_db)
-        assert service.db_session == test_db
+        service = CompanyService()
         assert service.company_repo is not None
 
     async def test_create_company_minimal_data(self, service):

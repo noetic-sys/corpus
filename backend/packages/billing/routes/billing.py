@@ -13,6 +13,8 @@ from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.billing.models.domain.enums import SubscriptionTier
 from packages.billing.services.subscription_service import SubscriptionService
 from packages.billing.services.quota_service import QuotaService
+
+# Note: QuotaService still uses db_session (not yet migrated to lazy sessions)
 from packages.billing.models.schemas.billing import (
     CheckoutSessionRequest,
     CheckoutSessionResponse,
@@ -37,7 +39,6 @@ router = APIRouter()
 @router.get("/status", response_model=SubscriptionStatusResponse)
 async def get_subscription_status(
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Get current subscription status for the company.
@@ -45,7 +46,7 @@ async def get_subscription_status(
     Returns subscription tier, status, and access information.
     If no subscription exists, creates a FREE tier subscription.
     """
-    subscription_service = SubscriptionService(db_session)
+    subscription_service = SubscriptionService()
 
     subscription = await subscription_service.get_by_company_id(current_user.company_id)
 
@@ -85,8 +86,8 @@ async def get_usage_stats(
     Returns current usage counts, limits, and percentages for all 4 quota types.
     If no subscription exists, creates a FREE tier subscription.
     """
-    subscription_service = SubscriptionService(db_session)
-    quota_service = QuotaService(db_session)
+    subscription_service = SubscriptionService()
+    quota_service = QuotaService(db_session)  # QuotaService not yet migrated
 
     # Ensure subscription exists (lazy backfill for existing companies)
     subscription = await subscription_service.get_by_company_id(current_user.company_id)
@@ -191,7 +192,6 @@ async def check_cell_operation_quota(
 async def create_checkout_session(
     request: CheckoutSessionRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Create a Stripe checkout session or update existing subscription.
@@ -199,7 +199,7 @@ async def create_checkout_session(
     - No subscription / FREE tier → Checkout session for new subscription
     - Paid tier → Update existing subscription (no new checkout)
     """
-    subscription_service = SubscriptionService(db_session)
+    subscription_service = SubscriptionService()
 
     # Check if subscription already exists
     existing = await subscription_service.get_by_company_id(current_user.company_id)
@@ -271,14 +271,13 @@ async def create_checkout_session(
 async def create_portal_session(
     request: PortalSessionRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Create a Stripe customer portal session.
 
     Allows customers to manage payment methods, view invoices, cancel subscription.
     """
-    subscription_service = SubscriptionService(db_session)
+    subscription_service = SubscriptionService()
 
     portal_url = await subscription_service.create_portal_session(
         company_id=current_user.company_id,
@@ -297,7 +296,6 @@ async def create_portal_session(
 async def upgrade_tier(
     request: UpgradeTierRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Upgrade subscription tier.
@@ -310,7 +308,7 @@ async def upgrade_tier(
             detail="Only company admins can upgrade subscription tier",
         )
 
-    subscription_service = SubscriptionService(db_session)
+    subscription_service = SubscriptionService()
 
     subscription = await subscription_service.get_by_company_id(current_user.company_id)
 
@@ -342,7 +340,6 @@ async def upgrade_tier(
 @router.post("/cancel", response_model=CancelSubscriptionResponse)
 async def cancel_subscription(
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Cancel subscription.
@@ -356,7 +353,7 @@ async def cancel_subscription(
             detail="Only company admins can cancel subscription",
         )
 
-    subscription_service = SubscriptionService(db_session)
+    subscription_service = SubscriptionService()
 
     cancelled = await subscription_service.cancel_subscription(current_user.company_id)
 

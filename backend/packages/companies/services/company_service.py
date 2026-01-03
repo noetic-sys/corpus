@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.companies.repositories.company_repository import CompanyRepository
@@ -16,9 +15,8 @@ logger = get_logger(__name__)
 class CompanyService:
     """Service for handling company operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.company_repo = CompanyRepository(db_session)
+    def __init__(self):
+        self.company_repo = CompanyRepository()
 
     @trace_span
     async def create_company(self, company_data: CompanyCreateModel) -> Company:

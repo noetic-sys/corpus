@@ -13,9 +13,9 @@ class TestServiceAccountService:
     """Test ServiceAccountService methods."""
 
     @pytest.fixture
-    async def service(self, test_db: AsyncSession):
+    async def service(self):
         """Create service instance."""
-        return ServiceAccountService(test_db)
+        return ServiceAccountService()
 
     @pytest.fixture
     async def sample_service_account(self, test_db: AsyncSession, sample_company):

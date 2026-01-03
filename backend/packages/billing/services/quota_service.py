@@ -27,7 +27,7 @@ class QuotaService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.subscription_repo = SubscriptionRepository(db_session)
+        self.subscription_repo = SubscriptionRepository()
         self.usage_repo = UsageEventRepository(db_session)
 
     async def _get_subscription_or_raise(self, company_id: int):

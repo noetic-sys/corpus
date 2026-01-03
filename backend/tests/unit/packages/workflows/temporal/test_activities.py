@@ -14,7 +14,6 @@ from packages.workflows.temporal.activities import (
 )
 
 
-@patch("common.execution.workflow_framework.service_accounts.get_db")
 class TestLaunchWorkflowAgentActivity:
     """Tests for launch_workflow_agent_activity."""
 
@@ -25,21 +24,12 @@ class TestLaunchWorkflowAgentActivity:
         self,
         mock_activity,
         mock_get_executor,
-        mock_get_db,
         test_db,
         sample_company,
         test_user,
     ):
         """Test launching workflow agent with real service account creation."""
-
-        # Mock get_db to yield test database session (fresh for each call)
-        def make_mock_db_generator():
-            async def mock_db_generator():
-                yield test_db
-
-            return mock_db_generator()
-
-        mock_get_db.side_effect = make_mock_db_generator
+        # ServiceAccountService now uses lazy sessions via patch_lazy_sessions fixture
 
         # Mock activity logger
         mock_activity.logger = MagicMock()
@@ -203,7 +193,6 @@ class TestExtractWorkflowResultsActivity:
         )
 
 
-@patch("common.execution.workflow_framework.service_accounts.get_db")
 class TestCleanupWorkflowAgentActivity:
     """Tests for cleanup_workflow_agent_activity."""
 
@@ -211,24 +200,15 @@ class TestCleanupWorkflowAgentActivity:
     @patch("packages.workflows.temporal.activities._get_executor")
     @patch("packages.workflows.temporal.activities.activity")
     async def test_cleanup_success(
-        self, mock_activity, mock_get_executor, mock_get_db, test_db, sample_company
+        self, mock_activity, mock_get_executor, test_db, sample_company
     ):
         """Test successful cleanup with real service account deletion."""
-
-        # Mock get_db to yield test database session (fresh for each call)
-        def make_mock_db_generator():
-            async def mock_db_generator():
-                yield test_db
-
-            return mock_db_generator()
-
-        mock_get_db.side_effect = make_mock_db_generator
+        # ServiceAccountService now uses lazy sessions via patch_lazy_sessions fixture
 
         # Mock activity logger
         mock_activity.logger = MagicMock()
 
         # First create a real service account
-
         service_account_id, _ = await create_execution_service_account(
             execution_id=456, company_id=sample_company.id
         )
@@ -256,24 +236,15 @@ class TestCleanupWorkflowAgentActivity:
     @patch("packages.workflows.temporal.activities._get_executor")
     @patch("packages.workflows.temporal.activities.activity")
     async def test_cleanup_container_failure_continues(
-        self, mock_activity, mock_get_executor, mock_get_db, test_db, sample_company
+        self, mock_activity, mock_get_executor, test_db, sample_company
     ):
         """Test cleanup continues even if container cleanup fails."""
-
-        # Mock get_db to yield test database session (fresh for each call)
-        def make_mock_db_generator():
-            async def mock_db_generator():
-                yield test_db
-
-            return mock_db_generator()
-
-        mock_get_db.side_effect = make_mock_db_generator
+        # ServiceAccountService now uses lazy sessions via patch_lazy_sessions fixture
 
         # Mock activity logger
         mock_activity.logger = MagicMock()
 
         # Create real service account
-
         service_account_id, _ = await create_execution_service_account(
             execution_id=789, company_id=sample_company.id
         )

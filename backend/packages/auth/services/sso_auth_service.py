@@ -1,4 +1,3 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
 from packages.auth.providers.models import SSOProvider
@@ -24,11 +23,10 @@ logger = get_logger(__name__)
 class SSOAuthService:
     """Unified service for handling SSO authentication with any provider"""
 
-    def __init__(self, db_session: AsyncSession, provider: SSOProvider):
-        self.db_session = db_session
-        self.user_service = UserService(db_session)
-        self.company_service = CompanyService(db_session)
-        self.subscription_service = SubscriptionService(db_session)
+    def __init__(self, provider: SSOProvider):
+        self.user_service = UserService()
+        self.company_service = CompanyService()
+        self.subscription_service = SubscriptionService()
         self.bloom_filter = get_bloom_filter_provider()
 
         # Get singleton provider instance from factory

@@ -25,7 +25,7 @@ class TestSubscriptionRepository:
 
     async def test_create_subscription(self, test_db, sample_company):
         """Test creating a subscription."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         subscription_data = SubscriptionCreateModel(
             company_id=sample_company.id,
@@ -44,7 +44,7 @@ class TestSubscriptionRepository:
 
     async def test_get_by_id(self, test_db, sample_subscription):
         """Test getting subscription by ID."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         subscription = await repo.get(sample_subscription.id)
 
@@ -54,7 +54,7 @@ class TestSubscriptionRepository:
 
     async def test_get_by_company_id(self, test_db, sample_subscription):
         """Test getting subscription by company ID."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         subscription = await repo.get_by_company_id(sample_subscription.company_id)
 
@@ -64,7 +64,7 @@ class TestSubscriptionRepository:
 
     async def test_get_by_company_id_not_found(self, test_db):
         """Test getting subscription for non-existent company."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         subscription = await repo.get_by_company_id(999999)
 
@@ -72,7 +72,7 @@ class TestSubscriptionRepository:
 
     async def test_update_subscription(self, test_db, sample_subscription):
         """Test updating subscription."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         update_data = SubscriptionUpdateModel(
             status=SubscriptionStatus.SUSPENDED,
@@ -86,7 +86,7 @@ class TestSubscriptionRepository:
 
     async def test_update_tier(self, test_db, sample_subscription):
         """Test upgrading subscription tier."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         update_data = SubscriptionUpdateModel(tier=SubscriptionTier.PROFESSIONAL)
 
@@ -99,7 +99,7 @@ class TestSubscriptionRepository:
         self, test_db, sample_subscription, second_company
     ):
         """Test listing all subscriptions."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         # Create second subscription
         subscription_data = SubscriptionCreateModel(
@@ -121,7 +121,7 @@ class TestSubscriptionRepository:
 
     async def test_delete_subscription(self, test_db, sample_subscription):
         """Test deleting subscription."""
-        repo = SubscriptionRepository(test_db)
+        repo = SubscriptionRepository()
 
         deleted = await repo.delete(sample_subscription.id)
 

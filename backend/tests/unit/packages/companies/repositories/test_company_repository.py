@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.companies.repositories.company_repository import CompanyRepository
 from packages.companies.models.database.company import CompanyEntity
@@ -9,9 +8,9 @@ class TestCompanyRepository:
     """Test CompanyRepository methods."""
 
     @pytest.fixture
-    async def repository(self, test_db: AsyncSession):
+    async def repository(self):
         """Create repository instance."""
-        return CompanyRepository(test_db)
+        return CompanyRepository()
 
     async def test_get_by_domain_exists(self, repository, second_company):
         """Test getting existing company by domain."""
@@ -80,10 +79,10 @@ class TestCompanyRepository:
         assert result.name == sample_company.name
         assert result.deleted == sample_company.deleted
 
-    async def test_repository_initialization(self, test_db):
+    async def test_repository_initialization(self):
         """Test repository properly initializes."""
-        repository = CompanyRepository(test_db)
-        assert repository.db_session == test_db
+        repository = CompanyRepository()
+        assert repository.entity_class is not None
 
     async def test_multiple_companies_different_domains(self, repository, test_db):
         """Test getting companies with different domains."""

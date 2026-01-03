@@ -4,7 +4,6 @@ Service for managing subscriptions.
 
 from typing import Optional
 from datetime import datetime, timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
@@ -33,10 +32,9 @@ logger = get_logger(__name__)
 class SubscriptionService:
     """Service for subscription management."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.subscription_repo = SubscriptionRepository(db_session)
-        self.company_service = CompanyService(db_session)
+    def __init__(self):
+        self.subscription_repo = SubscriptionRepository()
+        self.company_service = CompanyService()
         self.metering = get_metering_provider()
         self.payment = get_payment_provider()
 
