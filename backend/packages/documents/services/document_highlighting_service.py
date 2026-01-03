@@ -24,7 +24,7 @@ class DocumentHighlightingService:
         self.citation_service = CitationService(db_session)
         self.document_service = DocumentService(db_session)
         self.answer_service = AnswerService()
-        self.answer_set_service = AnswerSetService(db_session)
+        self.answer_set_service = AnswerSetService()
         self.matrix_service = MatrixService(db_session)
 
     @trace_span

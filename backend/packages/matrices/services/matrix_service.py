@@ -78,7 +78,7 @@ class MatrixService:
         self.matrix_cell_repo = MatrixCellRepository(db_session)
         self.cell_entity_ref_repo = CellEntityReferenceRepository(db_session)
         self.member_repo = EntitySetMemberRepository(db_session)
-        self.answer_set_service = AnswerSetService(db_session)
+        self.answer_set_service = AnswerSetService()
         self.answer_service = AnswerService()
         self.citation_service = CitationService(db_session)
 

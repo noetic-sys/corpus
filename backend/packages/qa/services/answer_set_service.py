@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.qa.repositories.answer_set_repository import AnswerSetRepository
 from packages.qa.models.domain.answer_set import AnswerSetModel, AnswerSetCreateModel
@@ -10,9 +9,8 @@ logger = get_logger(__name__)
 class AnswerSetService:
     """Service for handling answer set operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.answer_set_repo = AnswerSetRepository(db_session)
+    def __init__(self):
+        self.answer_set_repo = AnswerSetRepository()
 
     @trace_span
     async def create_answer_set(

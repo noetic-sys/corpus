@@ -19,7 +19,9 @@ class AnswerRepository(BaseRepository[AnswerEntity, AnswerModel]):
     ) -> List[AnswerModel]:
         """Get all answers for an answer set."""
         async with self._get_session() as session:
-            query = select(AnswerEntity).where(AnswerEntity.answer_set_id == answer_set_id)
+            query = select(AnswerEntity).where(
+                AnswerEntity.answer_set_id == answer_set_id
+            )
             if company_id is not None:
                 query = self._add_company_filter(query, company_id)
             result = await session.execute(query)
