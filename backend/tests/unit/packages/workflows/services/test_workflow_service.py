@@ -13,7 +13,7 @@ class TestWorkflowService:
     @pytest.fixture
     async def service(self, test_db: AsyncSession):
         """Create service instance."""
-        return WorkflowService(test_db)
+        return WorkflowService()
 
     async def test_create_workflow(self, service, sample_workspace, sample_company):
         """Test creating a workflow."""

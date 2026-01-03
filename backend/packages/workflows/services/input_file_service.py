@@ -25,7 +25,7 @@ class InputFileService:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
         self.input_file_repo = InputFileRepository(db_session)
-        self.workflow_repo = WorkflowRepository(db_session)
+        self.workflow_repo = WorkflowRepository()
         self.storage_service = WorkflowStorageService()
 
     @trace_span

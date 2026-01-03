@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.workflows.repositories.workflow_repository import WorkflowRepository
@@ -8,7 +7,6 @@ from packages.workflows.models.domain.workflow import (
     WorkflowCreateModel,
     WorkflowUpdateModel,
 )
-from common.db.transaction_utils import transactional
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
 logger = get_logger(__name__)
@@ -17,9 +15,8 @@ logger = get_logger(__name__)
 class WorkflowService:
     """Service for managing workflows."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.workflow_repo = WorkflowRepository(db_session)
+    def __init__(self):
+        self.workflow_repo = WorkflowRepository()
 
     def _validate_workflow_create(self, workflow_data: WorkflowCreateModel):
         """Validate workflow creation data."""
@@ -37,7 +34,6 @@ class WorkflowService:
             )
 
     @trace_span
-    @transactional
     async def create_workflow(
         self, workflow_data: WorkflowCreateModel
     ) -> WorkflowModel:
@@ -61,7 +57,6 @@ class WorkflowService:
         return await self.workflow_repo.get(workflow_id, company_id)
 
     @trace_span
-    @transactional
     async def update_workflow(
         self, workflow_id: int, workflow_data: WorkflowUpdateModel, company_id: int
     ) -> WorkflowModel:
@@ -80,7 +75,6 @@ class WorkflowService:
         return updated_workflow
 
     @trace_span
-    @transactional
     async def delete_workflow(self, workflow_id: int, company_id: int) -> bool:
         """Delete a workflow (soft delete)."""
         logger.info(f"Deleting workflow {workflow_id}")
@@ -120,6 +114,6 @@ class WorkflowService:
         )
 
 
-def get_workflow_service(db_session: AsyncSession) -> WorkflowService:
+def get_workflow_service() -> WorkflowService:
     """Get workflow service instance."""
-    return WorkflowService(db_session)
+    return WorkflowService()

@@ -14,7 +14,7 @@ class TestWorkflowRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return WorkflowRepository(test_db)
+        return WorkflowRepository()
 
     async def test_get_workflow_by_id(self, repository, sample_workflow):
         """Test getting a workflow by ID."""
@@ -41,7 +41,7 @@ class TestWorkflowRepository:
         assert result.id == sample_workflow.id
 
     async def test_list_by_company(
-        self, repository, sample_workflow, sample_company, second_company
+        self, repository, sample_workflow, sample_company, second_company, test_db
     ):
         """Test listing workflows by company."""
         # Create workflow for second company
@@ -52,8 +52,8 @@ class TestWorkflowRepository:
             trigger_type="manual",
             output_type="pdf",
         )
-        repository.db_session.add(workflow2)
-        await repository.db_session.commit()
+        test_db.add(workflow2)
+        await test_db.commit()
 
         # List workflows for first company
         results = await repository.list_by_company(sample_company.id)
@@ -63,7 +63,7 @@ class TestWorkflowRepository:
         assert results[0].company_id == sample_company.id
 
     async def test_list_by_company_excludes_deleted(
-        self, repository, sample_workflow, sample_company
+        self, repository, sample_workflow, sample_company, test_db
     ):
         """Test listing workflows excludes soft deleted ones."""
         # Create deleted workflow
@@ -75,8 +75,8 @@ class TestWorkflowRepository:
             output_type="excel",
             deleted=True,
         )
-        repository.db_session.add(deleted_workflow)
-        await repository.db_session.commit()
+        test_db.add(deleted_workflow)
+        await test_db.commit()
 
         # List workflows (should exclude deleted)
         results = await repository.list_by_company(sample_company.id)
