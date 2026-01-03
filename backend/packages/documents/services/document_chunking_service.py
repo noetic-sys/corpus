@@ -25,8 +25,8 @@ class DocumentChunkingService:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
         self.storage = get_storage()
-        self.chunk_service = ChunkService(db_session)
-        self.chunk_set_service = ChunkSetService(db_session)
+        self.chunk_service = ChunkService()
+        self.chunk_set_service = ChunkSetService()
 
     @trace_span
     async def get_chunks_for_document(

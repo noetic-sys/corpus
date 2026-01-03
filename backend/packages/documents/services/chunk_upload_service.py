@@ -29,8 +29,8 @@ class ChunkUploadService:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
         self.storage = get_storage()
-        self.chunk_set_service = ChunkSetService(db_session)
-        self.chunk_service = ChunkService(db_session)
+        self.chunk_set_service = ChunkSetService()
+        self.chunk_service = ChunkService()
 
     @trace_span
     async def process_chunk_upload(
