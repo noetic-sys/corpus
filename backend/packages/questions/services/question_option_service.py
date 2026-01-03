@@ -24,8 +24,8 @@ class QuestionOptionService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.option_set_repo = QuestionOptionSetRepository(db_session)
-        self.option_repo = QuestionOptionRepository(db_session)
+        self.option_set_repo = QuestionOptionSetRepository()
+        self.option_repo = QuestionOptionRepository()
         self.question_repo = QuestionRepository(db_session)
 
     @trace_span
