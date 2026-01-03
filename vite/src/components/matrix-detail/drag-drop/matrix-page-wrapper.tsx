@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { DropZoneOverlay } from './drop-zone-overlay'
 import { useFileDrop } from './use-file-drop'
+import { BulkUploadDialog } from './bulk-upload-dialog'
 import { MatrixProvider, useMatrixContext } from '../context/matrix-context'
 import { EntitySetSelectorDialog } from '../dialogs/entity-set-selector-dialog'
 import { toast } from "sonner"
@@ -51,6 +52,10 @@ function MatrixPageWrapperInner({ children }: { children: React.ReactNode }) {
     documentEntitySets: uploadDocumentEntitySets,
     onEntitySetSelected,
     onEntitySetDialogClose,
+    showBulkUploadDialog,
+    pendingFiles,
+    onBulkUploadConfirm,
+    onBulkUploadClose,
     handlers
   } = useFileDrop({
     matrixId,
@@ -110,6 +115,14 @@ function MatrixPageWrapperInner({ children }: { children: React.ReactNode }) {
         title="Select Document Set"
         description="Choose which document set to add the files to."
         onSelect={onEntitySetSelected}
+      />
+
+      <BulkUploadDialog
+        isOpen={showBulkUploadDialog}
+        onClose={onBulkUploadClose}
+        files={pendingFiles}
+        onConfirm={onBulkUploadConfirm}
+        isUploading={isUploading}
       />
     </div>
   )
