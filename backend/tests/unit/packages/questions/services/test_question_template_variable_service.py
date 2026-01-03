@@ -42,7 +42,7 @@ def question_repo(test_db):
 @pytest.fixture
 def template_var_repo(test_db):
     """Create a MatrixTemplateVariableRepository instance."""
-    return MatrixTemplateVariableRepository(test_db)
+    return MatrixTemplateVariableRepository()
 
 
 @pytest.fixture

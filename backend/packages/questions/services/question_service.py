@@ -55,7 +55,7 @@ class QuestionService:
         self.db_session = db_session
         self.question_repo = QuestionRepository(db_session)
         self.matrix_repo = MatrixRepository(db_session)
-        self.template_var_repo = MatrixTemplateVariableRepository(db_session)
+        self.template_var_repo = MatrixTemplateVariableRepository()
         self.option_set_repo = QuestionOptionSetRepository()
         self.option_repo = QuestionOptionRepository()
         self.question_option_service = QuestionOptionService(db_session)

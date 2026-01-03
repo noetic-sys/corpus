@@ -24,7 +24,7 @@ class MatrixTemplateVariableService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.template_var_repo = MatrixTemplateVariableRepository(db_session)
+        self.template_var_repo = MatrixTemplateVariableRepository()
         self.question_template_var_repo = QuestionTemplateVariableRepository()
         self.matrix_repo = MatrixRepository(db_session)
 
