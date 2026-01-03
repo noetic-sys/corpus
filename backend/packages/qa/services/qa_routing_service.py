@@ -3,11 +3,15 @@ QA routing service.
 
 Determines whether to use agent-based QA or regular QA based on:
 1. Question configuration (use_agent_qa flag)
-
-TODO: Add document size-based routing when we have content_length in documents table
+2. Document size (auto-route to agent QA if content exceeds threshold)
 """
 
+from common.core.config import settings
 from common.core.otel_axiom_exporter import trace_span, get_logger
+from packages.qa.models.domain.qa_routing import (
+    QARoutingDecision,
+    QARoutingReason,
+)
 
 logger = get_logger(__name__)
 
@@ -17,30 +21,58 @@ class QARoutingService:
 
     @staticmethod
     @trace_span
-    def should_use_agent_qa(question_use_agent_qa: bool) -> bool:
+    def should_use_agent_qa(
+        question_use_agent_qa: bool,
+        total_char_count: int = 0,
+    ) -> QARoutingDecision:
         """
         Determine if agent-based QA should be used.
 
-        Currently only checks question.use_agent_qa flag.
-
-        TODO: Add document size check once we have content_length in documents table:
-        - Query document.content_length from DB (don't load full content)
-        - If sum(content_lengths) > threshold, use agent QA
-        - Threshold: ~400K chars (~100K tokens)
+        Checks in order:
+        1. If question.use_agent_qa is True, use agent QA
+        2. If total document char count exceeds threshold, use agent QA
+        3. Otherwise, use regular QA
 
         Args:
-            question_use_agent_qa: Whether question requires agent QA
+            question_use_agent_qa: Whether question explicitly requires agent QA
+            total_char_count: Sum of extracted_text_char_count for all documents
 
         Returns:
-            True if agent QA should be used, False otherwise
+            QARoutingDecision with use_agent_qa flag, reason, and char count
         """
+        threshold = settings.agent_qa_char_threshold
+
+        # Check explicit flag first
         if question_use_agent_qa:
             logger.info("Using agent QA: question.use_agent_qa=True")
-            return True
+            return QARoutingDecision(
+                use_agent_qa=True,
+                reason=QARoutingReason.QUESTION_FLAG,
+                total_char_count=total_char_count,
+            )
+
+        # Check document size threshold
+        if total_char_count > threshold:
+            logger.info(
+                f"Using agent QA: document size ({total_char_count:,} chars) "
+                f"exceeds threshold ({threshold:,} chars)"
+            )
+            return QARoutingDecision(
+                use_agent_qa=True,
+                reason=QARoutingReason.DOCUMENT_SIZE,
+                total_char_count=total_char_count,
+            )
 
         # Use regular QA
-        logger.info("Using regular QA: question.use_agent_qa=False")
-        return False
+        logger.info(
+            f"Using regular QA: size ({total_char_count:,} chars) "
+            f"within threshold ({threshold:,} chars)"
+        )
+        return QARoutingDecision(
+            use_agent_qa=False,
+            reason=QARoutingReason.DEFAULT,
+            total_char_count=total_char_count,
+        )
 
 
 def get_qa_routing_service() -> QARoutingService:

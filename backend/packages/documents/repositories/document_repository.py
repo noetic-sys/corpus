@@ -11,6 +11,7 @@ from packages.documents.models.database.document import DocumentEntity
 from packages.documents.models.domain.document import (
     DocumentModel,
     DocumentExtractionStatsModel,
+    DocumentCharCountResult,
 )
 from common.core.otel_axiom_exporter import trace_span
 
@@ -204,3 +205,52 @@ class DocumentRepository(BaseRepository[DocumentEntity, DocumentModel]):
         result = await self.db_session.execute(query)
         entities = result.scalars().all()
         return self._entities_to_domain(entities)
+
+    @trace_span
+    async def get_total_text_char_count(
+        self, document_ids: List[int], company_id: Optional[int] = None
+    ) -> DocumentCharCountResult:
+        """Get sum of extracted_text_char_count for documents.
+
+        Returns both the total and which document IDs are missing counts
+        (need lazy backfill from S3).
+
+        Args:
+            document_ids: List of document IDs to sum
+            company_id: Optional company ID for access control
+
+        Returns:
+            DocumentCharCountResult with total and list of IDs missing counts
+        """
+        if not document_ids:
+            return DocumentCharCountResult(
+                total_char_count=0,
+                document_ids_missing_count=[],
+            )
+
+        query = select(
+            self.entity_class.id,
+            self.entity_class.extracted_text_char_count,
+        ).where(
+            self.entity_class.id.in_(document_ids),
+            self.entity_class.deleted == False,  # noqa
+        )
+
+        if company_id:
+            query = self._add_company_filter(query, company_id)
+
+        result = await self.db_session.execute(query)
+        rows = result.fetchall()
+
+        total = 0
+        missing_ids = []
+        for doc_id, char_count in rows:
+            if char_count is not None:
+                total += char_count
+            else:
+                missing_ids.append(doc_id)
+
+        return DocumentCharCountResult(
+            total_char_count=total,
+            document_ids_missing_count=missing_ids,
+        )

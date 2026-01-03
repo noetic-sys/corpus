@@ -199,6 +199,9 @@ class Settings(BaseSettings):
     chunk_target_size: int = 12000  # Target chunk size in characters (~3000 tokens)
     chunk_overlap_size: int = 800  # Overlap between chunks in characters (~200 tokens)
 
+    # QA Routing - auto-route to agent QA when content exceeds threshold
+    agent_qa_char_threshold: int = 400_000  # ~100K tokens for Claude context window
+
     # Billing - Stripe (payments)
     stripe_secret_key: str = ""
     stripe_publishable_key: str = ""

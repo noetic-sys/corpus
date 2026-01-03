@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @workflow.defn
 class GenericDocumentWorkflow:
     @workflow.run
-    async def run(self, input_data: DocumentProcessingInput) -> str:
+    async def run(self, input_data: DocumentProcessingInput) -> dict:
         """
         Generic workflow for extracting content from non-PDF documents.
         Much simpler than PDF workflow since no page splitting is needed.
@@ -79,4 +79,4 @@ class GenericDocumentWorkflow:
         logger.info(
             f"Generic document extraction completed for document {input_data.document_id}"
         )
-        return s3_key
+        return {"s3_key": s3_key, "char_count": len(extracted_content)}

@@ -3,12 +3,15 @@ from packages.matrices.strategies.factory import CellStrategyFactory
 from common.workers.base_worker import BaseWorker
 from packages.matrices.models.domain.matrix import MatrixCellStatus
 from packages.qa.models.domain.qa_job import QAJobStatus
+from packages.qa.models.domain.qa_routing import QARoutingReason
 from common.providers.messaging.messages import QAJobMessage
 from common.providers.messaging.constants import QueueName
 from packages.qa.services.qa_job_service import get_qa_job_service
 from packages.qa.services.qa_routing_service import get_qa_routing_service
 from packages.questions.services.question_service import get_question_service
 from packages.matrices.services.matrix_service import get_matrix_service
+from packages.documents.services.document_service import get_document_service
+from packages.billing.services.quota_service import QuotaService
 from packages.qa.temporal.agent_qa_workflow import AgentQAWorkflow
 from common.providers.locking.factory import get_lock_provider
 from temporalio.client import Client
@@ -217,13 +220,30 @@ class QAWorker(BaseWorker[QAJobMessage]):
                         f"Question {cell_data.question.question_id} not found"
                     )
 
-                # Check if we should use agent QA
-                routing_service = get_qa_routing_service()
-                use_agent_qa = routing_service.should_use_agent_qa(
-                    question_model.use_agent_qa
+                # Get document char counts for size-based routing
+                document_ids = [doc.document_id for doc in cell_data.documents]
+                document_service = get_document_service(db_session)
+                total_char_count = await document_service.get_total_text_char_count(
+                    document_ids, matrix.company_id
                 )
 
-                if use_agent_qa:
+                # Check if we should use agent QA (flag or document size)
+                routing_service = get_qa_routing_service()
+                routing_decision = routing_service.should_use_agent_qa(
+                    question_model.use_agent_qa,
+                    total_char_count,
+                )
+
+                # If auto-routed due to document size, check quota first
+                if routing_decision.is_auto_routed:
+                    logger.info(
+                        f"Auto-routing to agent QA due to document size "
+                        f"({total_char_count:,} chars), checking quota"
+                    )
+                    quota_service = QuotaService(db_session)
+                    await quota_service.check_agentic_qa_quota(matrix.company_id)
+
+                if routing_decision.use_agent_qa:
                     # Route to agent QA via Temporal workflow
                     logger.info(f"Routing cell {matrix_cell_id} to agent QA workflow")
                     await self._launch_agent_qa_workflow(

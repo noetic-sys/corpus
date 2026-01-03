@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel, field_validator
 from enum import StrEnum
 
@@ -22,6 +22,7 @@ class DocumentModel(BaseModel):
 
     # Extraction fields
     extracted_content_path: Optional[str] = None
+    extracted_text_char_count: Optional[int] = None
     extraction_status: ExtractionStatus = ExtractionStatus.PENDING
     extraction_started_at: Optional[datetime] = None
     extraction_completed_at: Optional[datetime] = None
@@ -73,6 +74,7 @@ class DocumentUpdateModel(BaseModel):
     company_id: Optional[int] = None
     extraction_status: Optional[str] = None
     extracted_content_path: Optional[str] = None
+    extracted_text_char_count: Optional[int] = None
     extraction_started_at: Optional[datetime] = None
     extraction_completed_at: Optional[datetime] = None
 
@@ -92,3 +94,15 @@ class DocumentExtractionStatsModel(BaseModel):
     processing: int
     completed: int
     failed: int
+
+
+class DocumentCharCountResult(BaseModel):
+    """Result of summing character counts for documents."""
+
+    total_char_count: int
+    document_ids_missing_count: List[int]
+
+    @property
+    def has_missing(self) -> bool:
+        """Check if any documents are missing char count (need lazy backfill)."""
+        return len(self.document_ids_missing_count) > 0

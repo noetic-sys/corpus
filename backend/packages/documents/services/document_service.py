@@ -15,7 +15,12 @@ from packages.documents.providers.document_search.interface import (
     DocumentSearchResult,
 )
 from packages.documents.repositories.document_repository import DocumentRepository
-from packages.documents.models.domain.document import DocumentModel, DocumentCreateModel
+from packages.documents.models.domain.document import (
+    DocumentModel,
+    DocumentCreateModel,
+    DocumentCharCountResult,
+    DocumentUpdateModel,
+)
 from packages.documents.models.domain.document_types import DocumentType
 from packages.documents.models.database.document import ExtractionStatus
 from packages.documents.services.document_indexing_job_service import (
@@ -551,6 +556,86 @@ class DocumentService:
                 match_data.document = doc
 
         return chunk_matches
+
+    @trace_span
+    async def get_total_text_char_count(
+        self, document_ids: List[int], company_id: int
+    ) -> int:
+        """Get total character count for documents with lazy backfill.
+
+        For documents missing char count (existing docs before this feature),
+        fetches content from S3 in parallel, calculates length, and updates DB.
+
+        Args:
+            document_ids: List of document IDs
+            company_id: Company ID for access control
+
+        Returns:
+            Total character count across all documents
+        """
+        if not document_ids:
+            return 0
+
+        # Get counts from DB, identifying which docs need backfill
+        result = await self.document_repo.get_total_text_char_count(
+            document_ids, company_id
+        )
+
+        if not result.has_missing:
+            return result.total_char_count
+
+        # Lazy backfill: fetch content for docs missing char count in parallel
+        logger.info(
+            f"Lazy backfilling char count for {len(result.document_ids_missing_count)} documents"
+        )
+
+        backfill_total = await self._backfill_char_counts(
+            result.document_ids_missing_count, company_id
+        )
+
+        return result.total_char_count + backfill_total
+
+    async def _backfill_char_counts(
+        self, document_ids: List[int], company_id: int
+    ) -> int:
+        """Backfill char counts for documents missing them (parallel S3 fetch).
+
+        Args:
+            document_ids: Document IDs missing char counts
+            company_id: Company ID for access control
+
+        Returns:
+            Total char count from backfilled documents
+        """
+        # Fetch all documents in parallel
+        docs = await self.get_documents_by_ids(document_ids, company_id)
+        doc_map = {doc.id: doc for doc in docs}
+
+        # Fetch content from S3 in parallel
+        async def fetch_and_count(doc_id: int) -> Tuple[int, int]:
+            """Fetch content and return (doc_id, char_count)."""
+            doc = doc_map.get(doc_id)
+            if not doc or not doc.extracted_content_path:
+                return doc_id, 0
+
+            content = await self.get_extracted_content(doc)
+            return doc_id, len(content) if content else 0
+
+        results = await asyncio.gather(
+            *[fetch_and_count(doc_id) for doc_id in document_ids]
+        )
+
+        # Update DB with char counts
+        total = 0
+        for doc_id, char_count in results:
+            if char_count > 0:
+                total += char_count
+                update_data = DocumentUpdateModel(extracted_text_char_count=char_count)
+                await self.document_repo.update(doc_id, update_data)
+                logger.debug(f"Backfilled char count for document {doc_id}: {char_count}")
+
+        await self.db_session.commit()
+        return total
 
 
 def get_document_service(db_session: AsyncSession) -> DocumentService:

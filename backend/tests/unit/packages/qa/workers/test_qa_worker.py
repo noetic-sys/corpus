@@ -472,3 +472,224 @@ class TestQAWorker:
         await test_db.refresh(test_data["job"])
         assert test_data["job"].status == QAJobStatus.COMPLETED.value
         assert "already completed" in test_data["job"].error_message.lower()
+
+
+class TestQAWorkerAutoRouting:
+    """Tests for automatic routing to agent QA based on document size."""
+
+    @pytest.fixture
+    def mock_lock_provider(self):
+        """Create mock lock provider."""
+        mock_provider = AsyncMock(spec=DistributedLockInterface)
+        mock_provider.acquire_lock.return_value = "test_lock_token"
+        mock_provider.release_lock.return_value = True
+        return mock_provider
+
+    @pytest.fixture
+    def qa_worker(self, mock_lock_provider):
+        """Create QAWorker instance with mocked services."""
+        worker = QAWorker()
+        worker.lock_provider = mock_lock_provider
+        return worker
+
+    @pytest.fixture
+    async def test_data_with_large_doc(
+        self,
+        test_db,
+        sample_workspace,
+        sample_document,
+        sample_matrix,
+        sample_question,
+        sample_matrix_cell,
+    ):
+        """Create test data with a large document."""
+        # Update sample_document to be large (over threshold)
+        sample_document.extraction_status = ExtractionStatus.COMPLETED
+        sample_document.extracted_content_path = "extracted/test_doc.md"
+        sample_document.extracted_text_char_count = 500_000  # Over 400K threshold
+        test_db.add(sample_document)
+        await test_db.commit()
+        await test_db.refresh(sample_document)
+
+        # Create QA job
+        job = QAJobEntity(
+            matrix_cell_id=sample_matrix_cell.id, status=QAJobStatus.QUEUED.value
+        )
+        test_db.add(job)
+        await test_db.commit()
+        await test_db.refresh(job)
+
+        return {
+            "matrix": sample_matrix,
+            "document": sample_document,
+            "question": sample_question,
+            "cell": sample_matrix_cell,
+            "job": job,
+        }
+
+    @pytest.mark.asyncio
+    @patch("packages.qa.workers.qa_worker.QuotaService")
+    @patch("packages.qa.workers.qa_worker.Client")
+    @patch("packages.matrices.strategies.factory.CellStrategyFactory.get_strategy")
+    async def test_large_doc_auto_routes_to_agent_qa(
+        self,
+        mock_get_strategy,
+        mock_temporal_client,
+        mock_quota_service_class,
+        qa_worker,
+        mock_lock_provider,
+        test_db,
+        test_data_with_large_doc,
+    ):
+        """Test that large documents are auto-routed to agent QA."""
+        test_data = test_data_with_large_doc
+
+        # Mock strategy's load_cell_data
+        mock_strategy = AsyncMock()
+        mock_cell_data = AsyncMock()
+        mock_cell_data.question.question_id = test_data["question"].id
+        mock_cell_data.documents = [
+            AsyncMock(document_id=test_data["document"].id)
+        ]
+        mock_strategy.load_cell_data.return_value = mock_cell_data
+        mock_get_strategy.return_value = mock_strategy
+
+        # Mock quota service to allow
+        mock_quota_service = AsyncMock()
+        mock_quota_service.check_agentic_qa_quota.return_value = AsyncMock()
+        mock_quota_service_class.return_value = mock_quota_service
+
+        # Mock Temporal client (connect is async)
+        mock_client = AsyncMock()
+        mock_temporal_client.connect = AsyncMock(return_value=mock_client)
+
+        sample_message = QAJobMessage(
+            job_id=test_data["job"].id,
+            matrix_cell_id=test_data["cell"].id,
+        )
+
+        await qa_worker.process_message(sample_message, test_db)
+
+        # Verify quota was checked (auto-routing triggers quota check)
+        mock_quota_service.check_agentic_qa_quota.assert_called_once_with(
+            test_data["matrix"].company_id
+        )
+
+        # Verify Temporal workflow was started
+        mock_client.start_workflow.assert_called_once()
+
+        # Verify job was marked as completed (workflow takes over)
+        await test_db.refresh(test_data["job"])
+        assert test_data["job"].status == QAJobStatus.COMPLETED.value
+
+    @pytest.mark.asyncio
+    @patch("packages.qa.workers.qa_worker.QuotaService")
+    @patch("packages.matrices.strategies.factory.CellStrategyFactory.get_strategy")
+    async def test_large_doc_quota_exceeded_fails_job(
+        self,
+        mock_get_strategy,
+        mock_quota_service_class,
+        qa_worker,
+        mock_lock_provider,
+        test_db,
+        test_data_with_large_doc,
+    ):
+        """Test that quota exceeded for auto-routed job fails gracefully."""
+        from fastapi import HTTPException
+
+        test_data = test_data_with_large_doc
+
+        # Mock strategy's load_cell_data
+        mock_strategy = AsyncMock()
+        mock_cell_data = AsyncMock()
+        mock_cell_data.question.question_id = test_data["question"].id
+        mock_cell_data.documents = [
+            AsyncMock(document_id=test_data["document"].id)
+        ]
+        mock_strategy.load_cell_data.return_value = mock_cell_data
+        mock_get_strategy.return_value = mock_strategy
+
+        # Mock quota service to reject
+        mock_quota_service = AsyncMock()
+        mock_quota_service.check_agentic_qa_quota.side_effect = HTTPException(
+            status_code=429,
+            detail="Monthly agentic QA limit reached"
+        )
+        mock_quota_service_class.return_value = mock_quota_service
+
+        sample_message = QAJobMessage(
+            job_id=test_data["job"].id,
+            matrix_cell_id=test_data["cell"].id,
+        )
+
+        with pytest.raises(HTTPException):
+            await qa_worker.process_message(sample_message, test_db)
+
+        # Verify quota was checked
+        mock_quota_service.check_agentic_qa_quota.assert_called_once()
+
+        # Verify job was marked as failed
+        await test_db.refresh(test_data["job"])
+        assert test_data["job"].status == QAJobStatus.FAILED.value
+
+    @pytest.mark.asyncio
+    @patch("packages.matrices.strategies.factory.CellStrategyFactory.get_strategy")
+    async def test_small_doc_uses_regular_qa(
+        self,
+        mock_get_strategy,
+        qa_worker,
+        mock_lock_provider,
+        test_db,
+        sample_workspace,
+        sample_document,
+        sample_matrix,
+        sample_question,
+        sample_matrix_cell,
+    ):
+        """Test that small documents use regular QA (no agent routing)."""
+        # Update document to be small (under threshold)
+        sample_document.extraction_status = ExtractionStatus.COMPLETED
+        sample_document.extracted_content_path = "extracted/test_doc.md"
+        sample_document.extracted_text_char_count = 100_000  # Under 400K threshold
+        test_db.add(sample_document)
+        await test_db.commit()
+        await test_db.refresh(sample_document)
+
+        # Create QA job
+        job = QAJobEntity(
+            matrix_cell_id=sample_matrix_cell.id, status=QAJobStatus.QUEUED.value
+        )
+        test_db.add(job)
+        await test_db.commit()
+        await test_db.refresh(job)
+
+        # Mock strategy
+        answer_data = TextAnswerData(
+            type="text", value="This is a test answer from the AI."
+        )
+        mock_strategy = AsyncMock()
+        mock_cell_data = AsyncMock()
+        mock_cell_data.question.question_id = sample_question.id
+        mock_cell_data.documents = [
+            AsyncMock(document_id=sample_document.id)
+        ]
+        mock_strategy.load_cell_data.return_value = mock_cell_data
+        mock_strategy.process_cell_to_completion.return_value = (
+            AIAnswerSet.found([answer_data]),
+            1,
+        )
+        mock_get_strategy.return_value = mock_strategy
+
+        sample_message = QAJobMessage(
+            job_id=job.id,
+            matrix_cell_id=sample_matrix_cell.id,
+        )
+
+        await qa_worker.process_message(sample_message, test_db)
+
+        # Verify regular QA strategy was used
+        mock_strategy.process_cell_to_completion.assert_called_once()
+
+        # Verify job was completed
+        await test_db.refresh(job)
+        assert job.status == QAJobStatus.COMPLETED.value
