@@ -36,6 +36,7 @@ class DocumentEntity(Base):
 
     # Extraction fields
     extracted_content_path = Column(String, nullable=True, index=True)
+    extracted_text_char_count = Column(BigIntegerType, nullable=True)
     extraction_status = Column(
         String, nullable=False, default=ExtractionStatus.PENDING.value, index=True
     )

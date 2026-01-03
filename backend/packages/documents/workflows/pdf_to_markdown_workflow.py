@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 @workflow.defn
 class PDFToMarkdownWorkflow:
     @workflow.run
-    async def run(self, input_data: PDFProcessingInput) -> str:
+    async def run(self, input_data: PDFProcessingInput) -> dict:
         """
         PDF-specific workflow that:
         1. Downloads and splits PDF into pages
@@ -102,4 +102,4 @@ class PDFToMarkdownWorkflow:
         logger.info(
             f"PDF to Markdown workflow completed successfully for document {input_data.document_id}"
         )
-        return s3_key
+        return {"s3_key": s3_key, "char_count": len(combined_markdown)}

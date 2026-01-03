@@ -117,7 +117,11 @@ async def update_document_content_path_activity(
 
 @activity.defn
 async def update_document_completion_activity(
-    document_id: int, extraction_job_id: int, s3_key: str, trace_headers: dict = None
+    document_id: int,
+    extraction_job_id: int,
+    s3_key: str,
+    char_count: int,
+    trace_headers: dict = None,
 ) -> None:
     """Update document with completion status. Does NOT trigger QA jobs - use queue_qa_jobs_for_document_activity for that."""
     with create_span_with_context(
@@ -130,9 +134,10 @@ async def update_document_completion_activity(
                 extraction_job_service = get_document_extraction_job_service(db_session)
                 document_repo = DocumentRepository(db_session)
 
-                # Update document status
+                # Update document status including char count for QA routing
                 document_update = DocumentUpdateModel(
                     extracted_content_path=s3_key,
+                    extracted_text_char_count=char_count,
                     extraction_status=ExtractionStatus.COMPLETED,
                     extraction_completed_at=datetime.utcnow(),
                 )

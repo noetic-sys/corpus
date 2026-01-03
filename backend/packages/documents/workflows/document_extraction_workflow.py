@@ -72,7 +72,7 @@ class DocumentExtractionWorkflow:
                 logger.info(
                     f"Routing document {input_data.document_id} to PDF workflow"
                 )
-                s3_key = await workflow.execute_child_workflow(
+                extraction_result = await workflow.execute_child_workflow(
                     PDFToMarkdownWorkflow.run,
                     args=[input_data],
                     id=f"pdf-extraction-{input_data.document_id}",
@@ -82,12 +82,15 @@ class DocumentExtractionWorkflow:
                 logger.info(
                     f"Routing document {input_data.document_id} to generic document workflow"
                 )
-                s3_key = await workflow.execute_child_workflow(
+                extraction_result = await workflow.execute_child_workflow(
                     GenericDocumentWorkflow.run,
                     args=[input_data],
                     id=f"doc-extraction-{input_data.document_id}",
                     task_queue=TaskQueueType.GENERIC_EXTRACTION.value,
                 )
+
+            s3_key = extraction_result["s3_key"]
+            char_count = extraction_result["char_count"]
 
             # Step 3.5: Update document with S3 content path (so chunking can download)
             await workflow.execute_activity(
@@ -141,6 +144,7 @@ class DocumentExtractionWorkflow:
                     input_data.document_id,
                     input_data.extraction_job_id,
                     s3_key,
+                    char_count,
                     input_data.trace_headers,
                 ],
                 start_to_close_timeout=timedelta(seconds=30),

@@ -716,3 +716,121 @@ class TestUrlUploadQuotaEnforcement:
             mock_quota_service.check_storage_quota.assert_called()
             call_kwargs = mock_quota_service.check_storage_quota.call_args.kwargs
             assert call_kwargs["file_size_bytes"] > 0
+
+
+@patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")
+class TestDocumentServiceCharCount:
+    """Tests for DocumentService.get_total_text_char_count() method."""
+
+    @pytest.mark.asyncio
+    async def test_get_total_char_count_empty_list(
+        self, mock_start_span, document_service
+    ):
+        """Test with empty document list returns 0."""
+        result = await document_service.get_total_text_char_count([], company_id=1)
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_get_total_char_count_all_cached(
+        self, mock_start_span, document_service, test_db
+    ):
+        """Test with all documents having char counts cached returns sum."""
+        from packages.documents.models.database.document import DocumentEntity
+
+        # Create documents with char counts set
+        doc1 = DocumentEntity(
+            company_id=1,
+            filename="doc1.pdf",
+            storage_key="docs/doc1.pdf",
+            checksum="abc123",
+            extracted_text_char_count=100_000,
+        )
+        doc2 = DocumentEntity(
+            company_id=1,
+            filename="doc2.pdf",
+            storage_key="docs/doc2.pdf",
+            checksum="def456",
+            extracted_text_char_count=150_000,
+        )
+        test_db.add(doc1)
+        test_db.add(doc2)
+        await test_db.flush()
+
+        result = await document_service.get_total_text_char_count(
+            [doc1.id, doc2.id], company_id=1
+        )
+        assert result == 250_000
+
+    @pytest.mark.asyncio
+    async def test_get_total_char_count_lazy_backfill(
+        self, mock_start_span, document_service, test_db, mock_storage
+    ):
+        """Test lazy backfill when char count is NULL."""
+        from packages.documents.models.database.document import DocumentEntity, ExtractionStatus
+
+        # Create document without char count (simulating old document)
+        doc = DocumentEntity(
+            company_id=1,
+            filename="old_doc.pdf",
+            storage_key="docs/old_doc.pdf",
+            checksum="old123",
+            extracted_content_path="extracted/old_doc.txt",
+            extraction_status=ExtractionStatus.COMPLETED,
+            extracted_text_char_count=None,  # NULL - needs backfill
+        )
+        test_db.add(doc)
+        await test_db.flush()
+
+        # Mock S3 to return content
+        test_content = "This is the content from S3." * 1000  # ~29K chars
+        mock_storage.download.return_value = test_content.encode("utf-8")
+
+        result = await document_service.get_total_text_char_count(
+            [doc.id], company_id=1
+        )
+
+        # Should return the length of fetched content
+        assert result == len(test_content)
+
+        # Verify S3 was called
+        mock_storage.download.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_total_char_count_mixed_cached_and_backfill(
+        self, mock_start_span, document_service, test_db, mock_storage
+    ):
+        """Test mix of cached and backfill documents."""
+        from packages.documents.models.database.document import DocumentEntity, ExtractionStatus
+
+        # Cached document
+        cached_doc = DocumentEntity(
+            company_id=1,
+            filename="cached.pdf",
+            storage_key="docs/cached.pdf",
+            checksum="cached123",
+            extracted_text_char_count=50_000,
+        )
+        # Uncached document
+        uncached_doc = DocumentEntity(
+            company_id=1,
+            filename="uncached.pdf",
+            storage_key="docs/uncached.pdf",
+            checksum="uncached456",
+            extracted_content_path="extracted/uncached.txt",
+            extraction_status=ExtractionStatus.COMPLETED,
+            extracted_text_char_count=None,
+        )
+        test_db.add(cached_doc)
+        test_db.add(uncached_doc)
+        await test_db.flush()
+
+        # Mock S3 for uncached doc
+        backfill_content = "Backfilled content" * 100  # 1800 chars
+        mock_storage.download.return_value = backfill_content.encode("utf-8")
+
+        result = await document_service.get_total_text_char_count(
+            [cached_doc.id, uncached_doc.id], company_id=1
+        )
+
+        # Should sum cached + backfilled
+        assert result == 50_000 + len(backfill_content)
