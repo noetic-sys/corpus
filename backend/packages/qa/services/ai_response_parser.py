@@ -2,9 +2,10 @@
 
 import json
 import re
-import logging
 from datetime import datetime
 from typing import Optional, List
+
+from common.core.otel_axiom_exporter import get_logger
 from packages.qa.models.domain.ai_responses import (
     CurrencyResponse,
     DateResponse,
@@ -22,7 +23,7 @@ from packages.qa.models.domain.answer_data import (
 )
 from packages.qa.models.domain.citation import CitationReference
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AIResponseParser:

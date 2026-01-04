@@ -1,9 +1,9 @@
-import logging
 from typing import Optional
 
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from common.core.otel_axiom_exporter import get_logger
 from packages.workflows.workflows import WorkflowExecutionWorkflow
 from packages.workflows.workflows.activities import (
     launch_workflow_agent_activity,
@@ -13,8 +13,7 @@ from packages.workflows.workflows.activities import (
     update_execution_status_activity,
 )
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class WorkflowTemporalWorker:

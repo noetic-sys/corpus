@@ -1,9 +1,9 @@
-import logging
 from typing import Optional
 
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from common.core.otel_axiom_exporter import get_logger
 from packages.qa.workflows import AgentQAWorkflow
 from packages.qa.workflows.activities import (
     launch_agent_qa_activity,
@@ -12,8 +12,7 @@ from packages.qa.workflows.activities import (
     cleanup_agent_qa_activity,
 )
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AgentQATemporalWorker:

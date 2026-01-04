@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-import logging
 
 from common.workers.base_worker import BaseWorker
 from common.providers.messaging.messages import DocumentIndexingMessage
@@ -20,9 +19,10 @@ from packages.documents.models.database.document import ExtractionStatus
 
 from common.core.otel_axiom_exporter import (
     trace_span,
+    get_logger,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DocumentIndexingWorker(BaseWorker[DocumentIndexingMessage]):

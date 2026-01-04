@@ -1,4 +1,3 @@
-import logging
 from typing import Optional
 
 from temporalio.client import Client
@@ -36,9 +35,9 @@ from packages.documents.workflows.activities.chunk_indexing_activities import (
     index_chunks_activity,
 )
 from packages.documents.workflows.common import TaskQueueType
+from common.core.otel_axiom_exporter import get_logger
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TemporalWorker:

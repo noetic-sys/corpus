@@ -6,8 +6,8 @@ Orchestrates the complete PDF extraction process.
 from temporalio import workflow
 from datetime import timedelta
 import asyncio
-import logging
 
+from common.core.otel_axiom_exporter import get_logger
 from .common import (
     PDFProcessingInput,
     TaskQueueType,
@@ -18,7 +18,7 @@ from .common import (
 )
 from .convert_page_workflow import ConvertPageWorkflow
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @workflow.defn
