@@ -16,7 +16,7 @@ class TestQuestionOptionService:
     @pytest.fixture
     async def service(self, test_db: AsyncSession):
         """Create service instance."""
-        return QuestionOptionService(test_db)
+        return QuestionOptionService()
 
     async def test_create_option_set_success(self, service, sample_question):
         """Test successful creation of option set with options."""
@@ -255,9 +255,8 @@ class TestQuestionOptionService:
 
     async def test_service_initialization(self, test_db):
         """Test service properly initializes repositories."""
-        service = QuestionOptionService(test_db)
+        service = QuestionOptionService()
 
-        assert service.db_session == test_db
         assert service.option_set_repo is not None
         assert service.option_repo is not None
         assert service.question_repo is not None

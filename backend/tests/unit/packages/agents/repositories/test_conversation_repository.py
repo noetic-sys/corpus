@@ -1,6 +1,5 @@
 import pytest
 import asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.agents.repositories.conversation_repository import ConversationRepository
 from packages.agents.models.database.conversation import ConversationEntity
@@ -15,9 +14,9 @@ class TestConversationRepository:
     """Test ConversationRepository methods."""
 
     @pytest.fixture
-    async def repository(self, test_db: AsyncSession):
+    async def repository(self):
         """Create repository instance."""
-        return ConversationRepository(test_db)
+        return ConversationRepository()
 
     async def test_create_conversation_success(
         self, repository, sample_ai_model, sample_company
@@ -98,7 +97,7 @@ class TestConversationRepository:
         assert success is False
 
     async def test_list_conversations_active_only(
-        self, repository, sample_ai_model, sample_company
+        self, repository, sample_ai_model, sample_company, test_db
     ):
         """Test listing only active conversations."""
         # Create active and inactive conversations
@@ -115,8 +114,8 @@ class TestConversationRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([active_conv, inactive_conv])
-        await repository.db_session.commit()
+        test_db.add_all([active_conv, inactive_conv])
+        await test_db.commit()
 
         # Get all active conversations
         results = await repository.get_all()
@@ -127,7 +126,7 @@ class TestConversationRepository:
         assert "Inactive Conversation" not in active_titles
 
     async def test_list_conversations_pagination(
-        self, repository, sample_ai_model, sample_company
+        self, repository, sample_ai_model, sample_company, test_db
     ):
         """Test listing conversations with pagination."""
         # Create multiple conversations
@@ -141,8 +140,8 @@ class TestConversationRepository:
             )
             conversations.append(conv)
 
-        repository.db_session.add_all(conversations)
-        await repository.db_session.commit()
+        test_db.add_all(conversations)
+        await test_db.commit()
 
         # Test pagination
         page_1 = await repository.get_all(skip=0, limit=2)
@@ -157,7 +156,7 @@ class TestConversationRepository:
         assert page_1_ids.isdisjoint(page_2_ids)
 
     async def test_get_by_ai_model_id(
-        self, repository, sample_ai_model, sample_ai_provider, sample_company
+        self, repository, sample_ai_model, sample_ai_provider, sample_company, test_db
     ):
         """Test getting conversations by AI model ID."""
         # Create another AI model
@@ -168,9 +167,9 @@ class TestConversationRepository:
             default_temperature=0.7,
             enabled=True,
         )
-        repository.db_session.add(other_model)
-        await repository.db_session.commit()
-        await repository.db_session.refresh(other_model)
+        test_db.add(other_model)
+        await test_db.commit()
+        await test_db.refresh(other_model)
 
         # Create conversations with different models
         conv1 = ConversationEntity(
@@ -192,8 +191,8 @@ class TestConversationRepository:
             company_id=sample_company.id,
         )
 
-        repository.db_session.add_all([conv1, conv2, conv3])
-        await repository.db_session.commit()
+        test_db.add_all([conv1, conv2, conv3])
+        await test_db.commit()
 
         # Get conversations for first model
         results = await repository.get_by_ai_model_id(sample_ai_model.id)

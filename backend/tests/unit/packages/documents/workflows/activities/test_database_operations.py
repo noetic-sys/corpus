@@ -22,29 +22,22 @@ from packages.documents.models.database.document import ExtractionStatus
 @patch(
     "packages.documents.workflows.activities.database_operations.create_span_with_context"
 )
-@patch("packages.documents.workflows.activities.database_operations.get_db")
 class TestUpdateExtractionStatusActivity:
     """Unit tests for update_extraction_status_activity."""
 
     @pytest.mark.asyncio
     async def test_update_extraction_status_processing(
         self,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
     ):
         """Test updating extraction status to PROCESSING."""
-
-        # Mock get_db to yield our test database session
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # The patch_lazy_sessions fixture in conftest.py handles test database routing
 
         # Create test data in the database
-        document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        document_repo = DocumentRepository()
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a document
         document_create = DocumentCreateModel(
@@ -89,22 +82,16 @@ class TestUpdateExtractionStatusActivity:
     @pytest.mark.asyncio
     async def test_update_extraction_status_failed(
         self,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
     ):
         """Test updating extraction status to FAILED."""
-
-        # Mock get_db to yield our test database session
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # The patch_lazy_sessions fixture in conftest.py handles test database routing
 
         # Create test data in the database
-        document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        document_repo = DocumentRepository()
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a document
         document_create = DocumentCreateModel(
@@ -149,22 +136,16 @@ class TestUpdateExtractionStatusActivity:
     @pytest.mark.asyncio
     async def test_update_extraction_status_no_trace_headers(
         self,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
     ):
         """Test updating extraction status without trace headers."""
-
-        # Mock get_db to yield our test database session
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # The patch_lazy_sessions fixture in conftest.py handles test database routing
 
         # Create test data in the database
-        document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        document_repo = DocumentRepository()
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a document
         document_create = DocumentCreateModel(
@@ -209,7 +190,6 @@ class TestUpdateExtractionStatusActivity:
 @patch(
     "packages.documents.workflows.activities.database_operations.create_span_with_context"
 )
-@patch("packages.documents.workflows.activities.database_operations.get_db")
 @patch(
     "packages.matrices.services.batch_processing_service.get_message_queue"
 )  # Mock the RabbitMQ queueing
@@ -220,7 +200,6 @@ class TestUpdateDocumentCompletionActivity:
     async def test_update_document_completion_success(
         self,
         mock_get_message_queue,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
@@ -228,12 +207,7 @@ class TestUpdateDocumentCompletionActivity:
         sample_matrix,
     ):
         """Test successful document completion."""
-
-        # Mock get_db to yield our test database session
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # The patch_lazy_sessions fixture in conftest.py handles test database routing
 
         # Mock the message queue to prevent actual RabbitMQ calls
         mock_message_queue = MagicMock()
@@ -242,9 +216,9 @@ class TestUpdateDocumentCompletionActivity:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create test data in the database
-        matrix_repo = MatrixRepository(test_db)
-        document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        matrix_repo = MatrixRepository()
+        document_repo = DocumentRepository()
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a workspace first
         workspace = sample_workspace
@@ -298,7 +272,6 @@ class TestUpdateDocumentCompletionActivity:
     async def test_update_document_completion_no_trace_headers(
         self,
         mock_get_message_queue,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_workspace,
@@ -306,12 +279,7 @@ class TestUpdateDocumentCompletionActivity:
         sample_matrix,
     ):
         """Test document completion without trace headers."""
-
-        # Mock get_db to yield our test database session
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # The patch_lazy_sessions fixture in conftest.py handles test database routing
 
         # Mock the message queue to prevent actual RabbitMQ calls
         mock_message_queue = MagicMock()
@@ -320,9 +288,9 @@ class TestUpdateDocumentCompletionActivity:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create test data in the database
-        matrix_repo = MatrixRepository(test_db)
-        document_repo = DocumentRepository(test_db)
-        job_repo = DocumentExtractionJobRepository(test_db)
+        matrix_repo = MatrixRepository()
+        document_repo = DocumentRepository()
+        job_repo = DocumentExtractionJobRepository()
 
         # Create a workspace first
         workspace = sample_workspace

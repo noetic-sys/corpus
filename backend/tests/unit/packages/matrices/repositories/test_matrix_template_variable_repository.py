@@ -20,7 +20,7 @@ class TestMatrixTemplateVariableRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return MatrixTemplateVariableRepository(test_db)
+        return MatrixTemplateVariableRepository()
 
     async def test_create_template_variable(
         self, repository, sample_matrix, sample_company

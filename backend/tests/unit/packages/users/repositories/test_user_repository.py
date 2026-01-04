@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.users.repositories.user_repository import UserRepository
 from packages.users.models.database.user import UserEntity
@@ -9,9 +8,9 @@ class TestUserRepository:
     """Test UserRepository methods."""
 
     @pytest.fixture
-    async def repository(self, test_db: AsyncSession):
+    async def repository(self):
         """Create repository instance."""
-        return UserRepository(test_db)
+        return UserRepository()
 
     async def test_get_by_email_exists(self, repository, sample_user_entity):
         """Test getting existing user by email."""

@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from common.repositories.base import BaseRepository
@@ -13,39 +12,44 @@ logger = get_logger(__name__)
 
 
 class QAJobRepository(BaseRepository[QAJobEntity, QAJobModel]):
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(QAJobEntity, QAJobModel, db_session)
+    def __init__(self):
+        super().__init__(QAJobEntity, QAJobModel)
 
     @trace_span
     async def get_by_matrix_cell_id(self, matrix_cell_id: int) -> List[QAJobModel]:
-        result = await self.db_session.execute(
-            select(self.entity_class).where(
-                self.entity_class.matrix_cell_id == matrix_cell_id
+        async with self._get_session() as session:
+            result = await session.execute(
+                select(self.entity_class).where(
+                    self.entity_class.matrix_cell_id == matrix_cell_id
+                )
             )
-        )
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_pending_matrix_cells(
         self, matrix_id: Optional[int] = None
     ) -> List[MatrixCellModel]:
-        query = select(MatrixCellEntity).where(
-            MatrixCellEntity.status == MatrixCellStatus.PENDING.value
-        )
+        async with self._get_session() as session:
+            query = select(MatrixCellEntity).where(
+                MatrixCellEntity.status == MatrixCellStatus.PENDING.value
+            )
 
-        # Filter by matrix_id if provided
-        if matrix_id is not None:
-            query = query.where(MatrixCellEntity.matrix_id == matrix_id)
+            # Filter by matrix_id if provided
+            if matrix_id is not None:
+                query = query.where(MatrixCellEntity.matrix_id == matrix_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return [MatrixCellModel.model_validate(entity) for entity in entities]
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return [MatrixCellModel.model_validate(entity) for entity in entities]
 
     @trace_span
     async def get_by_status(self, status: QAJobStatus) -> List[QAJobModel]:
-        result = await self.db_session.execute(
-            select(self.entity_class).where(self.entity_class.status == status.value)
-        )
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(
+                select(self.entity_class).where(
+                    self.entity_class.status == status.value
+                )
+            )
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)

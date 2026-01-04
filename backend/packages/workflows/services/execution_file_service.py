@@ -3,7 +3,6 @@ Service for managing workflow execution files.
 """
 
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.workflows.repositories.execution_file_repository import (
     ExecutionFileRepository,
@@ -22,8 +21,8 @@ logger = get_logger(__name__)
 class ExecutionFileService:
     """Service for execution file operations."""
 
-    def __init__(self, session: AsyncSession):
-        self.repository = ExecutionFileRepository(session)
+    def __init__(self):
+        self.repository = ExecutionFileRepository()
         self.storage_service = WorkflowStorageService()
 
     @trace_span

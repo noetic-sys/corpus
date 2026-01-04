@@ -3,7 +3,6 @@ import os
 from deprecated import deprecated
 from functools import lru_cache
 from typing import Optional, Dict, Any, List
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.ai import get_ai_provider
 from common.providers.ai.interface import AIProviderInterface
@@ -29,16 +28,14 @@ logger = get_logger(__name__)
 class AIService:
     """Service that handles AI-related business logic using any AI provider."""
 
-    def __init__(self, provider: AIProviderInterface, db_session: AsyncSession):
-
+    def __init__(self, provider: AIProviderInterface):
         self.provider = provider
-        self.db_session = db_session
         # Navigate to project root and find prompts directory
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         )
         self.prompts_dir = os.path.join(project_root, "prompts")
-        self.question_option_service = QuestionOptionService(db_session)
+        self.question_option_service = QuestionOptionService()
 
     @trace_span
     @lru_cache(maxsize=100)
@@ -245,18 +242,16 @@ Please return a JSON object with the extracted information."""
 
 @deprecated
 def get_ai_service(
-    db_session: AsyncSession,
     provider_type: Optional[str] = None,
     model_name: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> AIService:
     """Get AI service instance with specified provider and model."""
     provider = get_ai_provider(provider_type, model_name)
-    return AIService(provider, db_session)
+    return AIService(provider)
 
 
 async def get_ai_service_for_question(
-    db_session: AsyncSession,
     question: QuestionModel,
     ai_config_override: Optional[dict] = None,
 ) -> AIService:
@@ -264,7 +259,7 @@ async def get_ai_service_for_question(
 
     # If question has a specific AI model configured, use it
     if question.ai_model_id:
-        ai_model_repo = AIModelRepository(db_session)
+        ai_model_repo = AIModelRepository()
         ai_model = await ai_model_repo.get_with_provider(question.ai_model_id)
 
         if (
@@ -278,8 +273,8 @@ async def get_ai_service_for_question(
 
             # Create provider with specific model
             provider = get_ai_provider(provider_type, model_name)
-            return AIService(provider, db_session)
+            return AIService(provider)
 
     # Use global default
     provider = get_ai_provider()
-    return AIService(provider, db_session)
+    return AIService(provider)

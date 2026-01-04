@@ -4,7 +4,6 @@ from temporalio import activity
 
 from common.core.otel_axiom_exporter import create_span_with_context, get_logger
 from common.core.config import settings
-from common.db.session import get_db
 from packages.documents.services.pdf_service import PdfService
 from packages.documents.services.document_service import get_document_service
 
@@ -19,12 +18,8 @@ async def split_pdf_activity(document_id: int, trace_headers: dict = None) -> Li
     and returns URLs for each page.
     """
     with create_span_with_context("temporal::split_pdf_activity", trace_headers):
-        # Get document from database (minimal session usage)
-        document = None
-        async for db_session in get_db():
-            document_service = get_document_service(db_session)
-            document = await document_service.get_document(document_id)
-            break
+        document_service = get_document_service()
+        document = await document_service.get_document(document_id)
 
         if not document:
             raise ValueError(f"Document {document_id} not found")

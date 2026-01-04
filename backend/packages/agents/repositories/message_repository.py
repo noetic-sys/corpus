@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc, func
 
@@ -10,8 +9,8 @@ from common.core.otel_axiom_exporter import trace_span
 
 
 class MessageRepository(BaseRepository[MessageEntity, MessageModel]):
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(MessageEntity, MessageModel, db_session)
+    def __init__(self):
+        super().__init__(MessageEntity, MessageModel)
 
     @trace_span
     async def get_by_conversation_id(
@@ -32,9 +31,10 @@ class MessageRepository(BaseRepository[MessageEntity, MessageModel]):
         if limit:
             query = query.limit(limit)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_latest_by_conversation_id(
@@ -50,10 +50,11 @@ class MessageRepository(BaseRepository[MessageEntity, MessageModel]):
         if company_id is not None:
             query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        # Reverse to get chronological order
-        return self._entities_to_domain(list(reversed(entities)))
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            # Reverse to get chronological order
+            return self._entities_to_domain(list(reversed(entities)))
 
     @trace_span
     async def get_next_sequence_number(
@@ -66,9 +67,10 @@ class MessageRepository(BaseRepository[MessageEntity, MessageModel]):
         if company_id is not None:
             query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        max_seq = result.scalar() or 0
-        return max_seq + 1
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            max_seq = result.scalar() or 0
+            return max_seq + 1
 
     @trace_span
     async def get_by_tool_call_id(
@@ -81,9 +83,10 @@ class MessageRepository(BaseRepository[MessageEntity, MessageModel]):
         if company_id is not None:
             query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entity = result.scalar_one_or_none()
-        return self._entity_to_domain(entity) if entity else None
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            entity = result.scalar_one_or_none()
+            return self._entity_to_domain(entity) if entity else None
 
     @trace_span
     async def count_by_conversation_id(
@@ -96,5 +99,6 @@ class MessageRepository(BaseRepository[MessageEntity, MessageModel]):
         if company_id is not None:
             query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        return result.scalar() or 0
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            return result.scalar() or 0

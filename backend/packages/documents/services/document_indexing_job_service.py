@@ -1,6 +1,5 @@
 from typing import Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.messages import DocumentIndexingMessage
@@ -22,9 +21,8 @@ logger = get_logger(__name__)
 class DocumentIndexingJobService:
     """Service for handling document indexing job operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.indexing_job_repo = DocumentIndexingJobRepository(db_session)
+    def __init__(self):
+        self.indexing_job_repo = DocumentIndexingJobRepository()
         self.message_queue = get_message_queue()
 
     @trace_span

@@ -61,7 +61,7 @@ class ListQuestionTypesTool(Tool[ListQuestionTypesParameters]):
     ) -> ToolResult:
         try:
             # Call the get_question_types route function directly
-            question_types = await get_question_types(db=session)
+            question_types = await get_question_types()
 
             return ToolResult.ok(
                 ListQuestionTypesSuccessResult(question_types=question_types)

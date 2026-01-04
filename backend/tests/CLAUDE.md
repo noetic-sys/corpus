@@ -23,7 +23,7 @@ def document_service(test_db, mock_storage, mock_bloom_filter, mock_search_provi
         "packages.documents.services.document_service.get_document_search_provider",
         return_value=mock_search_provider,
     ):
-        return DocumentService(test_db)
+        return DocumentService()
 ```
 
 ### For Audio Extractors

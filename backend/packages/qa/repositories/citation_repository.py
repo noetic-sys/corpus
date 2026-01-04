@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from common.core.otel_axiom_exporter import trace_span
 from common.repositories.base import BaseRepository
@@ -19,8 +18,8 @@ from packages.qa.cache_keys import (
 
 
 class CitationSetRepository(BaseRepository[CitationSetEntity, CitationSetModel]):
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(CitationSetEntity, CitationSetModel, db_session)
+    def __init__(self):
+        super().__init__(CitationSetEntity, CitationSetModel)
 
     @trace_span
     @cache(CitationSetModel, ttl=14400, key_generator=citation_sets_by_answer_key)
@@ -28,14 +27,15 @@ class CitationSetRepository(BaseRepository[CitationSetEntity, CitationSetModel])
         self, answer_id: int, company_id: Optional[int] = None
     ) -> List[CitationSetModel]:
         """Get all citation sets for an answer."""
-        query = select(CitationSetEntity).where(
-            CitationSetEntity.answer_id == answer_id
-        )
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            query = select(CitationSetEntity).where(
+                CitationSetEntity.answer_id == answer_id
+            )
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     @cache(CitationSetModel, ttl=14400, key_generator=citation_set_by_id_key)
@@ -43,12 +43,15 @@ class CitationSetRepository(BaseRepository[CitationSetEntity, CitationSetModel])
         self, citation_set_id: int, company_id: Optional[int] = None
     ) -> Optional[CitationSetModel]:
         """Get citation set by ID without loading citations."""
-        query = select(CitationSetEntity).where(CitationSetEntity.id == citation_set_id)
-        if company_id is not None:
-            query = query.where(CitationSetEntity.company_id == company_id)
-        result = await self.db_session.execute(query)
-        entity = result.scalar_one_or_none()
-        return self._entity_to_domain(entity) if entity else None
+        async with self._get_session() as session:
+            query = select(CitationSetEntity).where(
+                CitationSetEntity.id == citation_set_id
+            )
+            if company_id is not None:
+                query = query.where(CitationSetEntity.company_id == company_id)
+            result = await session.execute(query)
+            entity = result.scalar_one_or_none()
+            return self._entity_to_domain(entity) if entity else None
 
     @trace_span
     async def get_with_citations(
@@ -74,21 +77,22 @@ class CitationSetRepository(BaseRepository[CitationSetEntity, CitationSetModel])
         self, citation_set_id: int, company_id: Optional[int] = None
     ) -> List[CitationModel]:
         """Get all citations for a citation set, ordered by citation_order."""
-        query = (
-            select(CitationEntity)
-            .where(CitationEntity.citation_set_id == citation_set_id)
-            .order_by(CitationEntity.citation_order)
-        )
-        if company_id is not None:
-            query = query.where(CitationEntity.company_id == company_id)
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return [CitationModel.model_validate(entity) for entity in entities]
+        async with self._get_session() as session:
+            query = (
+                select(CitationEntity)
+                .where(CitationEntity.citation_set_id == citation_set_id)
+                .order_by(CitationEntity.citation_order)
+            )
+            if company_id is not None:
+                query = query.where(CitationEntity.company_id == company_id)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return [CitationModel.model_validate(entity) for entity in entities]
 
 
 class CitationRepository(BaseRepository[CitationEntity, CitationModel]):
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(CitationEntity, CitationModel, db_session)
+    def __init__(self):
+        super().__init__(CitationEntity, CitationModel)
 
     @trace_span
     @cache(CitationModel, ttl=14400, key_generator=citations_by_set_key)
@@ -96,16 +100,17 @@ class CitationRepository(BaseRepository[CitationEntity, CitationModel]):
         self, citation_set_id: int, company_id: Optional[int] = None
     ) -> List[CitationModel]:
         """Get all citations for a citation set, ordered by citation_order."""
-        query = (
-            select(CitationEntity)
-            .where(CitationEntity.citation_set_id == citation_set_id)
-            .order_by(CitationEntity.citation_order)
-        )
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            query = (
+                select(CitationEntity)
+                .where(CitationEntity.citation_set_id == citation_set_id)
+                .order_by(CitationEntity.citation_order)
+            )
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     @cache(CitationModel, ttl=14400, key_generator=citations_by_document_key)
@@ -113,12 +118,15 @@ class CitationRepository(BaseRepository[CitationEntity, CitationModel]):
         self, document_id: int, company_id: Optional[int] = None
     ) -> List[CitationModel]:
         """Get all citations for a specific document."""
-        query = select(CitationEntity).where(CitationEntity.document_id == document_id)
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            query = select(CitationEntity).where(
+                CitationEntity.document_id == document_id
+            )
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_by_citation_set_ids(
@@ -128,13 +136,14 @@ class CitationRepository(BaseRepository[CitationEntity, CitationModel]):
         if not citation_set_ids:
             return []
 
-        query = (
-            select(CitationEntity)
-            .where(CitationEntity.citation_set_id.in_(citation_set_ids))
-            .order_by(CitationEntity.citation_set_id, CitationEntity.citation_order)
-        )
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            query = (
+                select(CitationEntity)
+                .where(CitationEntity.citation_set_id.in_(citation_set_ids))
+                .order_by(CitationEntity.citation_set_id, CitationEntity.citation_order)
+            )
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)

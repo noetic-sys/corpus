@@ -64,7 +64,6 @@ class GetMatrixDocumentsTool(Tool[GetMatrixDocumentsParameters]):
             documents = await get_documents_by_matrix(
                 matrix_id=parameters.matrix_id,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(GetMatrixDocumentsSuccessResult(documents=documents))

@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from packages.auth.repositories.service_account_repository import (
     ServiceAccountRepository,
 )
@@ -11,12 +10,12 @@ class TestServiceAccountRepository:
     """Test ServiceAccountRepository methods."""
 
     @pytest.fixture
-    async def repository(self, test_db: AsyncSession):
+    async def repository(self):
         """Create repository instance."""
-        return ServiceAccountRepository(test_db)
+        return ServiceAccountRepository()
 
     @pytest.fixture
-    async def sample_service_account(self, test_db: AsyncSession, sample_company):
+    async def sample_service_account(self, test_db, sample_company):
         """Create a sample service account."""
         api_key_hash = hashlib.sha256(b"test_api_key").hexdigest()
         account = ServiceAccountEntity(

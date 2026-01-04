@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from common.core.otel_axiom_exporter import trace_span
 from common.repositories.base import BaseRepository
@@ -13,8 +12,8 @@ from packages.qa.cache_keys import (
 
 
 class AnswerSetRepository(BaseRepository[AnswerSetEntity, AnswerSetModel]):
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(AnswerSetEntity, AnswerSetModel, db_session)
+    def __init__(self):
+        super().__init__(AnswerSetEntity, AnswerSetModel)
 
     @trace_span
     @cache(AnswerSetModel, ttl=7200, key_generator=answer_set_by_matrix_cell_key)
@@ -22,14 +21,15 @@ class AnswerSetRepository(BaseRepository[AnswerSetEntity, AnswerSetModel]):
         self, matrix_cell_id: int, company_id: Optional[int] = None
     ) -> List[AnswerSetModel]:
         """Get all answer sets for a matrix cell."""
-        query = select(AnswerSetEntity).where(
-            AnswerSetEntity.matrix_cell_id == matrix_cell_id
-        )
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            query = select(AnswerSetEntity).where(
+                AnswerSetEntity.matrix_cell_id == matrix_cell_id
+            )
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     @cache(
@@ -39,14 +39,15 @@ class AnswerSetRepository(BaseRepository[AnswerSetEntity, AnswerSetModel]):
         self, matrix_cell_id: int, company_id: Optional[int] = None
     ) -> Optional[AnswerSetModel]:
         """Get the current answer set for a matrix cell (most recent one)."""
-        query = (
-            select(AnswerSetEntity)
-            .where(AnswerSetEntity.matrix_cell_id == matrix_cell_id)
-            .order_by(AnswerSetEntity.created_at.desc())
-            .limit(1)
-        )
-        if company_id is not None:
-            query = query.where(AnswerSetEntity.company_id == company_id)
-        result = await self.db_session.execute(query)
-        entity = result.scalar_one_or_none()
-        return self._entity_to_domain(entity) if entity else None
+        async with self._get_session() as session:
+            query = (
+                select(AnswerSetEntity)
+                .where(AnswerSetEntity.matrix_cell_id == matrix_cell_id)
+                .order_by(AnswerSetEntity.created_at.desc())
+                .limit(1)
+            )
+            if company_id is not None:
+                query = query.where(AnswerSetEntity.company_id == company_id)
+            result = await session.execute(query)
+            entity = result.scalar_one_or_none()
+            return self._entity_to_domain(entity) if entity else None

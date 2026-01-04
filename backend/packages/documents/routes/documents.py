@@ -1,10 +1,8 @@
 from typing import List, Optional, Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Path
 from fastapi.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.db.session import get_db, get_db_readonly
-from common.db.transaction_utils import transaction
+from common.db.scoped import transaction
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.billing.services.quota_service import QuotaService
@@ -78,10 +76,9 @@ async def list_documents(
         100, ge=1, le=1000, description="Maximum number of documents to return"
     ),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """List all documents with optional filters and pagination."""
-    document_service = get_document_service(db)
+    document_service = get_document_service()
 
     result = await document_service.list_all_documents(
         company_id=current_user.company_id,
@@ -129,10 +126,9 @@ async def search_documents(
         100, ge=1, le=1000, description="Maximum number of documents to return"
     ),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Search documents with optional query and filters."""
-    document_service = get_document_service(db)
+    document_service = get_document_service()
 
     result = await document_service.search_documents(
         company_id=current_user.company_id,
@@ -168,10 +164,9 @@ async def hybrid_search_documents(
         3, ge=1, le=10, description="Max snippets per document", alias="snippetsPerDoc"
     ),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Hybrid document search combining filename, BM25 content, and semantic vector search."""
-    document_service = get_document_service(db)
+    document_service = get_document_service()
 
     result = await document_service.hybrid_search_documents(
         company_id=current_user.company_id,
@@ -218,14 +213,13 @@ async def upload_document(
     ],
     file: UploadFile = File(...),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    async with transaction(db):
+    async with transaction():
         # Require file size for quota enforcement
         if file.size is None:
             raise HTTPException(status_code=400, detail="File size required")
 
-        quota_service = QuotaService(db)
+        quota_service = QuotaService()
 
         # Check document count quota first
         await quota_service.check_document_quota(company_id=current_user.company_id)
@@ -239,11 +233,11 @@ async def upload_document(
             raise HTTPException(status_code=402, detail=quota_check.get_user_message())
 
         # these should be dependencies
-        document_service = get_document_service(db)
-        question_service = get_question_service(db)
-        batch_processing_service = get_batch_processing_service(db)
-        entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        document_service = get_document_service()
+        question_service = get_question_service()
+        batch_processing_service = get_batch_processing_service()
+        entity_set_service = get_entity_set_service()
+        member_repo = EntitySetMemberRepository()
 
         # Upload document as standalone entity
         document, is_duplicate = await document_service.upload_document(
@@ -252,7 +246,7 @@ async def upload_document(
 
         # Track usage for billing (skip if duplicate)
         if not is_duplicate:
-            usage_service = UsageService(db)
+            usage_service = UsageService()
             await usage_service.track_storage_upload(
                 company_id=current_user.company_id,
                 file_size_bytes=file.size,
@@ -319,7 +313,6 @@ async def upload_document(
             entity_set_id=document_entity_set.id,
             create_qa_jobs=False,  # Jobs created after extraction completes (or immediately for duplicates)
         )
-        await db.commit()
 
         # Check if document is duplicate AND already extracted
         if is_duplicate and document.extraction_status == ExtractionStatus.COMPLETED:
@@ -339,7 +332,7 @@ async def upload_document(
                 )
         else:
             # Document needs extraction, start Temporal workflow
-            temporal_extraction_service = get_temporal_document_extraction_service(db)
+            temporal_extraction_service = get_temporal_document_extraction_service()
             logger.info(
                 f"Starting Temporal workflow for document {document.id} "
                 f"(duplicate={is_duplicate}, status={document.extraction_status}, type={document.content_type})"
@@ -367,10 +360,9 @@ async def upload_documents_from_urls(
     ],
     request: BulkUrlUploadRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Upload multiple documents from URLs to a matrix."""
-    quota_service = QuotaService(db)
+    quota_service = QuotaService()
 
     # Check document count quota first (per URL)
     # Note: This is a pre-check - actual count enforcement happens per-document
@@ -387,11 +379,11 @@ async def upload_documents_from_urls(
     if not quota_check.allowed:
         raise HTTPException(status_code=402, detail=quota_check.get_user_message())
 
-    document_service = get_document_service(db)
-    entity_set_service = get_entity_set_service(db)
-    batch_processing_service = get_batch_processing_service(db)
-    member_repo = EntitySetMemberRepository(db)
-    temporal_extraction_service = get_temporal_document_extraction_service(db)
+    document_service = get_document_service()
+    entity_set_service = get_entity_set_service()
+    batch_processing_service = get_batch_processing_service()
+    member_repo = EntitySetMemberRepository()
+    temporal_extraction_service = get_temporal_document_extraction_service()
 
     # Validate entity set
     document_entity_set = await entity_set_service.get_entity_set(
@@ -421,7 +413,7 @@ async def upload_documents_from_urls(
     )
 
     # Now handle matrix associations inside transaction
-    async with transaction(db):
+    async with transaction():
         response_documents = []
 
         for document in uploaded_documents:
@@ -478,8 +470,6 @@ async def upload_documents_from_urls(
                 )
                 upload_errors.append(f"Document {document.filename}: {str(e)}")
 
-        await db.commit()
-
     return BulkUrlUploadResponse(documents=response_documents, errors=upload_errors)
 
 
@@ -487,15 +477,14 @@ async def upload_documents_from_urls(
 async def upload_standalone_document(
     file: UploadFile = File(...),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Upload a document without associating it with any matrix."""
-    async with transaction(db):
+    async with transaction():
         # Require file size for quota enforcement
         if file.size is None:
             raise HTTPException(status_code=400, detail="File size required")
 
-        quota_service = QuotaService(db)
+        quota_service = QuotaService()
 
         # Check document count quota first
         await quota_service.check_document_quota(company_id=current_user.company_id)
@@ -508,7 +497,7 @@ async def upload_standalone_document(
         if not quota_check.allowed:
             raise HTTPException(status_code=402, detail=quota_check.get_user_message())
 
-        document_service = get_document_service(db)
+        document_service = get_document_service()
 
         # Upload document as standalone entity
         document, is_duplicate = await document_service.upload_document(
@@ -517,7 +506,7 @@ async def upload_standalone_document(
 
         # Track usage for billing (skip if duplicate)
         if not is_duplicate:
-            usage_service = UsageService(db)
+            usage_service = UsageService()
             await usage_service.track_storage_upload(
                 company_id=current_user.company_id,
                 file_size_bytes=file.size,
@@ -526,7 +515,7 @@ async def upload_standalone_document(
             )
 
         # Start extraction workflow
-        temporal_extraction_service = get_temporal_document_extraction_service(db)
+        temporal_extraction_service = get_temporal_document_extraction_service()
 
         logger.info(
             f"Using Temporal workflow for standalone document {document.id} (type: {document.content_type})"
@@ -553,9 +542,8 @@ async def upload_standalone_document(
 async def get_document(
     document_id: Annotated[int, Path(alias="documentId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     document = await document_service.get_document(document_id, current_user.company_id)
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -566,10 +554,9 @@ async def get_document(
 async def get_document_content(
     document_id: Annotated[int, Path(alias="documentId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get extracted content for a document (for chunking agent)."""
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     document = await document_service.get_document(document_id, current_user.company_id)
 
     if not document:
@@ -598,9 +585,8 @@ async def get_document_content(
 async def delete_document(
     document_id: Annotated[int, Path(alias="documentId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     success = await document_service.delete_document(
         document_id, current_user.company_id
     )
@@ -619,11 +605,10 @@ async def delete_document(
 async def get_documents_by_matrix(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all documents for a specific matrix through entity set membership."""
-    entity_set_service = get_entity_set_service(db)
-    document_service = get_document_service(db)
+    entity_set_service = get_entity_set_service()
+    document_service = get_document_service()
 
     # Get all document members across all document entity sets
     all_members = await entity_set_service.get_all_members_by_type(
@@ -670,12 +655,11 @@ async def remove_document_from_matrix(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     document_id: Annotated[int, Path(alias="documentId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Remove a document from a specific matrix (removes from entity set)."""
-    async with transaction(db):
-        entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+    async with transaction():
+        entity_set_service = get_entity_set_service()
+        member_repo = EntitySetMemberRepository()
 
         # Get matrix entity sets
         entity_sets_with_members = (
@@ -725,15 +709,14 @@ async def associate_existing_document_with_matrix(
     document_id: Annotated[int, Path(alias="documentId")],
     label_update: DocumentLabelUpdate = None,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Associate an existing document with a matrix (adds to entity set)."""
-    async with transaction(db):
-        question_service = get_question_service(db)
-        batch_processing_service = get_batch_processing_service(db)
-        document_service = get_document_service(db)
-        entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+    async with transaction():
+        question_service = get_question_service()
+        batch_processing_service = get_batch_processing_service()
+        document_service = get_document_service()
+        entity_set_service = get_entity_set_service()
+        member_repo = EntitySetMemberRepository()
 
         # Get the document for batch processing
         document = await document_service.get_document(
@@ -837,10 +820,9 @@ async def get_highlighted_document_for_cell(
     document_id: Annotated[int, Path(alias="documentId")],
     matrix_cell_id: Annotated[int, Path(alias="matrixCellId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get a document with citations from a matrix cell highlighted."""
-    highlighting_service = get_document_highlighting_service(db)
+    highlighting_service = get_document_highlighting_service()
 
     try:
         highlighted_content = (
@@ -849,7 +831,7 @@ async def get_highlighted_document_for_cell(
             )
         )
         # Get document info for proper content type
-        document_service = get_document_service(db)
+        document_service = get_document_service()
         document = await document_service.get_document(
             document_id, current_user.company_id
         )

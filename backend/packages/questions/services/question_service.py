@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 import re
@@ -51,16 +50,15 @@ logger = get_logger(__name__)
 class QuestionService:
     """Service for handling question operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.question_repo = QuestionRepository(db_session)
-        self.matrix_repo = MatrixRepository(db_session)
-        self.template_var_repo = MatrixTemplateVariableRepository(db_session)
-        self.option_set_repo = QuestionOptionSetRepository(db_session)
-        self.option_repo = QuestionOptionRepository(db_session)
-        self.question_option_service = QuestionOptionService(db_session)
-        self.reprocessing_service = ReprocessingService(db_session)
-        self.ai_model_repo = AIModelRepository(db_session)
+    def __init__(self):
+        self.question_repo = QuestionRepository()
+        self.matrix_repo = MatrixRepository()
+        self.template_var_repo = MatrixTemplateVariableRepository()
+        self.option_set_repo = QuestionOptionSetRepository()
+        self.option_repo = QuestionOptionRepository()
+        self.question_option_service = QuestionOptionService()
+        self.reprocessing_service = ReprocessingService()
+        self.ai_model_repo = AIModelRepository()
 
     async def _get_available_template_variables(self, matrix_id: int) -> List[str]:
         """Get list of available template variable names for a matrix."""
@@ -413,11 +411,11 @@ class QuestionService:
         if self._needs_reprocessing_for_options_update(question_update):
             # Check agentic QA quota if question uses agentic mode (raises 429 if exceeded)
             if question.use_agent_qa:
-                quota_service = QuotaService(self.db_session)
+                quota_service = QuotaService()
                 await quota_service.check_agentic_qa_quota(company_id)
 
             # Get question entity set to build reprocess request
-            entity_set_service = get_entity_set_service(self.db_session)
+            entity_set_service = get_entity_set_service()
             question_entity_set = await entity_set_service.get_entity_set_by_type(
                 matrix_id, EntityType.QUESTION
             )
@@ -445,7 +443,7 @@ class QuestionService:
 
             # Track agentic QA usage if question uses agentic mode
             if question.use_agent_qa and reprocessed_count > 0:
-                usage_service = UsageService(self.db_session)
+                usage_service = UsageService()
                 await usage_service.track_agentic_qa(
                     company_id=company_id,
                     quantity=reprocessed_count,
@@ -528,7 +526,7 @@ class QuestionService:
     ) -> None:
         """Duplicate template variable associations for questions in the same matrix."""
 
-        template_var_service = QuestionTemplateVariableService(self.db_session)
+        template_var_service = QuestionTemplateVariableService()
 
         # Get template variable associations from source question
         source_associations = (
@@ -748,7 +746,7 @@ class QuestionService:
         if not id_mapping:
             return
 
-        template_var_service = QuestionTemplateVariableService(self.db_session)
+        template_var_service = QuestionTemplateVariableService()
 
         # Get template variable associations from source question
         source_associations = (
@@ -800,6 +798,6 @@ class QuestionService:
         )
 
 
-def get_question_service(db_session: AsyncSession) -> QuestionService:
+def get_question_service() -> QuestionService:
     """Get question service instance."""
-    return QuestionService(db_session)
+    return QuestionService()

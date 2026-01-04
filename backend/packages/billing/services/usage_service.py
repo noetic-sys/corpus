@@ -4,7 +4,6 @@ Service for tracking usage events.
 
 from typing import Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.billing.repositories.usage_repository import UsageEventRepository
@@ -17,9 +16,8 @@ logger = get_logger(__name__)
 class UsageService:
     """Service for usage event tracking."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.usage_repo = UsageEventRepository(db_session)
+    def __init__(self):
+        self.usage_repo = UsageEventRepository()
 
     @trace_span
     async def track_cell_operation(
@@ -316,6 +314,17 @@ class UsageService:
         )
 
         return event
+
+    @trace_span
+    async def update_event_metadata(self, event_id: int, metadata: dict) -> None:
+        """
+        Update the metadata for a usage event.
+
+        Args:
+            event_id: The usage event ID
+            metadata: The new metadata dict to set
+        """
+        await self.usage_repo.update_event_metadata(event_id, metadata)
 
     @trace_span
     async def get_user_usage(self, user_id: int, limit: int = 100) -> list[UsageEvent]:

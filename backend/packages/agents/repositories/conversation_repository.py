@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update
 
@@ -10,8 +9,8 @@ from common.core.otel_axiom_exporter import trace_span
 
 
 class ConversationRepository(BaseRepository[ConversationEntity, ConversationModel]):
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(ConversationEntity, ConversationModel, db_session)
+    def __init__(self):
+        super().__init__(ConversationEntity, ConversationModel)
 
     @trace_span
     async def get_active_conversations(
@@ -28,9 +27,10 @@ class ConversationRepository(BaseRepository[ConversationEntity, ConversationMode
         if company_id is not None:
             query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def deactivate_conversation(
@@ -41,14 +41,15 @@ class ConversationRepository(BaseRepository[ConversationEntity, ConversationMode
         if company_id is not None:
             query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(
-            query.values(is_active=False).returning(self.entity_class)
-        )
-        entity = result.scalar_one_or_none()
-        if entity:
-            await self.db_session.flush()
-            return self._entity_to_domain(entity)
-        return None
+        async with self._get_session() as session:
+            result = await session.execute(
+                query.values(is_active=False).returning(self.entity_class)
+            )
+            entity = result.scalar_one_or_none()
+            if entity:
+                await session.flush()
+                return self._entity_to_domain(entity)
+            return None
 
     @trace_span
     async def get_by_ai_model_id(
@@ -67,9 +68,10 @@ class ConversationRepository(BaseRepository[ConversationEntity, ConversationMode
         if company_id is not None:
             query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_all(
@@ -89,6 +91,7 @@ class ConversationRepository(BaseRepository[ConversationEntity, ConversationMode
         if company_id is not None:
             query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)

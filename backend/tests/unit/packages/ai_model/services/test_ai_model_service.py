@@ -10,9 +10,9 @@ class TestAIModelService:
     """Test AIModelService methods."""
 
     @pytest.fixture
-    async def service(self, test_db: AsyncSession):
+    async def service(self):
         """Create service instance."""
-        return AIModelService(test_db)
+        return AIModelService()
 
     @pytest.fixture
     async def sample_provider(self, test_db: AsyncSession):

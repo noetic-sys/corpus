@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.users.models.database.user import UserEntity
@@ -11,9 +10,9 @@ class TestUserService:
     """Test UserService methods."""
 
     @pytest.fixture
-    async def service(self, test_db: AsyncSession):
+    async def service(self):
         """Create service instance."""
-        return UserService(test_db)
+        return UserService()
 
     async def test_create_user_success(self, service, sample_company):
         """Test successful user creation."""
@@ -183,8 +182,7 @@ class TestUserService:
         success = await service.delete_user(999)
         assert success is False
 
-    async def test_service_initialization(self, test_db):
+    async def test_service_initialization(self):
         """Test service properly initializes."""
-        service = UserService(test_db)
-        assert service.db_session == test_db
+        service = UserService()
         assert service.user_repo is not None

@@ -28,7 +28,7 @@ class TestCitationService:
     @pytest.fixture
     async def service(self, test_db: AsyncSession):
         """Create service instance."""
-        return CitationService(test_db)
+        return CitationService()
 
     async def test_create_citation_set_with_citations_success(
         self, service, sample_answer, sample_document, sample_company
@@ -97,7 +97,7 @@ class TestCitationService:
         assert result is None
 
     async def test_get_citation_set_with_citations(
-        self, service, sample_citation_set, sample_document, sample_company
+        self, service, sample_citation_set, sample_document, sample_company, test_db
     ):
         """Test getting citation set with citations loaded."""
         # Create citations for the set
@@ -115,8 +115,8 @@ class TestCitationService:
             quote_text="Second quote",
             citation_order=2,
         )
-        service.db_session.add_all([citation1, citation2])
-        await service.db_session.commit()
+        test_db.add_all([citation1, citation2])
+        await test_db.commit()
 
         result = await service.get_citation_set_with_citations(sample_citation_set.id)
 
@@ -148,7 +148,7 @@ class TestCitationService:
         assert all(cs.answer_id == sample_answer.id for cs in results)
 
     async def test_get_citations_for_set(
-        self, service, sample_citation_set, sample_document, sample_company
+        self, service, sample_citation_set, sample_document, sample_company, test_db
     ):
         """Test getting citations for a citation set."""
         # Create citations with different orders
@@ -166,8 +166,8 @@ class TestCitationService:
             quote_text="First quote",
             citation_order=1,
         )
-        service.db_session.add_all([citation1, citation2])
-        await service.db_session.commit()
+        test_db.add_all([citation1, citation2])
+        await test_db.commit()
 
         citations = await service.get_citations_for_set(sample_citation_set.id)
 
@@ -218,8 +218,8 @@ class TestCitationService:
             quote_text="Quote from doc 2",
             citation_order=3,
         )
-        service.db_session.add_all([citation1, citation2, citation3])
-        await service.db_session.commit()
+        test_db.add_all([citation1, citation2, citation3])
+        await test_db.commit()
 
         # Get citations for first document
         citations = await service.get_citations_for_document(sample_document.id)
@@ -254,8 +254,7 @@ class TestCitationService:
 
     async def test_service_initialization(self, test_db):
         """Test service properly initializes all repositories."""
-        service = CitationService(test_db)
+        service = CitationService()
 
-        assert service.db_session == test_db
         assert service.citation_set_repo is not None
         assert service.citation_repo is not None

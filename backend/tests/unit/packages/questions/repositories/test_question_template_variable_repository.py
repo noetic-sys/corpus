@@ -22,7 +22,7 @@ class TestQuestionTemplateVariableRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return QuestionTemplateVariableRepository(test_db)
+        return QuestionTemplateVariableRepository()
 
     async def test_create_association(
         self, repository, sample_question, sample_template_variable, sample_company
@@ -534,7 +534,6 @@ class TestQuestionTemplateVariableRepository:
 
     async def test_repository_initialization(self, test_db):
         """Test repository properly initializes."""
-        repository = QuestionTemplateVariableRepository(test_db)
+        repository = QuestionTemplateVariableRepository()
 
-        assert repository.db_session == test_db
         assert repository.entity_class == QuestionTemplateVariableEntity

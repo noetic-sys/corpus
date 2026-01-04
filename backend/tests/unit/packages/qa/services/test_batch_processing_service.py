@@ -24,7 +24,7 @@ def batch_service(test_db, mock_message_queue):
         "packages.matrices.services.batch_processing_service.get_message_queue",
         return_value=mock_message_queue,
     ):
-        return BatchProcessingService(test_db)
+        return BatchProcessingService()
 
 
 @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")
@@ -43,7 +43,7 @@ class TestBatchProcessingService:
     ):
         """Test batch creation with empty entity set list."""
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Test with empty entity sets
         cells, jobs = await service.batch_create_matrix_cells_and_jobs(
@@ -65,10 +65,10 @@ class TestBatchProcessingService:
         """Test successful processing of entity added to entity set."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -79,7 +79,7 @@ class TestBatchProcessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -98,7 +98,7 @@ class TestBatchProcessingService:
         )
 
         # Add initial question member
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         question_member = await member_repo.create(
             MatrixEntitySetMemberCreateModel(
                 entity_set_id=question_set.id,
@@ -148,10 +148,10 @@ class TestBatchProcessingService:
         """Test that adding question creates QA jobs."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -162,7 +162,7 @@ class TestBatchProcessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -181,7 +181,7 @@ class TestBatchProcessingService:
         )
 
         # Add document and question members
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         await member_repo.create(
             MatrixEntitySetMemberCreateModel(
                 entity_set_id=doc_set.id,
@@ -229,10 +229,10 @@ class TestBatchProcessingService:
         """Test successful creation and queueing of jobs for existing cells."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -243,7 +243,7 @@ class TestBatchProcessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -262,7 +262,7 @@ class TestBatchProcessingService:
         )
 
         # Add members
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         for i in range(3):
             await member_repo.create(
                 MatrixEntitySetMemberCreateModel(
@@ -319,7 +319,7 @@ class TestBatchProcessingService:
     ):
         """Test that empty matrix cells list returns 0."""
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Call with empty list
         jobs_created = await service.create_jobs_and_queue_for_cells([])
@@ -345,10 +345,10 @@ class TestBatchProcessingService:
         """Test that adding entities incrementally doesn't create duplicate cells."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -359,7 +359,7 @@ class TestBatchProcessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -378,7 +378,7 @@ class TestBatchProcessingService:
         )
 
         # Add initial members
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         await member_repo.create(
             MatrixEntitySetMemberCreateModel(
                 entity_set_id=doc_set.id,
@@ -419,6 +419,6 @@ class TestBatchProcessingService:
         assert len(cells2) == 0  # No new cells created
 
         # Verify only 1 cell total in database
-        cell_repo = MatrixCellRepository(test_db)
+        cell_repo = MatrixCellRepository()
         all_cells = await cell_repo.get_cells_by_matrix_id(matrix.id)
         assert len(all_cells) == 1

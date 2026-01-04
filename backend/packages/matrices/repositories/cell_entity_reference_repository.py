@@ -6,7 +6,6 @@ coordinates for cells using entity set members and roles.
 """
 
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import and_
 
@@ -30,11 +29,10 @@ class CellEntityReferenceRepository(
 ):
     """Repository for managing cell entity references (N-dimensional coordinates)."""
 
-    def __init__(self, db_session: AsyncSession):
+    def __init__(self):
         super().__init__(
             MatrixCellEntityReferenceEntity,
             MatrixCellEntityReferenceModel,
-            db_session,
         )
 
     @trace_span
@@ -45,35 +43,37 @@ class CellEntityReferenceRepository(
 
         Returns the N-dimensional coordinates of the cell.
         """
-        query = (
-            select(self.entity_class)
-            .where(self.entity_class.matrix_cell_id == cell_id)
-            .order_by(self.entity_class.entity_order)
-        )
+        async with self._get_session() as session:
+            query = (
+                select(self.entity_class)
+                .where(self.entity_class.matrix_cell_id == cell_id)
+                .order_by(self.entity_class.entity_order)
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_by_cell_id_and_role(
         self, cell_id: int, role: EntityRole, company_id: Optional[int] = None
     ) -> Optional[MatrixCellEntityReferenceModel]:
         """Get entity reference for a cell by role (identifies the axis)."""
-        query = select(self.entity_class).where(
-            self.entity_class.matrix_cell_id == cell_id,
-            self.entity_class.role == role.value,
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class).where(
+                self.entity_class.matrix_cell_id == cell_id,
+                self.entity_class.role == role.value,
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entity = result.scalar_one_or_none()
-        return self._entity_to_domain(entity) if entity else None
+            result = await session.execute(query)
+            entity = result.scalar_one_or_none()
+            return self._entity_to_domain(entity) if entity else None
 
     @trace_span
     async def get_cells_by_entity_member(
@@ -91,20 +91,21 @@ class CellEntityReferenceRepository(
 
         Returns: List of cell IDs
         """
-        query = select(self.entity_class.matrix_cell_id).where(
-            and_(
-                self.entity_class.matrix_id == matrix_id,
-                self.entity_class.entity_set_id == entity_set_id,
-                self.entity_class.entity_set_member_id == entity_set_member_id,
-                self.entity_class.role == role.value,
+        async with self._get_session() as session:
+            query = select(self.entity_class.matrix_cell_id).where(
+                and_(
+                    self.entity_class.matrix_id == matrix_id,
+                    self.entity_class.entity_set_id == entity_set_id,
+                    self.entity_class.entity_set_member_id == entity_set_member_id,
+                    self.entity_class.role == role.value,
+                )
             )
-        )
 
-        if company_id is not None:
-            query = query.where(self.entity_class.company_id == company_id)
+            if company_id is not None:
+                query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        return [row[0] for row in result.fetchall()]
+            result = await session.execute(query)
+            return [row[0] for row in result.fetchall()]
 
     @trace_span
     async def create_reference(
@@ -129,17 +130,18 @@ class CellEntityReferenceRepository(
         self, matrix_id: int, company_id: Optional[int] = None
     ) -> List[MatrixCellEntityReferenceModel]:
         """Get all entity references for a matrix."""
-        query = select(self.entity_class).where(
-            self.entity_class.matrix_id == matrix_id,
-            self.entity_class.deleted == False,  # noqa
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class).where(
+                self.entity_class.matrix_id == matrix_id,
+                self.entity_class.deleted == False,  # noqa
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_by_cell_ids_bulk(
@@ -153,18 +155,21 @@ class CellEntityReferenceRepository(
         if not cell_ids:
             return []
 
-        query = (
-            select(self.entity_class)
-            .where(self.entity_class.matrix_cell_id.in_(cell_ids))
-            .order_by(self.entity_class.matrix_cell_id, self.entity_class.entity_order)
-        )
+        async with self._get_session() as session:
+            query = (
+                select(self.entity_class)
+                .where(self.entity_class.matrix_cell_id.in_(cell_ids))
+                .order_by(
+                    self.entity_class.matrix_cell_id, self.entity_class.entity_order
+                )
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+            result = await session.execute(query)
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_cells_by_member_ids(
@@ -184,24 +189,25 @@ class CellEntityReferenceRepository(
         if not member_ids:
             return []
 
-        query = (
-            select(self.entity_class.matrix_cell_id)
-            .where(
-                and_(
-                    self.entity_class.matrix_id == matrix_id,
-                    self.entity_class.entity_set_id == entity_set_id,
-                    self.entity_class.entity_set_member_id.in_(member_ids),
-                    self.entity_class.deleted == False,  # noqa
+        async with self._get_session() as session:
+            query = (
+                select(self.entity_class.matrix_cell_id)
+                .where(
+                    and_(
+                        self.entity_class.matrix_id == matrix_id,
+                        self.entity_class.entity_set_id == entity_set_id,
+                        self.entity_class.entity_set_member_id.in_(member_ids),
+                        self.entity_class.deleted == False,  # noqa
+                    )
                 )
+                .distinct()
             )
-            .distinct()
-        )
 
-        if company_id is not None:
-            query = query.where(self.entity_class.company_id == company_id)
+            if company_id is not None:
+                query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        return [row[0] for row in result.fetchall()]
+            result = await session.execute(query)
+            return [row[0] for row in result.fetchall()]
 
     @trace_span
     async def get_cells_by_member_ids_with_role(
@@ -222,24 +228,25 @@ class CellEntityReferenceRepository(
         if not member_ids:
             return []
 
-        query = (
-            select(self.entity_class.matrix_cell_id)
-            .where(
-                and_(
-                    self.entity_class.matrix_id == matrix_id,
-                    self.entity_class.entity_set_id == entity_set_id,
-                    self.entity_class.entity_set_member_id.in_(member_ids),
-                    self.entity_class.role == role.value,
+        async with self._get_session() as session:
+            query = (
+                select(self.entity_class.matrix_cell_id)
+                .where(
+                    and_(
+                        self.entity_class.matrix_id == matrix_id,
+                        self.entity_class.entity_set_id == entity_set_id,
+                        self.entity_class.entity_set_member_id.in_(member_ids),
+                        self.entity_class.role == role.value,
+                    )
                 )
+                .distinct()
             )
-            .distinct()
-        )
 
-        if company_id is not None:
-            query = query.where(self.entity_class.company_id == company_id)
+            if company_id is not None:
+                query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        return [row[0] for row in result.fetchall()]
+            result = await session.execute(query)
+            return [row[0] for row in result.fetchall()]
 
     @trace_span
     async def members_have_cells_in_matrix(
@@ -264,22 +271,23 @@ class CellEntityReferenceRepository(
         if not member_ids:
             return False
 
-        # Check if any cells reference these members
-        query = select(
-            exists().where(
-                and_(
-                    self.entity_class.matrix_id == matrix_id,
-                    self.entity_class.entity_set_member_id.in_(member_ids),
-                    self.entity_class.deleted == False,  # noqa
+        async with self._get_session() as session:
+            # Check if any cells reference these members
+            query = select(
+                exists().where(
+                    and_(
+                        self.entity_class.matrix_id == matrix_id,
+                        self.entity_class.entity_set_member_id.in_(member_ids),
+                        self.entity_class.deleted == False,  # noqa
+                    )
                 )
             )
-        )
 
-        if company_id is not None:
-            query = query.where(self.entity_class.company_id == company_id)
+            if company_id is not None:
+                query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        return result.scalar()
+            result = await session.execute(query)
+            return result.scalar()
 
     @trace_span
     async def get_cell_combinations_for_members(
@@ -305,64 +313,65 @@ class CellEntityReferenceRepository(
         if not member_ids:
             return set()
 
-        # Get all cells that reference any of these members
-        query = (
-            select(self.entity_class.matrix_cell_id)
-            .where(
-                self.entity_class.matrix_id == matrix_id,
-                self.entity_class.entity_set_member_id.in_(member_ids),
-                self.entity_class.deleted == False,  # noqa
+        async with self._get_session() as session:
+            # Get all cells that reference any of these members
+            query = (
+                select(self.entity_class.matrix_cell_id)
+                .where(
+                    self.entity_class.matrix_id == matrix_id,
+                    self.entity_class.entity_set_member_id.in_(member_ids),
+                    self.entity_class.deleted == False,  # noqa
+                )
+                .distinct()
             )
-            .distinct()
-        )
 
-        if company_id is not None:
-            query = query.where(self.entity_class.company_id == company_id)
+            if company_id is not None:
+                query = query.where(self.entity_class.company_id == company_id)
 
-        result = await self.db_session.execute(query)
-        cell_ids = [row[0] for row in result.fetchall()]
+            result = await session.execute(query)
+            cell_ids = [row[0] for row in result.fetchall()]
 
-        if not cell_ids:
-            return set()
+            if not cell_ids:
+                return set()
 
-        logger.info(
-            f"Loading refs for {len(cell_ids)} cells that reference {len(member_ids)} members"
-        )
-
-        # Now load all refs for just these cells
-        refs_query = (
-            select(
-                self.entity_class.matrix_cell_id,
-                self.entity_class.role,
-                self.entity_class.entity_set_id,
-                self.entity_class.entity_set_member_id,
+            logger.info(
+                f"Loading refs for {len(cell_ids)} cells that reference {len(member_ids)} members"
             )
-            .where(
-                self.entity_class.matrix_cell_id.in_(cell_ids),
-                self.entity_class.deleted == False,  # noqa
+
+            # Now load all refs for just these cells
+            refs_query = (
+                select(
+                    self.entity_class.matrix_cell_id,
+                    self.entity_class.role,
+                    self.entity_class.entity_set_id,
+                    self.entity_class.entity_set_member_id,
+                )
+                .where(
+                    self.entity_class.matrix_cell_id.in_(cell_ids),
+                    self.entity_class.deleted == False,  # noqa
+                )
+                .order_by(self.entity_class.matrix_cell_id)
             )
-            .order_by(self.entity_class.matrix_cell_id)
-        )
 
-        result = await self.db_session.execute(refs_query)
-        rows = result.fetchall()
+            result = await session.execute(refs_query)
+            rows = result.fetchall()
 
-        logger.info(f"Loaded {len(rows)} entity refs for deduplication")
+            logger.info(f"Loaded {len(rows)} entity refs for deduplication")
 
-        # Group by cell and build combination keys
-        refs_by_cell = {}
-        for cell_id, role, entity_set_id, member_id in rows:
-            if cell_id not in refs_by_cell:
-                refs_by_cell[cell_id] = []
-            refs_by_cell[cell_id].append((role, entity_set_id, member_id))
+            # Group by cell and build combination keys
+            refs_by_cell = {}
+            for cell_id, role, entity_set_id, member_id in rows:
+                if cell_id not in refs_by_cell:
+                    refs_by_cell[cell_id] = []
+                refs_by_cell[cell_id].append((role, entity_set_id, member_id))
 
-        existing_combos = set()
-        for cell_id, refs in refs_by_cell.items():
-            key = tuple(sorted(refs))
-            existing_combos.add(key)
+            existing_combos = set()
+            for cell_id, refs in refs_by_cell.items():
+                key = tuple(sorted(refs))
+                existing_combos.add(key)
 
-        logger.info(f"Found {len(existing_combos)} existing cell combinations")
-        return existing_combos
+            logger.info(f"Found {len(existing_combos)} existing cell combinations")
+            return existing_combos
 
     @trace_span
     async def delete_by_cell_id(
@@ -372,15 +381,16 @@ class CellEntityReferenceRepository(
 
         Used when deleting or regenerating a cell.
         """
-        query = select(self.entity_class).where(
-            self.entity_class.matrix_cell_id == cell_id
-        )
+        async with self._get_session() as session:
+            query = select(self.entity_class).where(
+                self.entity_class.matrix_cell_id == cell_id
+            )
 
-        if company_id is not None:
-            query = self._add_company_filter(query, company_id)
+            if company_id is not None:
+                query = self._add_company_filter(query, company_id)
 
-        result = await self.db_session.execute(query)
-        entities = result.scalars().all()
+            result = await session.execute(query)
+            entities = result.scalars().all()
 
-        for entity in entities:
-            await self.db_session.delete(entity)
+            for entity in entities:
+                await session.delete(entity)

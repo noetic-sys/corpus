@@ -9,7 +9,6 @@ Validates that citations:
 from typing import List
 import re
 from rapidfuzz import fuzz
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.documents.repositories.document_chunk_repository import (
     DocumentChunkRepository,
@@ -33,9 +32,8 @@ PARTIAL_MATCH_THRESHOLD = 70  # Minimum score to consider grounded
 class CitationValidationService:
     """Service for validating citation grounding and relevance."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.chunk_repo = DocumentChunkRepository(db_session)
+    def __init__(self):
+        self.chunk_repo = DocumentChunkRepository()
 
     async def validate_answer_citations(
         self,

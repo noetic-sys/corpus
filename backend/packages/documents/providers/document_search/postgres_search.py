@@ -1,6 +1,5 @@
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, and_
 
@@ -12,6 +11,7 @@ from .interface import (
 from packages.documents.models.database.document import DocumentEntity
 from packages.documents.models.domain.document import DocumentModel
 from common.core.otel_axiom_exporter import trace_span, get_logger
+from common.db.scoped import get_session
 
 logger = get_logger(__name__)
 
@@ -19,8 +19,8 @@ logger = get_logger(__name__)
 class PostgresDocumentSearch(DocumentSearchInterface):
     """PostgreSQL-based document search implementation."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
+        pass
 
     def _entity_to_domain(self, entity: DocumentEntity) -> DocumentModel:
         """Convert database entity to domain model."""
@@ -106,19 +106,20 @@ class PostgresDocumentSearch(DocumentSearchInterface):
 
         # Get total count (before pagination)
         count_query = select(func.count()).select_from(base_query.subquery())
-        count_result = await self.db_session.execute(count_query)
-        total_count = count_result.scalar()
+        async with get_session(readonly=True) as session:
+            count_result = await session.execute(count_query)
+            total_count = count_result.scalar()
 
-        # Apply pagination and ordering
-        paginated_query = (
-            base_query.order_by(DocumentEntity.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-        )
+            # Apply pagination and ordering
+            paginated_query = (
+                base_query.order_by(DocumentEntity.created_at.desc())
+                .offset(skip)
+                .limit(limit)
+            )
 
-        # Execute query
-        result = await self.db_session.execute(paginated_query)
-        entities = result.scalars().all()
+            # Execute query
+            result = await session.execute(paginated_query)
+            entities = result.scalars().all()
         documents = self._entities_to_domain(entities)
 
         # Determine if there are more results
@@ -155,8 +156,9 @@ class PostgresDocumentSearch(DocumentSearchInterface):
         """Check if the search backend is available and healthy."""
         try:
             # Simple query to test database connectivity
-            result = await self.db_session.execute(select(1))
-            result.scalar()
+            async with get_session(readonly=True) as session:
+                result = await session.execute(select(1))
+                result.scalar()
             return True
         except Exception as e:
             logger.error(f"PostgreSQL search health check failed: {e}")

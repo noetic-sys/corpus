@@ -1,7 +1,6 @@
 import pytest
 from sqlalchemy.future import select
 from unittest.mock import AsyncMock, patch
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.workers.base_worker import BaseWorker
 from packages.qa.models.database.qa_job import QAJobEntity
@@ -16,7 +15,7 @@ class TestableWorker(BaseWorker):
         self.processed_messages = []
         self.process_error = None
 
-    async def process_message(self, message, db_session: AsyncSession):
+    async def process_message(self, message):
         """Mock implementation that records processed messages."""
         if self.process_error:
             raise self.process_error
@@ -27,16 +26,18 @@ class TestBaseWorker:
     """Tests for BaseWorker class with real worker logic."""
 
     @pytest.fixture
-    def test_worker(self):
+    def test_worker(self, test_db):
         """Create a test worker that actually does database operations."""
+        # Store test_db for use in process_message
+        db_session = test_db
 
         class TestWorker(BaseWorker):
             def __init__(self):
                 super().__init__("test_queue", "test_worker")
                 self.processed_jobs = []
 
-            async def process_message(self, message, db_session):
-
+            async def process_message(self, message):
+                # Use the test_db from the fixture closure
                 # Simulate real worker logic - update a job status
                 job_id = message.get("job_id")
                 if not job_id:
@@ -117,7 +118,7 @@ class TestBaseWorker:
         message = {"job_id": test_job["job"].id}
 
         # Process the message
-        await test_worker.process_message(message, test_db)
+        await test_worker.process_message(message)
 
         # Verify job was processed
         assert test_job["job"].id in test_worker.processed_jobs
@@ -135,7 +136,7 @@ class TestBaseWorker:
 
         # Process should fail
         with pytest.raises(ValueError, match="Simulated processing error"):
-            await test_worker.process_message(message, test_db)
+            await test_worker.process_message(message)
 
         # Verify database shows failure
         await test_db.refresh(test_job["job"])
@@ -147,7 +148,7 @@ class TestBaseWorker:
         message = {}  # Missing job_id
 
         with pytest.raises(ValueError, match="Missing job_id in message"):
-            await test_worker.process_message(message, test_db)
+            await test_worker.process_message(message)
 
     @pytest.mark.asyncio
     async def test_worker_handles_nonexistent_job(self, test_worker, test_db):
@@ -155,7 +156,7 @@ class TestBaseWorker:
         message = {"job_id": 99999}  # Non-existent job
 
         with pytest.raises(ValueError, match="Job 99999 not found"):
-            await test_worker.process_message(message, test_db)
+            await test_worker.process_message(message)
 
     @pytest.mark.asyncio
     async def test_worker_queue_setup_and_cleanup(self, test_worker):
@@ -265,33 +266,21 @@ class TestBaseWorker:
 
         mock_queue.disconnect.assert_called_once()
 
-    @patch("common.workers.base_worker.AsyncSessionLocal")
     @pytest.mark.asyncio
-    async def test_message_handler_creates_db_session(
-        self, mock_session_local, testable_worker, test_db
-    ):
-        """Test that _message_handler creates and uses database session correctly."""
-        # Setup mock to return our test database session
-        mock_session_local.return_value.__aenter__.return_value = test_db
-
+    async def test_message_handler_processes_message(self, testable_worker):
+        """Test that _message_handler processes messages correctly."""
         message = {"test_data": "sample message"}
 
-        # This should work and process the message using the test database
+        # This should work and process the message
         await testable_worker._message_handler(message)
 
         # Verify the message was processed
         assert len(testable_worker.processed_messages) == 1
         assert testable_worker.processed_messages[0] == message
 
-    @patch("common.workers.base_worker.AsyncSessionLocal")
     @pytest.mark.asyncio
-    async def test_message_handler_propagates_processing_errors(
-        self, mock_session_local, testable_worker, test_db
-    ):
+    async def test_message_handler_propagates_processing_errors(self, testable_worker):
         """Test that _message_handler propagates errors from process_message."""
-        # Setup mock to return our test database session
-        mock_session_local.return_value.__aenter__.return_value = test_db
-
         # Set worker to raise an error during processing
         testable_worker.process_error = ValueError("Processing failed")
 

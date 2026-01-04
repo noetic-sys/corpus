@@ -18,7 +18,7 @@ class TestMatrixCellRepository:
     @pytest.fixture
     def matrix_cell_repo(self, test_db):
         """Create a MatrixCellRepository instance with real database session."""
-        return MatrixCellRepository(test_db)
+        return MatrixCellRepository()
 
     @pytest.fixture(autouse=True)
     def setup_span_mock(self):

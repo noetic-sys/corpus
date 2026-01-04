@@ -1,10 +1,7 @@
 from typing import Annotated, Optional
 from fastapi import Depends, HTTPException, status, Header
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
-from common.db.session import get_db
-from common.db.transaction_utils import transaction
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.auth.providers.models import SSOProvider
 from packages.auth.services.sso_auth_service import SSOAuthService
@@ -15,9 +12,9 @@ from packages.billing.services.subscription_service import SubscriptionService
 logger = get_logger(__name__)
 
 
-def get_sso_auth_service(db: AsyncSession = Depends(get_db)) -> SSOAuthService:
+def get_sso_auth_service() -> SSOAuthService:
     """Get SSOAuthService instance."""
-    return SSOAuthService(db, SSOProvider.FIREBASE)
+    return SSOAuthService(SSOProvider.FIREBASE)
 
 
 @trace_span
@@ -25,12 +22,11 @@ async def get_current_user(
     authorization: Annotated[Optional[str], Header()] = None,
     x_api_key: Annotated[Optional[str], Header()] = None,
     sso_auth_service: SSOAuthService = Depends(get_sso_auth_service),
-    db: AsyncSession = Depends(get_db),
 ) -> AuthenticatedUser:
     """Get current authenticated user from SSO JWT token or API key."""
     # Try API key first
     if x_api_key:
-        service_account_service = ServiceAccountService(db)
+        service_account_service = ServiceAccountService()
         user = await service_account_service.authenticate_api_key(x_api_key)
         if not user:
             raise HTTPException(
@@ -39,7 +35,7 @@ async def get_current_user(
             )
 
         # Verify company has active subscription
-        subscription_service = SubscriptionService(db)
+        subscription_service = SubscriptionService()
         subscription = await subscription_service.get_by_company_id(user.company_id)
         if not subscription or not subscription.has_access():
             raise HTTPException(
@@ -59,15 +55,12 @@ async def get_current_user(
 
     token = authorization.split(" ")[1]
 
-    # TODO: txN??
-    async with transaction(sso_auth_service.db_session):
-        return await sso_auth_service.authenticate_user_from_token(token)
+    return await sso_auth_service.authenticate_user_from_token(token)
 
 
 @trace_span
 async def get_service_account(
     x_api_key: Annotated[Optional[str], Header()] = None,
-    db: AsyncSession = Depends(get_db),
 ) -> AuthenticatedUser:
     """Get authenticated service account (API key only, no SSO tokens)."""
     if not x_api_key:
@@ -76,7 +69,7 @@ async def get_service_account(
             detail="API key required",
         )
 
-    service_account_service = ServiceAccountService(db)
+    service_account_service = ServiceAccountService()
     user = await service_account_service.authenticate_api_key(x_api_key)
     if not user:
         raise HTTPException(
@@ -102,10 +95,9 @@ async def get_current_active_user(
 @trace_span
 async def get_subscribed_user(
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ) -> AuthenticatedUser:
     """Get current user with active subscription check."""
-    subscription_service = SubscriptionService(db)
+    subscription_service = SubscriptionService()
     subscription = await subscription_service.get_by_company_id(current_user.company_id)
 
     if not subscription:
@@ -136,14 +128,10 @@ async def get_current_admin_user(
 
 
 @trace_span
-async def get_current_active_user_from_token(
-    token: str, db: AsyncSession
-) -> AuthenticatedUser:
-    """Get current active user directly from token and database session."""
-    sso_auth_service = get_sso_auth_service(db)
-
-    async with transaction(db):
-        user = await sso_auth_service.authenticate_user_from_token(token)
+async def get_current_active_user_from_token(token: str) -> AuthenticatedUser:
+    """Get current active user directly from token."""
+    sso_auth_service = get_sso_auth_service()
+    user = await sso_auth_service.authenticate_user_from_token(token)
 
     # if not user.is_active:
     #    raise HTTPException(status_code=400, detail="Inactive user")
@@ -151,6 +139,6 @@ async def get_current_active_user_from_token(
     return user
 
 
-def get_user_service(db: AsyncSession = Depends(get_db)) -> UserService:
+def get_user_service() -> UserService:
     """Get UserService instance."""
-    return UserService(db)
+    return UserService()

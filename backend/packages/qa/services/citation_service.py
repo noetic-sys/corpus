@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.qa.repositories.citation_repository import (
     CitationSetRepository,
@@ -20,10 +19,9 @@ logger = get_logger(__name__)
 class CitationService:
     """Service for handling citation and citation set operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.citation_set_repo = CitationSetRepository(db_session)
-        self.citation_repo = CitationRepository(db_session)
+    def __init__(self):
+        self.citation_set_repo = CitationSetRepository()
+        self.citation_repo = CitationRepository()
 
     @trace_span
     async def create_citation_set_with_citations(

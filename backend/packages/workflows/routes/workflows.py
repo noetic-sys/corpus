@@ -10,10 +10,8 @@ from fastapi import (
     File,
     Form,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.db.session import get_db
-from common.db.transaction_utils import transaction
+from common.db.scoped import transaction
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
@@ -45,24 +43,20 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
-def get_execution_service(
-    db: AsyncSession = Depends(get_db),
-) -> WorkflowExecutionService:
-    return WorkflowExecutionService(db)
+def get_execution_service() -> WorkflowExecutionService:
+    return WorkflowExecutionService()
 
 
-def get_workflow_service(db: AsyncSession = Depends(get_db)) -> WorkflowService:
-    return WorkflowService(db)
+def get_workflow_service() -> WorkflowService:
+    return WorkflowService()
 
 
-def get_execution_file_service(
-    db: AsyncSession = Depends(get_db),
-) -> ExecutionFileService:
-    return ExecutionFileService(db)
+def get_execution_file_service() -> ExecutionFileService:
+    return ExecutionFileService()
 
 
-def get_input_file_service(db: AsyncSession = Depends(get_db)) -> InputFileService:
-    return InputFileService(db)
+def get_input_file_service() -> InputFileService:
+    return InputFileService()
 
 
 @router.post("/workflows", response_model=WorkflowResponse, status_code=201)
@@ -166,9 +160,9 @@ async def execute_workflow(
     5. Clean up resources
     """
     try:
-        async with transaction(execution_service.db_session):
+        async with transaction():
             # Check workflow quota before execution (raises 429 if exceeded)
-            quota_service = QuotaService(execution_service.db_session)
+            quota_service = QuotaService()
             await quota_service.check_workflow_quota(current_user.company_id)
 
             execution = await execution_service.trigger_execution(
@@ -179,7 +173,7 @@ async def execute_workflow(
             )
 
             # Track workflow usage
-            usage_service = UsageService(execution_service.db_session)
+            usage_service = UsageService()
             await usage_service.track_workflow(
                 company_id=current_user.company_id,
                 user_id=current_user.user_id,
@@ -406,11 +400,10 @@ async def delete_input_file(
 ):
     """Delete an input file."""
     try:
-        async with transaction(input_file_service.db_session):
-            await input_file_service.delete_file(
-                file_id=file_id,
-                company_id=current_user.company_id,
-            )
+        await input_file_service.delete_file(
+            file_id=file_id,
+            company_id=current_user.company_id,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

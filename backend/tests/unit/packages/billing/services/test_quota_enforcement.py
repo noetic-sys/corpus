@@ -68,7 +68,7 @@ class TestCellOperationQuotaEnforcement:
             )
         ]
 
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Should raise 429 when quota exceeded
         with pytest.raises(HTTPException) as exc_info:
@@ -126,7 +126,7 @@ class TestAgenticQAQuotaEnforcement:
             )
         ]
 
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Should raise 429 when agentic quota exceeded
         with pytest.raises(HTTPException) as exc_info:
@@ -159,7 +159,7 @@ class TestAgenticQAQuotaEnforcement:
         question_entity.use_agent_qa = True
         await test_db.commit()
 
-        service = QuestionService(test_db)
+        service = QuestionService()
 
         update = QuestionWithOptionsUpdateModel(question_text="Updated question")
 
@@ -207,7 +207,7 @@ class TestQuotaServiceMethods:
         self, test_db, sample_company, sample_subscription
     ):
         """Test that cell operation quota check passes when under limit."""
-        service = QuotaService(test_db)
+        service = QuotaService()
 
         # Should not raise when under limit
         await service.check_cell_operation_quota(sample_company.id)
@@ -216,7 +216,7 @@ class TestQuotaServiceMethods:
         self, test_db, sample_company, sample_subscription
     ):
         """Test that agentic QA quota check passes when under limit."""
-        service = QuotaService(test_db)
+        service = QuotaService()
 
         # Should not raise when under limit
         await service.check_agentic_qa_quota(sample_company.id)
@@ -225,7 +225,7 @@ class TestQuotaServiceMethods:
         self, test_db, sample_company, sample_subscription
     ):
         """Test that workflow quota check passes when under limit."""
-        service = QuotaService(test_db)
+        service = QuotaService()
 
         # Should not raise when under limit
         await service.check_workflow_quota(sample_company.id)
@@ -234,7 +234,7 @@ class TestQuotaServiceMethods:
         self, test_db, sample_company, sample_subscription
     ):
         """Test that storage quota check passes when under limit."""
-        service = QuotaService(test_db)
+        service = QuotaService()
 
         # Should not raise when under limit
         await service.check_storage_quota(sample_company.id, file_size_bytes=1000)
@@ -243,7 +243,7 @@ class TestQuotaServiceMethods:
         self, test_db, sample_company, sample_subscription
     ):
         """Test that agentic chunking quota check passes when under limit."""
-        service = QuotaService(test_db)
+        service = QuotaService()
 
         # Should not raise when under limit
         await service.check_agentic_chunking_quota(sample_company.id)
@@ -252,7 +252,7 @@ class TestQuotaServiceMethods:
         self, test_db, sample_company, sample_subscription
     ):
         """Test that document quota check passes when under limit."""
-        service = QuotaService(test_db)
+        service = QuotaService()
 
         # Should not raise when under limit
         await service.check_document_quota(sample_company.id)
@@ -283,8 +283,8 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that cell operation quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
-        quota_service = QuotaService(test_db)
+        usage_service = UsageService()
+        quota_service = QuotaService()
 
         # FREE tier has 100 cell operations limit
         limits = free_subscription.tier.get_quota_limits()
@@ -309,8 +309,8 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that agentic QA quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
-        quota_service = QuotaService(test_db)
+        usage_service = UsageService()
+        quota_service = QuotaService()
 
         # FREE tier has 5 agentic QA limit
         limits = free_subscription.tier.get_quota_limits()
@@ -335,8 +335,8 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that workflow quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
-        quota_service = QuotaService(test_db)
+        usage_service = UsageService()
+        quota_service = QuotaService()
 
         # FREE tier has 1 workflow limit
         limits = free_subscription.tier.get_quota_limits()
@@ -359,8 +359,8 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that storage quota raises 429 when limit would be exceeded."""
-        usage_service = UsageService(test_db)
-        quota_service = QuotaService(test_db)
+        usage_service = UsageService()
+        quota_service = QuotaService()
 
         # FREE tier has 100 MB storage limit
         limits = free_subscription.tier.get_quota_limits()
@@ -387,8 +387,8 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that agentic chunking quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
-        quota_service = QuotaService(test_db)
+        usage_service = UsageService()
+        quota_service = QuotaService()
 
         # FREE tier has 0 agentic chunking limit
         limits = free_subscription.tier.get_quota_limits()
@@ -413,8 +413,8 @@ class TestQuotaExceededRejection:
         self, test_db, sample_company, free_subscription
     ):
         """Test that document quota raises 429 when limit is exceeded."""
-        usage_service = UsageService(test_db)
-        quota_service = QuotaService(test_db)
+        usage_service = UsageService()
+        quota_service = QuotaService()
 
         # FREE tier has 10 documents limit
         limits = free_subscription.tier.get_quota_limits()
@@ -440,7 +440,7 @@ class TestQuotaExceededRejection:
 
     async def test_no_subscription_returns_402(self, test_db, sample_company):
         """Test that missing subscription returns 402."""
-        quota_service = QuotaService(test_db)
+        quota_service = QuotaService()
 
         # No subscription created for this company
         with pytest.raises(HTTPException) as exc_info:
@@ -472,10 +472,10 @@ class TestMatrixDuplicationQuotaEnforcement:
         )
         mock_quota_service_class.return_value = mock_quota_service
 
-        service = MatrixService(test_db)
+        service = MatrixService()
 
         # Get entity set IDs for the matrix
-        entity_set_service = EntitySetService(test_db)
+        entity_set_service = EntitySetService()
         entity_sets = await entity_set_service.get_matrix_entity_sets(
             sample_matrix.id, sample_company.id
         )
@@ -521,10 +521,10 @@ class TestMatrixDuplicationQuotaEnforcement:
         )
         mock_quota_service_class.return_value = mock_quota_service
 
-        service = MatrixService(test_db)
+        service = MatrixService()
 
         # Get entity set IDs including the question entity set
-        entity_set_service = EntitySetService(test_db)
+        entity_set_service = EntitySetService()
         entity_sets = await entity_set_service.get_matrix_entity_sets(
             sample_matrix.id, sample_company.id
         )

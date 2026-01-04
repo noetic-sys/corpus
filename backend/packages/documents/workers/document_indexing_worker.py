@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
 from common.workers.base_worker import BaseWorker
@@ -34,9 +32,7 @@ class DocumentIndexingWorker(BaseWorker[DocumentIndexingMessage]):
         super().__init__(QueueName.DOCUMENT_INDEXING, None, DocumentIndexingMessage)
 
     @trace_span
-    async def process_message(
-        self, message: DocumentIndexingMessage, db_session: AsyncSession
-    ):
+    async def process_message(self, message: DocumentIndexingMessage):
         """Process a document indexing job message."""
         logger.info(
             f"Document Indexing Worker received message: job_id={message.job_id}, document_id={message.document_id}"
@@ -46,9 +42,9 @@ class DocumentIndexingWorker(BaseWorker[DocumentIndexingMessage]):
         document_id = message.document_id
 
         # Initialize services
-        document_service = get_document_service(db_session)
-        indexing_job_service = DocumentIndexingJobService(db_session)
-        search_provider = get_document_search_provider(db_session)
+        document_service = get_document_service()
+        indexing_job_service = DocumentIndexingJobService()
+        search_provider = get_document_search_provider()
 
         try:
             logger.info(f"Processing indexing job {job_id} for document {document_id}")

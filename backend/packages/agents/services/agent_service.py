@@ -2,7 +2,6 @@ import json
 import os
 from functools import lru_cache
 from typing import List, Optional, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.ai import AnthropicProvider
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
@@ -28,12 +27,10 @@ class AgentService:
 
     def __init__(
         self,
-        db_session: AsyncSession,
         ai_provider: Optional[AIProviderInterface] = None,
     ):
-        self.db_session = db_session
-        self.conversation_service = ConversationService(db_session)
-        self.tool_service = ToolService(db_session)
+        self.conversation_service = ConversationService()
+        self.tool_service = ToolService()
 
         # Default AI provider - could be configurable per conversation
         self.ai_provider = ai_provider or AnthropicProvider()
@@ -253,7 +250,7 @@ class AgentService:
 
 
 def get_agent_service(
-    db_session: AsyncSession, ai_provider: Optional[AIProviderInterface] = None
+    ai_provider: Optional[AIProviderInterface] = None,
 ) -> AgentService:
     """Get agent service instance."""
-    return AgentService(db_session, ai_provider)
+    return AgentService(ai_provider)

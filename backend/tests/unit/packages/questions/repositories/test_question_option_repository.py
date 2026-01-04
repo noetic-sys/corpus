@@ -13,7 +13,7 @@ class TestQuestionOptionSetRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return QuestionOptionSetRepository(test_db)
+        return QuestionOptionSetRepository()
 
     async def test_create_for_question(self, repository, sample_question):
         """Test creating an option set for a question."""
@@ -85,12 +85,12 @@ class TestQuestionOptionRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return QuestionOptionRepository(test_db)
+        return QuestionOptionRepository()
 
     @pytest.fixture
     async def option_set_repo(self, test_db: AsyncSession):
         """Create option set repository."""
-        return QuestionOptionSetRepository(test_db)
+        return QuestionOptionSetRepository()
 
     @pytest.fixture
     async def sample_option_set(self, option_set_repo, sample_question):

@@ -3,7 +3,6 @@ Service for managing workflow input files (templates, data files).
 """
 
 from typing import BinaryIO, List, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.workflows.repositories.input_file_repository import InputFileRepository
@@ -13,7 +12,6 @@ from packages.workflows.models.domain.input_file import (
     InputFileModel,
     InputFileCreateModel,
 )
-from common.db.transaction_utils import transactional
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
 logger = get_logger(__name__)
@@ -22,14 +20,12 @@ logger = get_logger(__name__)
 class InputFileService:
     """Service for managing workflow input files."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.input_file_repo = InputFileRepository(db_session)
-        self.workflow_repo = WorkflowRepository(db_session)
+    def __init__(self):
+        self.input_file_repo = InputFileRepository()
+        self.workflow_repo = WorkflowRepository()
         self.storage_service = WorkflowStorageService()
 
     @trace_span
-    @transactional
     async def upload_file(
         self,
         workflow_id: int,
@@ -115,7 +111,6 @@ class InputFileService:
         return file_data, file
 
     @trace_span
-    @transactional
     async def delete_file(
         self,
         file_id: int,

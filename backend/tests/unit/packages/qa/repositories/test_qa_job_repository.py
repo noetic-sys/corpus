@@ -14,7 +14,7 @@ class TestQAJobRepository:
     @pytest.fixture
     def qa_job_repo(self, test_db):
         """Create a QAJobRepository instance with real database session."""
-        return QAJobRepository(test_db)
+        return QAJobRepository()
 
     @pytest.fixture
     def sample_qa_job_data(self):

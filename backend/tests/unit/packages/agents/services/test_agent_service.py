@@ -1,7 +1,6 @@
 import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.agents.services.agent_service import AgentService, get_agent_service
 from packages.agents.models.domain.message import MessageModel
@@ -28,11 +27,6 @@ class TestAgentService:
     """Test AgentService functionality."""
 
     @pytest.fixture
-    def mock_session(self):
-        """Create mock database session."""
-        return AsyncMock(spec=AsyncSession)
-
-    @pytest.fixture
     def mock_user(self):
         """Create mock authenticated user."""
         return AuthenticatedUser(company_id=1, user_id=1)
@@ -43,38 +37,31 @@ class TestAgentService:
         return AsyncMock()
 
     @pytest.fixture
-    def agent_service(self, mock_session, mock_ai_provider):
+    def agent_service(self, mock_ai_provider):
         """Create agent service instance."""
-        return AgentService(mock_session, mock_ai_provider)
+        return AgentService(mock_ai_provider)
 
-    def test_agent_service_initialization(self, mock_session):
+    def test_agent_service_initialization(self):
         """Test agent service initialization."""
-        service = AgentService(mock_session)
+        service = AgentService()
 
-        assert service.db_session == mock_session
         assert service.conversation_service is not None
         assert service.tool_service is not None
         assert service.ai_provider is not None
 
-    def test_agent_service_initialization_with_custom_provider(
-        self, mock_session, mock_ai_provider
-    ):
+    def test_agent_service_initialization_with_custom_provider(self, mock_ai_provider):
         """Test agent service initialization with custom AI provider."""
-        service = AgentService(mock_session, mock_ai_provider)
+        service = AgentService(mock_ai_provider)
 
-        assert service.db_session == mock_session
         assert service.ai_provider == mock_ai_provider
 
-    def test_get_agent_service_function(self, mock_session):
+    def test_get_agent_service_function(self):
         """Test get_agent_service factory function."""
-        service = get_agent_service(mock_session)
+        service = get_agent_service()
 
         assert isinstance(service, AgentService)
-        assert service.db_session == mock_session
 
-    async def test_process_user_message_no_tools(
-        self, agent_service, mock_session, mock_user
-    ):
+    async def test_process_user_message_no_tools(self, agent_service, mock_user):
         """Test processing user message with no tool calls."""
         # Mock conversation service methods
         user_message = MessageModel(
@@ -137,9 +124,7 @@ class TestAgentService:
             mock_format_tools.assert_called_once()
             mock_call_ai.assert_called_once()
 
-    async def test_process_user_message_with_tool_calls(
-        self, agent_service, mock_session, mock_user
-    ):
+    async def test_process_user_message_with_tool_calls(self, agent_service, mock_user):
         """Test processing user message with tool calls."""
         # Mock messages
         user_message = MessageModel(
@@ -258,9 +243,7 @@ class TestAgentService:
                 "get_weather", {"location": "New York"}, mock_user
             )
 
-    async def test_process_user_message_tool_error(
-        self, agent_service, mock_session, mock_user
-    ):
+    async def test_process_user_message_tool_error(self, agent_service, mock_user):
         """Test processing user message when tool execution fails."""
         user_message = MessageModel(
             id=1,
@@ -375,9 +358,7 @@ class TestAgentService:
                 result[1].content == "Tool execution failed: Database connection failed"
             )
 
-    async def test_process_user_message_max_iterations(
-        self, agent_service, mock_session, mock_user
-    ):
+    async def test_process_user_message_max_iterations(self, agent_service, mock_user):
         """Test that agent respects max iterations limit."""
         user_message = MessageModel(
             id=1,
@@ -436,9 +417,7 @@ class TestAgentService:
             assert len(result) == 4
             assert mock_call_ai.call_count == 2
 
-    async def test_process_user_message_ai_exception(
-        self, agent_service, mock_session, mock_user
-    ):
+    async def test_process_user_message_ai_exception(self, agent_service, mock_user):
         """Test handling of AI provider exceptions."""
         user_message = MessageModel(
             id=1,

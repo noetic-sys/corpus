@@ -1,7 +1,6 @@
 """Service for managing chunk sets."""
 
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.documents.repositories.chunk_set_repository import ChunkSetRepository
@@ -17,9 +16,8 @@ logger = get_logger(__name__)
 class ChunkSetService:
     """Service for managing chunk sets."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.chunk_set_repo = ChunkSetRepository(db_session)
+    def __init__(self):
+        self.chunk_set_repo = ChunkSetRepository()
 
     @trace_span
     async def create_chunk_set(

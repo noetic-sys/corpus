@@ -71,7 +71,6 @@ class ListMatricesTool(Tool[ListMatricesParameters]):
                 skip=parameters.skip,
                 limit=parameters.limit,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(

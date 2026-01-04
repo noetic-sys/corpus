@@ -125,7 +125,6 @@ class UpdateQuestionTool(Tool[UpdateQuestionParameters]):
                     question_id=parameters.question_id,
                     question_update=question_update_data,
                     current_user=as_user,
-                    db=session,
                 )
             else:
                 question_update_data = QuestionUpdate(**update_fields)
@@ -135,7 +134,6 @@ class UpdateQuestionTool(Tool[UpdateQuestionParameters]):
                     question_id=parameters.question_id,
                     question_update=question_update_data,
                     current_user=as_user,
-                    db=session,
                 )
 
             return ToolResult.ok(UpdateQuestionSuccessResult(question=question))

@@ -76,7 +76,7 @@ def document_service(
         "packages.documents.services.document_service.DocumentIndexingJobService",
         return_value=mock_indexing_job_service,
     ):
-        return DocumentService(test_db)
+        return DocumentService()
 
 
 @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")
@@ -324,7 +324,7 @@ class TestHybridDocumentSearch:
         """Test hybrid search pagination works correctly."""
 
         # Create multiple documents in DB
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         documents = []
         for i in range(10):
             doc_create = DocumentCreateModel(

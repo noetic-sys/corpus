@@ -36,9 +36,7 @@ def mock_temporal_client():
 @pytest.fixture
 def temporal_service(test_db, mock_temporal_client):
     """Create a TemporalDocumentExtractionService instance with mocked Temporal client."""
-    return TemporalDocumentExtractionService(
-        test_db, temporal_client=mock_temporal_client
-    )
+    return TemporalDocumentExtractionService(temporal_client=mock_temporal_client)
 
 
 @pytest.fixture

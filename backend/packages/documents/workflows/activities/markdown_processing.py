@@ -4,7 +4,6 @@ from typing import List
 from temporalio import activity
 
 from common.core.otel_axiom_exporter import create_span_with_context, get_logger
-from common.db.session import get_db
 from common.providers.storage.factory import get_storage
 from common.providers.storage.paths import get_document_extracted_path
 from packages.documents.workflows.common import MarkdownPage
@@ -37,14 +36,13 @@ async def save_markdown_to_s3_activity(
 
         try:
             # Get company_id from document for centralized path
-            async for session in get_db():
-                document_repo = DocumentRepository(session)
-                document = await document_repo.get(document_id)
+            document_repo = DocumentRepository()
+            document = await document_repo.get(document_id)
 
-                if not document:
-                    raise ValueError(f"Document {document_id} not found in database")
+            if not document:
+                raise ValueError(f"Document {document_id} not found in database")
 
-                company_id = document.company_id
+            company_id = document.company_id
 
             # Use centralized path utility
             s3_key = get_document_extracted_path(company_id, document_id)

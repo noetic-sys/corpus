@@ -3,7 +3,6 @@ Factory for creating cell creation strategies based on matrix type.
 """
 
 from typing import Type, Dict
-from sqlalchemy.ext.asyncio import AsyncSession
 from packages.matrices.models.domain.matrix_enums import MatrixType
 from .base_strategy import BaseCellCreationStrategy
 from .standard_matrix_strategy import StandardMatrixStrategy
@@ -21,14 +20,11 @@ class CellStrategyFactory:
     }
 
     @classmethod
-    def get_strategy(
-        cls, matrix_type: MatrixType, db_session: AsyncSession
-    ) -> BaseCellCreationStrategy:
+    def get_strategy(cls, matrix_type: MatrixType) -> BaseCellCreationStrategy:
         """Get strategy instance for matrix type.
 
         Args:
             matrix_type: The type of matrix
-            db_session: Database session for service initialization
 
         Returns:
             Strategy instance for the given matrix type
@@ -39,7 +35,7 @@ class CellStrategyFactory:
         strategy_class = cls._strategies.get(matrix_type)
         if not strategy_class:
             raise ValueError(f"No strategy found for matrix type: {matrix_type}")
-        return strategy_class(db_session)
+        return strategy_class()
 
     @classmethod
     def register_strategy(

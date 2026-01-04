@@ -18,7 +18,7 @@ def indexing_job_service(test_db, mock_message_queue):
         "packages.documents.services.document_indexing_job_service.get_message_queue",
         return_value=mock_message_queue,
     ):
-        return DocumentIndexingJobService(test_db)
+        return DocumentIndexingJobService()
 
 
 class TestDocumentIndexingJobService:
@@ -183,7 +183,7 @@ class TestDocumentIndexingJobService:
             "packages.documents.services.document_indexing_job_service.get_message_queue",
             return_value=mock_failing_queue,
         ):
-            service = DocumentIndexingJobService(indexing_job_service.db_session)
+            service = DocumentIndexingJobService()
 
             # Create a job
             job = await service.create_indexing_job(1)
@@ -209,7 +209,7 @@ class TestDocumentIndexingJobService:
             "packages.documents.services.document_indexing_job_service.get_message_queue",
             return_value=mock_failing_queue,
         ):
-            service = DocumentIndexingJobService(indexing_job_service.db_session)
+            service = DocumentIndexingJobService()
 
             # Create a job
             job = await service.create_indexing_job(1)
@@ -255,7 +255,7 @@ class TestDocumentIndexingJobService:
             "packages.documents.services.document_indexing_job_service.get_message_queue",
             return_value=mock_failing_queue,
         ):
-            service = DocumentIndexingJobService(indexing_job_service.db_session)
+            service = DocumentIndexingJobService()
 
             # Call create_and_queue_job
             result = await service.create_and_queue_job(1)

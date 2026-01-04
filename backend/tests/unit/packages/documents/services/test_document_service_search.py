@@ -73,7 +73,7 @@ def document_service(
         "packages.documents.services.document_service.DocumentIndexingJobService",
         return_value=mock_indexing_job_service,
     ):
-        return DocumentService(test_db)
+        return DocumentService()
 
 
 @pytest.fixture
@@ -391,7 +391,7 @@ class TestDocumentSearchProvider:
     ):
         """Test that deleting a document removes it from the search index."""
         # Create a document in the database
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",
@@ -431,7 +431,7 @@ class TestDocumentSearchProvider:
         )
 
         # Create a document in the database
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",

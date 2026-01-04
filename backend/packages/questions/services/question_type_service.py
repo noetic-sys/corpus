@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.questions.repositories.question_type_repository import (
     QuestionTypeRepository,
@@ -13,9 +12,8 @@ logger = get_logger(__name__)
 class QuestionTypeService:
     """Service for handling question type operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.question_type_repo = QuestionTypeRepository(db_session)
+    def __init__(self):
+        self.question_type_repo = QuestionTypeRepository()
 
     @trace_span
     async def get_all_question_types(self) -> List[QuestionTypeModel]:
@@ -35,6 +33,6 @@ class QuestionTypeService:
         return await self.question_type_repo.get_question_type_by_name(name)
 
 
-def get_question_type_service(db_session: AsyncSession) -> QuestionTypeService:
+def get_question_type_service() -> QuestionTypeService:
     """Get question type service instance."""
-    return QuestionTypeService(db_session)
+    return QuestionTypeService()

@@ -15,7 +15,6 @@ from datetime import datetime
 
 from common.core.config import settings
 from common.core.otel_axiom_exporter import get_logger
-from common.db.session import get_db
 from common.providers.caching.factory import get_cache_provider
 from packages.billing.cache_keys import subscription_by_company_key
 from packages.billing.services.subscription_service import SubscriptionService
@@ -34,6 +33,8 @@ from packages.companies.services.company_service import CompanyService
 from packages.companies.models.domain.company import CompanyUpdateModel
 
 logger = get_logger(__name__)
+
+# Services now use lazy sessions - instantiate without db_session
 
 
 async def handle_stripe_webhook(request: Request) -> dict[str, str]:
@@ -155,69 +156,64 @@ async def _handle_checkout_completed(data: dict) -> None:
             logger.error("Missing customer or subscription ID in checkout session")
             return
 
-        async for db_session in get_db():
-            subscription_service = SubscriptionService(db_session)
-            company_service = CompanyService(db_session)
+        subscription_service = SubscriptionService()
+        company_service = CompanyService()
 
-            # Save stripe_customer_id on company (if not already set)
-            company = await company_service.get_company(company_id)
-            if company and not company.stripe_customer_id:
-                await company_service.update_company(
-                    company_id, CompanyUpdateModel(stripe_customer_id=session.customer)
-                )
+        # Save stripe_customer_id on company (if not already set)
+        company = await company_service.get_company(company_id)
+        if company and not company.stripe_customer_id:
+            await company_service.update_company(
+                company_id, CompanyUpdateModel(stripe_customer_id=session.customer)
+            )
 
-            # Check if subscription already exists (e.g., from a retry or race condition)
-            existing = await subscription_service.get_by_company_id(company_id)
+        # Check if subscription already exists (e.g., from a retry or race condition)
+        existing = await subscription_service.get_by_company_id(company_id)
 
-            if existing:
-                # Update existing subscription with Stripe subscription ID and new tier
+        if existing:
+            # Update existing subscription with Stripe subscription ID and new tier
+            update_data = SubscriptionUpdateModel(
+                stripe_subscription_id=session.subscription,
+                status=SubscriptionStatus.ACTIVE,
+                tier=tier,
+            )
+            await subscription_service.subscription_repo.update(
+                existing.id, update_data
+            )
+
+            # Invalidate subscription cache for this specific company
+            cache_key = subscription_by_company_key(company_id)
+            await get_cache_provider().delete(cache_key)
+
+            logger.info(
+                f"Updated existing subscription {existing.id} with Stripe IDs and tier {tier.value}"
+            )
+        else:
+            # Create new subscription - payment is now confirmed
+            company_name = session.metadata.company_name or f"Company {company_id}"
+            await subscription_service.create_subscription(
+                company_id=company_id,
+                company_name=company_name,
+                tier=tier,
+                billing_email=session.customer_email,
+            )
+
+            # Update with Stripe subscription ID
+            new_sub = await subscription_service.get_by_company_id(company_id)
+            if new_sub:
                 update_data = SubscriptionUpdateModel(
                     stripe_subscription_id=session.subscription,
-                    status=SubscriptionStatus.ACTIVE,
-                    tier=tier,
                 )
                 await subscription_service.subscription_repo.update(
-                    existing.id, update_data
+                    new_sub.id, update_data
                 )
 
-                # Invalidate subscription cache for this specific company
+                # Invalidate subscription cache for this company
                 cache_key = subscription_by_company_key(company_id)
                 await get_cache_provider().delete(cache_key)
 
-                logger.info(
-                    f"Updated existing subscription {existing.id} with Stripe IDs and tier {tier.value}"
-                )
-            else:
-                # Create new subscription - payment is now confirmed
-                company_name = session.metadata.company_name or f"Company {company_id}"
-                await subscription_service.create_subscription(
-                    company_id=company_id,
-                    company_name=company_name,
-                    tier=tier,
-                    billing_email=session.customer_email,
-                )
-
-                # Update with Stripe subscription ID
-                new_sub = await subscription_service.get_by_company_id(company_id)
-                if new_sub:
-                    update_data = SubscriptionUpdateModel(
-                        stripe_subscription_id=session.subscription,
-                    )
-                    await subscription_service.subscription_repo.update(
-                        new_sub.id, update_data
-                    )
-
-                    # Invalidate subscription cache for this company
-                    cache_key = subscription_by_company_key(company_id)
-                    await get_cache_provider().delete(cache_key)
-
-                logger.info(
-                    f"Created new subscription for company {company_id} after checkout"
-                )
-
-            # Commit before breaking - break bypasses the generator's commit
-            await db_session.commit()
-            break
+            logger.info(
+                f"Created new subscription for company {company_id} after checkout"
+            )
 
     except Exception as e:
         logger.error(
@@ -276,36 +272,32 @@ async def _handle_subscription_updated(data: dict) -> None:
         )
 
         # Update subscription status
-        async for db_session in get_db():
-            subscription_service = SubscriptionService(db_session)
+        subscription_service = SubscriptionService()
 
-            existing = await subscription_service.get_by_company_id(company_id)
-            if existing:
-                update_data = SubscriptionUpdateModel(
-                    status=new_status,
-                    current_period_start=datetime.fromtimestamp(
-                        subscription.current_period_start
-                    ),
-                    current_period_end=datetime.fromtimestamp(
-                        subscription.current_period_end
-                    ),
+        existing = await subscription_service.get_by_company_id(company_id)
+        if existing:
+            update_data = SubscriptionUpdateModel(
+                status=new_status,
+                current_period_start=datetime.fromtimestamp(
+                    subscription.current_period_start
+                ),
+                current_period_end=datetime.fromtimestamp(
+                    subscription.current_period_end
+                ),
+            )
+
+            if subscription.canceled_at:
+                update_data.cancelled_at = datetime.fromtimestamp(
+                    subscription.canceled_at
                 )
 
-                if subscription.canceled_at:
-                    update_data.cancelled_at = datetime.fromtimestamp(
-                        subscription.canceled_at
-                    )
+            await subscription_service.subscription_repo.update(
+                existing.id, update_data
+            )
 
-                await subscription_service.subscription_repo.update(
-                    existing.id, update_data
-                )
-
-                # Invalidate subscription cache for this company
-                cache_key = subscription_by_company_key(company_id)
-                await get_cache_provider().delete(cache_key)
-
-            await db_session.commit()
-            break
+            # Invalidate subscription cache for this company
+            cache_key = subscription_by_company_key(company_id)
+            await get_cache_provider().delete(cache_key)
 
     except Exception as e:
         logger.error(
@@ -332,12 +324,10 @@ async def _handle_subscription_deleted(data: dict) -> None:
         )
 
         # Mark subscription as cancelled
-        async for db_session in get_db():
-            subscription_service = SubscriptionService(db_session)
-            await subscription_service.update_status(
-                company_id=company_id, new_status=SubscriptionStatus.CANCELLED
-            )
-            break
+        subscription_service = SubscriptionService()
+        await subscription_service.update_status(
+            company_id=company_id, new_status=SubscriptionStatus.CANCELLED
+        )
 
     except Exception as e:
         logger.error(
@@ -369,20 +359,16 @@ async def _handle_invoice_paid(data: dict) -> None:
 
             if company_id_str:
                 company_id = int(company_id_str)
+                subscription_service = SubscriptionService()
 
-                async for db_session in get_db():
-                    subscription_service = SubscriptionService(db_session)
-
-                    existing = await subscription_service.get_by_company_id(company_id)
-                    if existing and existing.status == SubscriptionStatus.PAST_DUE:
-                        await subscription_service.update_status(
-                            company_id=company_id, new_status=SubscriptionStatus.ACTIVE
-                        )
-                        logger.info(
-                            f"Reactivated subscription for company {company_id} after payment"
-                        )
-
-                    break
+                existing = await subscription_service.get_by_company_id(company_id)
+                if existing and existing.status == SubscriptionStatus.PAST_DUE:
+                    await subscription_service.update_status(
+                        company_id=company_id, new_status=SubscriptionStatus.ACTIVE
+                    )
+                    logger.info(
+                        f"Reactivated subscription for company {company_id} after payment"
+                    )
 
     except Exception as e:
         logger.error(f"Error handling invoice.paid: {str(e)}", extra={"error": str(e)})
@@ -410,16 +396,11 @@ async def _handle_invoice_payment_failed(data: dict) -> None:
 
             if company_id_str:
                 company_id = int(company_id_str)
-
-                async for db_session in get_db():
-                    subscription_service = SubscriptionService(db_session)
-                    await subscription_service.update_status(
-                        company_id=company_id, new_status=SubscriptionStatus.PAST_DUE
-                    )
-                    logger.info(
-                        f"Marked subscription as past_due for company {company_id}"
-                    )
-                    break
+                subscription_service = SubscriptionService()
+                await subscription_service.update_status(
+                    company_id=company_id, new_status=SubscriptionStatus.PAST_DUE
+                )
+                logger.info(f"Marked subscription as past_due for company {company_id}")
 
         # Could send payment failure notification email here
 

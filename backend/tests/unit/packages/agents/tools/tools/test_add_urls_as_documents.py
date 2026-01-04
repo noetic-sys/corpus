@@ -137,7 +137,6 @@ class TestAddUrlsAsDocumentsTool:
             assert call_kwargs["matrix_id"] == 123
             assert call_kwargs["entity_set_id"] == 10
             assert call_kwargs["current_user"] == mock_user
-            assert call_kwargs["db"] == mock_session
 
     async def test_execute_multiple_urls_success(self, tool, mock_user):
         """Test successful tool execution with multiple URLs."""

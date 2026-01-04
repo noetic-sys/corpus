@@ -6,7 +6,6 @@ It uses ChunkService to get metadata from DB and loads content from S3.
 """
 
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.storage.factory import get_storage
 from common.core.otel_axiom_exporter import trace_span, get_logger
@@ -22,11 +21,10 @@ logger = get_logger(__name__)
 class DocumentChunkingService:
     """Service for retrieving document chunks with content."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.storage = get_storage()
-        self.chunk_service = ChunkService(db_session)
-        self.chunk_set_service = ChunkSetService(db_session)
+        self.chunk_service = ChunkService()
+        self.chunk_set_service = ChunkSetService()
 
     @trace_span
     async def get_chunks_for_document(
@@ -127,6 +125,6 @@ class DocumentChunkingService:
         )
 
 
-def get_document_chunking_service(db_session: AsyncSession) -> DocumentChunkingService:
+def get_document_chunking_service() -> DocumentChunkingService:
     """Get document chunking service instance."""
-    return DocumentChunkingService(db_session)
+    return DocumentChunkingService()

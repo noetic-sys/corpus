@@ -19,7 +19,7 @@ def extraction_job_service(test_db, mock_message_queue):
         "packages.documents.services.document_extraction_job_service.get_message_queue",
         return_value=mock_message_queue,
     ):
-        return DocumentExtractionJobService(test_db)
+        return DocumentExtractionJobService()
 
 
 class TestDocumentExtractionJobService:
@@ -108,7 +108,7 @@ class TestDocumentExtractionJobService:
             "packages.documents.services.document_extraction_job_service.get_message_queue",
             return_value=mock_failing_queue,
         ):
-            service = DocumentExtractionJobService(extraction_job_service.db_session)
+            service = DocumentExtractionJobService()
 
             # Create a job
             job = await service.create_extraction_job(1)
@@ -163,7 +163,7 @@ class TestDocumentExtractionJobService:
             "packages.documents.services.document_extraction_job_service.get_message_queue",
             return_value=mock_failing_queue,
         ):
-            service = DocumentExtractionJobService(extraction_job_service.db_session)
+            service = DocumentExtractionJobService()
 
             # Create a document
             document_create = DocumentCreateModel(

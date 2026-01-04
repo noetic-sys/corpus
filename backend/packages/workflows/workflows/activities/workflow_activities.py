@@ -12,7 +12,7 @@ from typing import Dict, Any, List
 from temporalio import activity
 from datetime import datetime
 
-from common.db.session import get_db
+from common.db.scoped import transaction
 from common.core.config import settings
 from common.execution.job_spec import JobSpec
 from common.execution.workflow_framework.activity_helpers import (
@@ -121,8 +121,8 @@ async def extract_workflow_results_activity(
     manifest = ExecutionManifest.model_validate(manifest_dict)
 
     # Create DB records for files (already in S3)
-    async for db_session in get_db():
-        file_service = ExecutionFileService(db_session)
+    async with transaction():
+        file_service = ExecutionFileService()
 
         # Create DB records for output files
         for file_info in manifest.output_files:
@@ -171,8 +171,8 @@ async def update_execution_status_activity(
 ) -> None:
     """Update workflow execution status in database."""
 
-    async for db_session in get_db():
-        execution_service = WorkflowExecutionService(db_session)
+    async with transaction():
+        execution_service = WorkflowExecutionService()
 
         activity.logger.info(f"Updating execution {execution_id} to status {status}")
 

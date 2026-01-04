@@ -64,7 +64,6 @@ class GetMatrixEntitySetsTool(Tool[GetMatrixEntitySetsParameters]):
             entity_sets_response = await get_matrix_entity_sets(
                 matrix_id=parameters.matrix_id,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(

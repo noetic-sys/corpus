@@ -22,7 +22,7 @@ from packages.matrices.models.domain.matrix_enums import EntityRole
 @pytest.fixture
 def template_processing_service(test_db):
     """Create a TemplateProcessingService instance."""
-    return TemplateProcessingService(test_db)
+    return TemplateProcessingService()
 
 
 @pytest.fixture

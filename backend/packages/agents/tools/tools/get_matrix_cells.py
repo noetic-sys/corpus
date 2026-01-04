@@ -70,7 +70,6 @@ class GetMatrixCellsTool(Tool[GetMatrixCellsParameters]):
                 matrix_id=parameters.matrix_id,
                 document_id=parameters.document_id,
                 question_id=parameters.question_id,
-                db=session,
             )
 
             return ToolResult.ok(GetMatrixCellsSuccessResult(cells=cells))

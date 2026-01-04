@@ -30,7 +30,7 @@ def reprocessing_service(test_db, mock_message_queue):
         "packages.matrices.services.batch_processing_service.get_message_queue",
         return_value=mock_message_queue,
     ):
-        return ReprocessingService(test_db)
+        return ReprocessingService()
 
 
 # Mock both tracing and the message queue BEFORE importing anything
@@ -54,7 +54,7 @@ class TestReprocessingService:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -65,7 +65,7 @@ class TestReprocessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -84,7 +84,7 @@ class TestReprocessingService:
         )
 
         # Add members
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         for i in range(2):
             await member_repo.create(
                 MatrixEntitySetMemberCreateModel(
@@ -148,7 +148,7 @@ class TestReprocessingService:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -159,7 +159,7 @@ class TestReprocessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -178,7 +178,7 @@ class TestReprocessingService:
         )
 
         # Add members
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         for i in range(2):
             await member_repo.create(
                 MatrixEntitySetMemberCreateModel(
@@ -245,7 +245,7 @@ class TestReprocessingService:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",
@@ -256,7 +256,7 @@ class TestReprocessingService:
         )
 
         # Create entity sets
-        entity_set_repo = EntitySetRepository(test_db)
+        entity_set_repo = EntitySetRepository()
         doc_set = await entity_set_repo.create(
             MatrixEntitySetCreateModel(
                 matrix_id=matrix.id,
@@ -275,7 +275,7 @@ class TestReprocessingService:
         )
 
         # Add members
-        member_repo = EntitySetMemberRepository(test_db)
+        member_repo = EntitySetMemberRepository()
         await member_repo.create(
             MatrixEntitySetMemberCreateModel(
                 entity_set_id=doc_set.id,
@@ -333,7 +333,7 @@ class TestReprocessingService:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create matrix
-        matrix_repo = MatrixRepository(test_db)
+        matrix_repo = MatrixRepository()
         matrix = await matrix_repo.create(
             MatrixCreateModel(
                 name="Test Matrix",

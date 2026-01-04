@@ -1,6 +1,5 @@
 from typing import Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.messages import QAJobMessage
@@ -26,11 +25,10 @@ logger = get_logger(__name__)
 class QAJobService:
     """Service for handling QA job operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.qa_job_repo = QAJobRepository(db_session)
-        self.document_repo = DocumentRepository(db_session)
-        self.question_repo = QuestionRepository(db_session)
+    def __init__(self):
+        self.qa_job_repo = QAJobRepository()
+        self.document_repo = DocumentRepository()
+        self.question_repo = QuestionRepository()
         self.message_queue = get_message_queue()
 
     @trace_span
@@ -187,6 +185,6 @@ class QAJobService:
         return await self.question_repo.get(question_id)
 
 
-def get_qa_job_service(db_session: AsyncSession) -> QAJobService:
+def get_qa_job_service() -> QAJobService:
     """Get QA job service instance."""
-    return QAJobService(db_session)
+    return QAJobService()

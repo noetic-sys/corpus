@@ -79,7 +79,6 @@ class AddUrlsAsDocumentsTool(Tool[AddUrlsAsDocumentsParameters]):
                 entity_set_id=parameters.entity_set_id,
                 request=request,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(

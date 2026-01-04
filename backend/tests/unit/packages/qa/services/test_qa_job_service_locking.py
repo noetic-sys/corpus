@@ -24,7 +24,7 @@ class TestQAJobServiceWithLocking:
     @pytest.fixture
     def qa_job_service(self, db_session, mock_message_queue):
         """Create QAJobService instance with real repositories."""
-        service = QAJobService(db_session)
+        service = QAJobService()
         service.message_queue = mock_message_queue
         return service
 

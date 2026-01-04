@@ -29,7 +29,7 @@ class TestCitationSetRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return CitationSetRepository(test_db)
+        return CitationSetRepository()
 
     async def test_create_citation_set(self, repository, sample_answer, sample_company):
         """Test creating a citation set."""
@@ -45,15 +45,15 @@ class TestCitationSetRepository:
         assert result.id is not None
 
     async def test_get_by_answer_id(
-        self, repository, sample_answer, sample_citation_set, sample_company
+        self, repository, sample_answer, sample_citation_set, sample_company, test_db
     ):
         """Test getting citation sets by answer ID."""
         # Create another citation set for the same answer
         citation_set2 = CitationSetEntity(
             answer_id=sample_answer.id, company_id=sample_company.id
         )
-        repository.db_session.add(citation_set2)
-        await repository.db_session.commit()
+        test_db.add(citation_set2)
+        await test_db.commit()
 
         citation_sets = await repository.get_by_answer_id(sample_answer.id)
 
@@ -66,7 +66,7 @@ class TestCitationSetRepository:
         assert len(citation_sets) == 0
 
     async def test_get_with_citations(
-        self, repository, sample_citation_set, sample_document, sample_company
+        self, repository, sample_citation_set, sample_document, sample_company, test_db
     ):
         """Test getting citation set with citations loaded."""
         # Create citations for the set
@@ -84,8 +84,8 @@ class TestCitationSetRepository:
             quote_text="Second quote",
             citation_order=2,
         )
-        repository.db_session.add_all([citation1, citation2])
-        await repository.db_session.commit()
+        test_db.add_all([citation1, citation2])
+        await test_db.commit()
 
         result = await repository.get_with_citations(sample_citation_set.id)
 
@@ -115,7 +115,7 @@ class TestCitationRepository:
     @pytest.fixture
     async def repository(self, test_db: AsyncSession):
         """Create repository instance."""
-        return CitationRepository(test_db)
+        return CitationRepository()
 
     async def test_create_citation(
         self, repository, sample_citation_set, sample_document, sample_company
@@ -138,7 +138,7 @@ class TestCitationRepository:
         assert result.citation_order == 1
 
     async def test_get_by_citation_set_id(
-        self, repository, sample_citation_set, sample_document, sample_company
+        self, repository, sample_citation_set, sample_document, sample_company, test_db
     ):
         """Test getting citations by citation set ID, ordered by citation_order."""
         # Create multiple citations with different orders
@@ -163,8 +163,8 @@ class TestCitationRepository:
             quote_text="Second quote",
             citation_order=2,
         )
-        repository.db_session.add_all([citation1, citation2, citation3])
-        await repository.db_session.commit()
+        test_db.add_all([citation1, citation2, citation3])
+        await test_db.commit()
 
         citations = await repository.get_by_citation_set_id(sample_citation_set.id)
 
@@ -221,8 +221,8 @@ class TestCitationRepository:
             quote_text="Quote from doc 2",
             citation_order=3,
         )
-        repository.db_session.add_all([citation1, citation2, citation3])
-        await repository.db_session.commit()
+        test_db.add_all([citation1, citation2, citation3])
+        await test_db.commit()
 
         # Get citations for first document
         citations = await repository.get_by_document_id(sample_document.id)

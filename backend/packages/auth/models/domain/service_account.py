@@ -21,11 +21,20 @@ class ServiceAccount(BaseModel):
 
 
 class ServiceAccountCreate(BaseModel):
-    """Model for creating a new service account"""
+    """Public input for creating a service account (API/callers)"""
 
     name: str
     description: Optional[str] = None
     company_id: int
+
+
+class ServiceAccountCreateModel(BaseModel):
+    """Internal model for repository creation (includes api_key_hash)"""
+
+    name: str
+    description: Optional[str] = None
+    company_id: int
+    api_key_hash: str
 
 
 class ServiceAccountUpdate(BaseModel):

@@ -1,11 +1,8 @@
 from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from common.db.session import get_db, get_db_readonly
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
-from common.db.transaction_utils import transaction
+from common.db.scoped import transaction
 from packages.matrices.models.schemas.matrix_template_variable import (
     MatrixTemplateVariableCreate,
     MatrixTemplateVariableUpdate,
@@ -38,11 +35,10 @@ async def create_template_variable(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     variable_data: MatrixTemplateVariableCreate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Create a new template variable for a matrix."""
-    async with transaction(db):
-        template_service = MatrixTemplateVariableService(db)
+    async with transaction():
+        template_service = MatrixTemplateVariableService()
         create_model = MatrixTemplateVariableCreateModel(
             template_string=variable_data.template_string,
             value=variable_data.value,
@@ -63,10 +59,9 @@ async def create_template_variable(
 async def get_matrix_template_variables(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all template variables for a matrix."""
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     return await template_service.get_matrix_template_variables(
         matrix_id, current_user.company_id
     )
@@ -79,10 +74,9 @@ async def get_matrix_template_variables(
 async def get_template_variables_with_usage(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get template variables with usage count for a matrix."""
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     usage_data = await template_service.get_template_variables_with_usage(
         matrix_id, current_user.company_id
     )
@@ -101,10 +95,9 @@ async def get_template_variables_with_usage(
 async def get_template_variable(
     variable_id: int = Path(alias="variableId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get a specific template variable by ID."""
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     variable = await template_service.get_template_variable(
         variable_id, current_user.company_id
     )
@@ -120,13 +113,12 @@ async def update_template_variable(
     variable_id: Annotated[int, Path(alias="variableId")],
     variable_update: MatrixTemplateVariableUpdate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Update a template variable and reprocess affected questions."""
-    async with transaction(db):
-        template_service = MatrixTemplateVariableService(db)
-        question_template_service = QuestionTemplateVariableService(db)
-        reprocessing_service = get_reprocessing_service(db)
+    async with transaction():
+        template_service = MatrixTemplateVariableService()
+        question_template_service = QuestionTemplateVariableService()
+        reprocessing_service = get_reprocessing_service()
 
         # Get the existing variable to check for changes
         existing = await template_service.get_template_variable(
@@ -176,11 +168,10 @@ async def update_template_variable(
 async def delete_template_variable(
     variable_id: int = Path(alias="variableId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Delete a template variable (only if not in use)."""
-    async with transaction(db):
-        template_service = MatrixTemplateVariableService(db)
+    async with transaction():
+        template_service = MatrixTemplateVariableService()
         success = await template_service.delete_template_variable(
             variable_id, current_user.company_id
         )
@@ -196,10 +187,9 @@ async def delete_template_variable(
 async def get_affected_questions(
     variable_id: int = Path(alias="variableId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get list of question IDs that would be affected by changes to this template variable."""
-    question_template_service = QuestionTemplateVariableService(db)
+    question_template_service = QuestionTemplateVariableService()
     return await question_template_service.get_questions_affected_by_template_change(
         variable_id
     )

@@ -1,5 +1,4 @@
 from typing import List
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from common.core.otel_axiom_exporter import trace_span
@@ -18,34 +17,36 @@ class DocumentIndexingJobRepository(
 ):
     """Repository for document indexing job operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        super().__init__(
-            DocumentIndexingJobEntity, DocumentIndexingJobModel, db_session
-        )
+    def __init__(self):
+        super().__init__(DocumentIndexingJobEntity, DocumentIndexingJobModel)
 
     @trace_span
     async def get_by_document_id(
         self, document_id: int
     ) -> List[DocumentIndexingJobModel]:
         """Get all indexing jobs for a document."""
-        result = await self.db_session.execute(
-            select(self.entity_class)
-            .where(self.entity_class.document_id == document_id)
-            .order_by(self.entity_class.id.desc())
-        )
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(
+                select(self.entity_class)
+                .where(self.entity_class.document_id == document_id)
+                .order_by(self.entity_class.id.desc())
+            )
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)
 
     @trace_span
     async def get_pending_jobs(
         self, limit: int = 100
     ) -> List[DocumentIndexingJobModel]:
         """Get pending indexing jobs."""
-        result = await self.db_session.execute(
-            select(self.entity_class)
-            .where(self.entity_class.status == DocumentIndexingJobStatus.QUEUED.value)
-            .order_by(self.entity_class.id.asc())
-            .limit(limit)
-        )
-        entities = result.scalars().all()
-        return self._entities_to_domain(entities)
+        async with self._get_session() as session:
+            result = await session.execute(
+                select(self.entity_class)
+                .where(
+                    self.entity_class.status == DocumentIndexingJobStatus.QUEUED.value
+                )
+                .order_by(self.entity_class.id.asc())
+                .limit(limit)
+            )
+            entities = result.scalars().all()
+            return self._entities_to_domain(entities)

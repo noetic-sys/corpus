@@ -5,7 +5,6 @@ This is the critical service that prevents usage beyond subscription limits.
 """
 
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
@@ -25,10 +24,9 @@ logger = get_logger(__name__)
 class QuotaService:
     """Service for quota enforcement."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.subscription_repo = SubscriptionRepository(db_session)
-        self.usage_repo = UsageEventRepository(db_session)
+    def __init__(self):
+        self.subscription_repo = SubscriptionRepository()
+        self.usage_repo = UsageEventRepository()
 
     async def _get_subscription_or_raise(self, company_id: int):
         """Get subscription and validate access."""

@@ -1,7 +1,6 @@
 import secrets
 import hashlib
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.auth.repositories.service_account_repository import (
     ServiceAccountRepository,
@@ -9,10 +8,10 @@ from packages.auth.repositories.service_account_repository import (
 from packages.auth.models.domain.service_account import (
     ServiceAccount,
     ServiceAccountCreate,
+    ServiceAccountCreateModel,
     ServiceAccountUpdate,
     ServiceAccountWithApiKey,
 )
-from packages.auth.models.database.service_account import ServiceAccountEntity
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
@@ -22,9 +21,8 @@ logger = get_logger(__name__)
 class ServiceAccountService:
     """Service for handling service account operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.service_account_repo = ServiceAccountRepository(db_session)
+    def __init__(self):
+        self.service_account_repo = ServiceAccountRepository()
 
     @staticmethod
     def _generate_api_key() -> str:
@@ -50,19 +48,14 @@ class ServiceAccountService:
         api_key = self._generate_api_key()
         api_key_hash = self._hash_api_key(api_key)
 
-        # Create entity with hashed API key
-        entity = ServiceAccountEntity(
+        # Create via repository
+        create_model = ServiceAccountCreateModel(
             name=account_data.name,
             description=account_data.description,
             company_id=account_data.company_id,
             api_key_hash=api_key_hash,
         )
-
-        self.db_session.add(entity)
-        await self.db_session.flush()
-        await self.db_session.refresh(entity)
-
-        service_account = ServiceAccount.model_validate(entity)
+        service_account = await self.service_account_repo.create(create_model)
 
         logger.info(f"Created service account with ID: {service_account.id}")
 

@@ -127,9 +127,7 @@ class TestGetMatrixEntitySetsTool:
             assert result.result.entity_sets.entity_sets[1].name == "Questions"
 
             # Verify function was called correctly
-            mock_route.assert_called_once_with(
-                matrix_id=123, current_user=mock_user, db=mock_session
-            )
+            mock_route.assert_called_once_with(matrix_id=123, current_user=mock_user)
 
     async def test_execute_service_exception(self, tool, mock_user):
         """Test tool execution when service raises exception."""

@@ -66,7 +66,7 @@ def document_service(test_db, mock_storage, mock_bloom_filter):
         "packages.documents.providers.document_extraction.text_extractor.get_storage",
         return_value=mock_storage,
     ):
-        return DocumentService(test_db)
+        return DocumentService()
 
 
 @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")

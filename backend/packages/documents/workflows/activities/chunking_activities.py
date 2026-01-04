@@ -14,11 +14,9 @@ Activities handle:
 import json
 from typing import Dict, Any
 from temporalio import activity
-from sqlalchemy import update as sql_update
 
 from common.core.config import settings
 from common.core.constants import WorkflowExecutionMode
-from common.db.session import get_db
 from common.providers.storage.factory import get_storage
 from common.providers.storage.paths import (
     get_document_chunks_prefix,
@@ -39,7 +37,6 @@ from packages.documents.services.chunk_upload_service import get_chunk_upload_se
 from packages.documents.services.document_service import get_document_service
 from packages.billing.services.quota_service import QuotaService
 from packages.billing.services.usage_service import UsageService
-from packages.billing.models.database.usage import UsageEventEntity
 
 
 def _get_executor():
@@ -80,37 +77,36 @@ async def get_chunking_strategy_activity(
         f"Determining chunking strategy for company {company_id}, document {document_id}"
     )
 
-    async for db_session in get_db():
-        quota_service = QuotaService(db_session)
-        result = await quota_service.reserve_agentic_chunking_if_available(
-            company_id=company_id,
-            document_id=document_id,
-        )
-        await db_session.commit()
+    # QuotaService handles its own transaction internally
+    quota_service = QuotaService()
+    result = await quota_service.reserve_agentic_chunking_if_available(
+        company_id=company_id,
+        document_id=document_id,
+    )
 
-        if result.reserved:
-            activity.logger.info(
-                f"Agentic chunking reserved for company {company_id}, "
-                f"document {document_id}, event_id={result.usage_event_id} "
-                f"({result.current_usage}/{result.limit})"
-            )
-            return {
-                "strategy": ChunkingStrategy.AGENTIC.value,
-                "tier": result.tier.value,
-                "usage_event_id": result.usage_event_id,
-                "quota_exceeded": False,
-            }
-        else:
-            activity.logger.info(
-                f"Agentic quota exceeded for company {company_id}, "
-                f"falling back to sentence ({result.current_usage}/{result.limit})"
-            )
-            return {
-                "strategy": ChunkingStrategy.SENTENCE.value,
-                "tier": result.tier.value,
-                "usage_event_id": None,
-                "quota_exceeded": True,
-            }
+    if result.reserved:
+        activity.logger.info(
+            f"Agentic chunking reserved for company {company_id}, "
+            f"document {document_id}, event_id={result.usage_event_id} "
+            f"({result.current_usage}/{result.limit})"
+        )
+        return {
+            "strategy": ChunkingStrategy.AGENTIC.value,
+            "tier": result.tier.value,
+            "usage_event_id": result.usage_event_id,
+            "quota_exceeded": False,
+        }
+    else:
+        activity.logger.info(
+            f"Agentic quota exceeded for company {company_id}, "
+            f"falling back to sentence ({result.current_usage}/{result.limit})"
+        )
+        return {
+            "strategy": ChunkingStrategy.SENTENCE.value,
+            "tier": result.tier.value,
+            "usage_event_id": None,
+            "quota_exceeded": True,
+        }
 
 
 # ============================================================================
@@ -299,10 +295,8 @@ async def naive_chunking_activity(
     )
 
     # Get document to find extracted content path
-    async for db_session in get_db():
-        document_service = get_document_service(db_session)
-        document = await document_service.get_document(document_id, company_id)
-        break
+    document_service = get_document_service()
+    document = await document_service.get_document(document_id, company_id)
 
     if not document:
         raise Exception(f"Document {document_id} not found")
@@ -331,16 +325,14 @@ async def naive_chunking_activity(
         f"Created {len(chunks)} chunks using {chunking_strategy} strategy"
     )
 
-    # Upload chunks via ChunkUploadService
-    async for db_session in get_db():
-        chunk_upload_service = get_chunk_upload_service(db_session)
-        s3_prefix = await chunk_upload_service.process_chunk_upload(
-            document_id=document_id,
-            company_id=company_id,
-            chunks=chunks,
-            chunking_strategy=chunking_strategy,
-        )
-        break
+    # Upload chunks via ChunkUploadService (handles its own transaction)
+    chunk_upload_service = get_chunk_upload_service()
+    s3_prefix = await chunk_upload_service.process_chunk_upload(
+        document_id=document_id,
+        company_id=company_id,
+        chunks=chunks,
+        chunking_strategy=chunking_strategy,
+    )
 
     activity.logger.info(f"Uploaded {len(chunks)} chunks to {s3_prefix}")
 
@@ -381,15 +373,13 @@ async def refund_agentic_chunking_credit_activity(
         f"(original_event_id={original_event_id})"
     )
 
-    async for db_session in get_db():
-        usage_service = UsageService(db_session)
-        refund_event = await usage_service.refund_agentic_chunking(
-            company_id=company_id,
-            document_id=document_id,
-            original_event_id=original_event_id,
-        )
-        await db_session.commit()
-        break
+    # UsageService handles its own transaction
+    usage_service = UsageService()
+    refund_event = await usage_service.refund_agentic_chunking(
+        company_id=company_id,
+        document_id=document_id,
+        original_event_id=original_event_id,
+    )
 
     activity.logger.info(
         f"Created refund event {refund_event.id} for original event {original_event_id}"
@@ -414,14 +404,10 @@ async def update_agentic_chunking_metadata_activity(
         f"Updating agentic chunking metadata (event_id={usage_event_id}, chunk_count={chunk_count})"
     )
 
-    async for db_session in get_db():
-        await db_session.execute(
-            sql_update(UsageEventEntity)
-            .where(UsageEventEntity.id == usage_event_id)
-            .values(event_metadata={"chunk_count": chunk_count})
-        )
-        await db_session.commit()
-        break
+    usage_service = UsageService()
+    await usage_service.update_event_metadata(
+        usage_event_id, {"chunk_count": chunk_count}
+    )
 
     activity.logger.info(
         f"Updated agentic chunking metadata for event {usage_event_id}"

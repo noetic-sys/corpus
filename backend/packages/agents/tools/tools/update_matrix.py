@@ -84,7 +84,6 @@ class UpdateMatrixTool(Tool[UpdateMatrixParameters]):
                 matrix_id=parameters.matrix_id,
                 matrix_update=matrix_update_data,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(UpdateMatrixSuccessResult(matrix=matrix))

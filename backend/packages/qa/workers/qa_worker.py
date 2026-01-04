@@ -13,7 +13,6 @@ from packages.qa.temporal.agent_qa_workflow import AgentQAWorkflow
 from common.providers.locking.factory import get_lock_provider
 from temporalio.client import Client
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
@@ -154,7 +153,7 @@ class QAWorker(BaseWorker[QAJobMessage]):
             logger.error(f"Failed to update job status after error: {update_error}")
 
     @trace_span
-    async def process_message(self, message: QAJobMessage, db_session: AsyncSession):
+    async def process_message(self, message: QAJobMessage):
         """Process a QA job message using strategy pattern."""
         logger.info(
             f"QA Worker received message: job_id={message.job_id}, matrix_cell_id={message.matrix_cell_id}"
@@ -164,8 +163,8 @@ class QAWorker(BaseWorker[QAJobMessage]):
         matrix_cell_id = message.matrix_cell_id
 
         # Initialize services
-        matrix_service = get_matrix_service(db_session)
-        qa_job_service = get_qa_job_service(db_session)
+        matrix_service = get_matrix_service()
+        qa_job_service = get_qa_job_service()
 
         try:
             logger.info(f"Processing QA job {job_id} for cell {matrix_cell_id}")
@@ -198,9 +197,7 @@ class QAWorker(BaseWorker[QAJobMessage]):
                 )
 
                 # Get strategy for this matrix type
-                strategy = CellStrategyFactory.get_strategy(
-                    matrix.matrix_type, db_session
-                )
+                strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
 
                 # Load cell data to get question info
                 cell_data = await strategy.load_cell_data(
@@ -208,7 +205,7 @@ class QAWorker(BaseWorker[QAJobMessage]):
                 )
 
                 # Load full question model for routing check
-                question_service = get_question_service(db_session)
+                question_service = get_question_service()
                 question_model = await question_service.get_question(
                     cell_data.question.question_id, matrix.company_id
                 )

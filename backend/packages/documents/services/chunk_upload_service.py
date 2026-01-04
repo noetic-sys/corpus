@@ -8,7 +8,6 @@ import io
 import json
 from typing import List
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.storage.factory import get_storage
 from common.providers.storage.paths import get_document_chunks_prefix
@@ -26,11 +25,10 @@ logger = get_logger(__name__)
 class ChunkUploadService:
     """Service for processing chunk uploads from chunking agents."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.storage = get_storage()
-        self.chunk_set_service = ChunkSetService(db_session)
-        self.chunk_service = ChunkService(db_session)
+        self.chunk_set_service = ChunkSetService()
+        self.chunk_service = ChunkService()
 
     @trace_span
     async def process_chunk_upload(
@@ -140,6 +138,6 @@ class ChunkUploadService:
         return s3_prefix
 
 
-def get_chunk_upload_service(db_session: AsyncSession) -> ChunkUploadService:
+def get_chunk_upload_service() -> ChunkUploadService:
     """Get chunk upload service instance."""
-    return ChunkUploadService(db_session)
+    return ChunkUploadService()

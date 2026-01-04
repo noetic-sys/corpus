@@ -7,10 +7,8 @@ Handles entity set management, member operations, and label updates.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.db.session import get_db
-from common.db.transaction_utils import transaction
+from common.db.scoped import transaction
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.matrices.services.entity_set_service import get_entity_set_service
@@ -34,15 +32,14 @@ async def update_entity_set_member_label(
     member_id: Annotated[int, Path(alias="memberId")],
     label_update: EntitySetMemberLabelUpdate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Update the label of an entity set member.
 
     Labels are per-matrix context - the same entity (document/question) can have
     different labels in different entity sets/matrices.
     """
-    async with transaction(db):
-        entity_set_service = get_entity_set_service(db)
+    async with transaction():
+        entity_set_service = get_entity_set_service()
 
         updated_member = await entity_set_service.update_member_label(
             entity_set_id=entity_set_id,
