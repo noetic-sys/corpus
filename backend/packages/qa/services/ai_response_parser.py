@@ -45,7 +45,6 @@ class AIResponseParser:
             AIAnswerSet with answer_found status and list of answers
         """
         try:
-            # Log raw input BEFORE any processing
             logger.info(
                 f"RAW AI RESPONSE (len={len(json_response) if json_response else 0}): {repr(json_response)}"
             )

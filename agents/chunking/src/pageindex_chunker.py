@@ -16,11 +16,7 @@ from pageindex.utils import flatten_tree
 
 
 class EnrichedChunkMetadata(BaseModel):
-    """Extended chunk metadata with PageIndex information.
-
-    Note: chunk_id is NOT included here - it's stored separately on the chunk
-    object and injected at the API response layer.
-    """
+    """Extended chunk metadata with PageIndex information."""
 
     node_id: str = Field(..., description="Hierarchical node ID")
     node_title: str = Field(..., description="Section title from PageIndex")
@@ -78,7 +74,7 @@ async def chunk_with_pageindex(
     for idx, node in enumerate(flat_nodes):
         chunk_id = f"chunk_{str(idx + 1).zfill(3)}"
 
-        # Create metadata (chunk_id stored separately, not in metadata)
+        # Create metadata
         metadata = EnrichedChunkMetadata(
             node_id=node.node_id,
             node_title=node.title,
