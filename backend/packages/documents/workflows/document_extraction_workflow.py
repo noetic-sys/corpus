@@ -6,8 +6,8 @@ Routes documents to appropriate child workflows based on file type.
 from temporalio import workflow
 from temporalio.common import RetryPolicy
 from datetime import timedelta
-import logging
 
+from common.core.otel_axiom_exporter import get_logger
 from .common import (
     DocumentProcessingInput,
     ExtractionStatusType,
@@ -23,7 +23,7 @@ from .pdf_to_markdown_workflow import PDFToMarkdownWorkflow
 from .generic_document_workflow import GenericDocumentWorkflow
 from .chunking_workflow import DocumentChunkingWorkflow
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @workflow.defn

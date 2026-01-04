@@ -5,8 +5,8 @@ Handles Word, Excel, PowerPoint, images, text files, etc.
 
 from temporalio import workflow
 from datetime import timedelta
-import logging
 
+from common.core.otel_axiom_exporter import get_logger
 from .common import (
     DocumentProcessingInput,
     EXTRACT_DOCUMENT_CONTENT_ACTIVITY,
@@ -15,7 +15,7 @@ from .common import (
     GET_DOCUMENT_DETAILS_ACTIVITY,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @workflow.defn

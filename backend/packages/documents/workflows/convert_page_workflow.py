@@ -6,14 +6,13 @@ Much simpler than Datalab since Gemini is synchronous.
 from temporalio import workflow
 from datetime import timedelta
 
-import logging
-
+from common.core.otel_axiom_exporter import get_logger
 from .common import (
     MarkdownPage,
     CONVERT_PAGE_TO_MARKDOWN_ACTIVITY,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @workflow.defn

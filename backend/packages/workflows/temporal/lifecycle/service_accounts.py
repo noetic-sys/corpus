@@ -8,9 +8,9 @@ from typing import Tuple
 
 from packages.auth.services.service_account_service import ServiceAccountService
 from packages.auth.models.domain.service_account import ServiceAccountCreate
-import logging
+from common.core.otel_axiom_exporter import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def create_execution_service_account(
