@@ -55,6 +55,9 @@ async def transaction(readonly: bool = False) -> AsyncGenerator[AsyncSession, No
     All DB operations inside share one session/connection.
     Commits on success (unless readonly), rolls back on exception.
 
+    If already inside a transaction, reuses the existing session (nested calls
+    are no-ops - the outer transaction handles commit/rollback).
+
     Args:
         readonly: If True, uses readonly session and skips commit.
                   Also respects @readonly decorator if applied to caller.
@@ -77,6 +80,14 @@ async def transaction(readonly: bool = False) -> AsyncGenerator[AsyncSession, No
         Exception: Re-raises any exception after rollback
     """
     effective_readonly = readonly or is_readonly_forced()
+
+    # Check if already inside a transaction - if so, reuse it
+    existing = get_current_session(readonly=effective_readonly)
+    if existing:
+        logger.debug("Reusing existing transaction session (nested transaction)")
+        yield existing
+        return
+
     session_factory = (
         AsyncSessionLocalReadonly if effective_readonly else AsyncSessionLocal
     )
