@@ -113,6 +113,100 @@ class TestTransaction:
             result = await session.execute(text("SELECT 1"))
             assert result.scalar() == 1
 
+    async def test_nested_transaction_reuses_session(self, patch_session_factories):
+        """Test that nested transaction() calls reuse the outer session."""
+        sessions_seen = []
+
+        async with transaction() as outer_session:
+            sessions_seen.append(outer_session)
+
+            # Nested transaction should reuse the outer session
+            async with transaction() as inner_session:
+                sessions_seen.append(inner_session)
+
+                # Double nested should also reuse
+                async with transaction() as innermost_session:
+                    sessions_seen.append(innermost_session)
+
+        # All should be the same session
+        assert len(sessions_seen) == 3
+        assert all(s is sessions_seen[0] for s in sessions_seen)
+
+    async def test_nested_transaction_does_not_commit(
+        self, patch_session_factories, scoped_session_factory
+    ):
+        """Test that nested transaction doesn't commit - outer handles it."""
+        async with transaction() as outer_session:
+            async with transaction() as inner_session:
+                company = CompanyEntity(name="Nested Transaction Company")
+                inner_session.add(company)
+                await inner_session.flush()
+
+            # Inner transaction exited, but we're still in outer
+            # Data should be visible within the transaction
+            result = await outer_session.execute(
+                text(
+                    "SELECT name FROM companies WHERE name = 'Nested Transaction Company'"
+                )
+            )
+            row = result.fetchone()
+            assert row is not None
+
+        # After outer commits, verify it's in the database
+        async with scoped_session_factory() as verify_session:
+            result = await verify_session.execute(
+                text(
+                    "SELECT name FROM companies WHERE name = 'Nested Transaction Company'"
+                )
+            )
+            row = result.fetchone()
+            assert row is not None
+
+    async def test_nested_transaction_rollback_handled_by_outer(
+        self, patch_session_factories, scoped_session_factory
+    ):
+        """Test that exception in nested transaction rolls back outer transaction."""
+        with pytest.raises(ValueError):
+            async with transaction() as outer_session:
+                company1 = CompanyEntity(name="Outer Company")
+                outer_session.add(company1)
+                await outer_session.flush()
+
+                async with transaction() as inner_session:
+                    company2 = CompanyEntity(name="Inner Company")
+                    inner_session.add(company2)
+                    await inner_session.flush()
+                    raise ValueError("Error in nested transaction")
+
+        # Both should be rolled back
+        async with scoped_session_factory() as verify_session:
+            result = await verify_session.execute(
+                text(
+                    "SELECT name FROM companies WHERE name IN ('Outer Company', 'Inner Company')"
+                )
+            )
+            rows = result.fetchall()
+            assert len(rows) == 0
+
+    async def test_nested_transaction_data_visible_to_outer(
+        self, patch_session_factories
+    ):
+        """Test that data created in nested transaction is visible to outer."""
+        async with transaction() as outer_session:
+            # Create data in nested transaction
+            async with transaction() as inner_session:
+                company = CompanyEntity(name="Visible Company")
+                inner_session.add(company)
+                await inner_session.flush()
+
+            # Should be visible in outer transaction after inner exits
+            result = await outer_session.execute(
+                text("SELECT name FROM companies WHERE name = 'Visible Company'")
+            )
+            row = result.fetchone()
+            assert row is not None
+            assert row[0] == "Visible Company"
+
 
 class TestGetSession:
     """Test the get_session() context manager with real database."""
