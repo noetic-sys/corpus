@@ -178,7 +178,6 @@ async def main():
     except Exception as e:
         print(f"ERROR: Failed to upload answer: {e}")
         sys.exit(1)
-    sys.exit(1)
 
     print("Agent QA execution completed successfully")
     sys.exit(0)
