@@ -30,13 +30,13 @@ def question_template_variable_service(test_db):
 @pytest.fixture
 def matrix_repo(test_db):
     """Create a MatrixRepository instance."""
-    return MatrixRepository(test_db)
+    return MatrixRepository()
 
 
 @pytest.fixture
 def question_repo(test_db):
     """Create a QuestionRepository instance."""
-    return QuestionRepository(test_db)
+    return QuestionRepository()
 
 
 @pytest.fixture

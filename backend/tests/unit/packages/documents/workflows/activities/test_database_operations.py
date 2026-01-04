@@ -43,7 +43,7 @@ class TestUpdateExtractionStatusActivity:
         mock_get_db.return_value = mock_db_generator()
 
         # Create test data in the database
-        document_repo = DocumentRepository(test_db)
+        document_repo = DocumentRepository()
         job_repo = DocumentExtractionJobRepository()
 
         # Create a document
@@ -103,7 +103,7 @@ class TestUpdateExtractionStatusActivity:
         mock_get_db.return_value = mock_db_generator()
 
         # Create test data in the database
-        document_repo = DocumentRepository(test_db)
+        document_repo = DocumentRepository()
         job_repo = DocumentExtractionJobRepository()
 
         # Create a document
@@ -163,7 +163,7 @@ class TestUpdateExtractionStatusActivity:
         mock_get_db.return_value = mock_db_generator()
 
         # Create test data in the database
-        document_repo = DocumentRepository(test_db)
+        document_repo = DocumentRepository()
         job_repo = DocumentExtractionJobRepository()
 
         # Create a document
@@ -242,8 +242,8 @@ class TestUpdateDocumentCompletionActivity:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create test data in the database
-        matrix_repo = MatrixRepository(test_db)
-        document_repo = DocumentRepository(test_db)
+        matrix_repo = MatrixRepository()
+        document_repo = DocumentRepository()
         job_repo = DocumentExtractionJobRepository()
 
         # Create a workspace first
@@ -320,8 +320,8 @@ class TestUpdateDocumentCompletionActivity:
         mock_get_message_queue.return_value = mock_message_queue
 
         # Create test data in the database
-        matrix_repo = MatrixRepository(test_db)
-        document_repo = DocumentRepository(test_db)
+        matrix_repo = MatrixRepository()
+        document_repo = DocumentRepository()
         job_repo = DocumentExtractionJobRepository()
 
         # Create a workspace first

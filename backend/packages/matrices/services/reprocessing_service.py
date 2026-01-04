@@ -25,9 +25,9 @@ class ReprocessingService(TransactionMixin):
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.matrix_cell_repo = MatrixCellRepository(db_session)
-        self.member_repo = EntitySetMemberRepository(db_session)
-        self.cell_ref_repo = CellEntityReferenceRepository(db_session)
+        self.matrix_cell_repo = MatrixCellRepository()
+        self.member_repo = EntitySetMemberRepository()
+        self.cell_ref_repo = CellEntityReferenceRepository()
         self.batch_processing_service = BatchProcessingService(db_session)
 
     @trace_span

@@ -55,10 +55,8 @@ def get_workflow_service() -> WorkflowService:
     return WorkflowService()
 
 
-def get_execution_file_service(
-    db: AsyncSession = Depends(get_db),
-) -> ExecutionFileService:
-    return ExecutionFileService(db)
+def get_execution_file_service() -> ExecutionFileService:
+    return ExecutionFileService()
 
 
 def get_input_file_service() -> InputFileService:

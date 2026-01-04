@@ -157,7 +157,7 @@ class TestAIService:
     async def sample_question_with_options(self, ai_service, sample_question):
         """Create a question with options."""
 
-        option_service = QuestionOptionService(ai_service.db_session)
+        option_service = QuestionOptionService()
         create_model = QuestionOptionSetCreateModel(
             options=[
                 QuestionOptionCreateModel(value="Yes"),

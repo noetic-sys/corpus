@@ -36,7 +36,7 @@ class TemporalDocumentExtractionService:
     ):
         self.db_session = db_session
         self.extraction_job_repo = DocumentExtractionJobRepository()
-        self.document_repo = DocumentRepository(db_session)
+        self.document_repo = DocumentRepository()
         self._temporal_client = temporal_client
 
     async def get_temporal_client(self) -> Client:

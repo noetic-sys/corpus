@@ -44,10 +44,10 @@ class BatchProcessingService(TransactionMixin):
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.matrix_repo = MatrixRepository(db_session)
-        self.matrix_cell_repo = MatrixCellRepository(db_session)
-        self.cell_entity_ref_repo = CellEntityReferenceRepository(db_session)
-        self.entity_set_member_repo = EntitySetMemberRepository(db_session)
+        self.matrix_repo = MatrixRepository()
+        self.matrix_cell_repo = MatrixCellRepository()
+        self.cell_entity_ref_repo = CellEntityReferenceRepository()
+        self.entity_set_member_repo = EntitySetMemberRepository()
         self.entity_set_service = EntitySetService(db_session)
         # TODO: i think this actually needs to be a service call here
         self.qa_job_repo = QAJobRepository()

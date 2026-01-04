@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.questions.repositories.question_option_repository import (
@@ -22,11 +21,10 @@ logger = get_logger(__name__)
 class QuestionOptionService:
     """Service for handling question option set operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.option_set_repo = QuestionOptionSetRepository()
         self.option_repo = QuestionOptionRepository()
-        self.question_repo = QuestionRepository(db_session)
+        self.question_repo = QuestionRepository()
 
     @trace_span
     async def create_option_set(
@@ -146,6 +144,6 @@ class QuestionOptionService:
         return success
 
 
-def get_question_option_service(db_session: AsyncSession) -> QuestionOptionService:
+def get_question_option_service() -> QuestionOptionService:
     """Get question option service instance."""
-    return QuestionOptionService(db_session)
+    return QuestionOptionService()

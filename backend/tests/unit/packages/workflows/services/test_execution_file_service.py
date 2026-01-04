@@ -28,7 +28,7 @@ class TestExecutionFileService:
             "packages.workflows.services.execution_file_service.WorkflowStorageService",
             return_value=mock_storage_service,
         ):
-            return ExecutionFileService(test_db)
+            return ExecutionFileService()
 
     async def test_create_file_record(
         self, service, sample_workflow_execution, sample_company

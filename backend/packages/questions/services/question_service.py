@@ -53,12 +53,12 @@ class QuestionService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.question_repo = QuestionRepository(db_session)
-        self.matrix_repo = MatrixRepository(db_session)
+        self.question_repo = QuestionRepository()
+        self.matrix_repo = MatrixRepository()
         self.template_var_repo = MatrixTemplateVariableRepository()
         self.option_set_repo = QuestionOptionSetRepository()
         self.option_repo = QuestionOptionRepository()
-        self.question_option_service = QuestionOptionService(db_session)
+        self.question_option_service = QuestionOptionService()
         self.reprocessing_service = ReprocessingService(db_session)
         self.ai_model_repo = AIModelRepository()
 

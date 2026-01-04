@@ -87,7 +87,7 @@ async def create_question(
         template_processing_service = TemplateProcessingService(db)
         question_template_service = QuestionTemplateVariableService(db)
         entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        member_repo = EntitySetMemberRepository()
 
         # Validate template variables if question contains them
         if template_processing_service.has_template_variables(question.question_text):
@@ -379,7 +379,7 @@ async def create_question_with_options(
         template_processing_service = TemplateProcessingService(db)
         question_template_service = QuestionTemplateVariableService(db)
         entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        member_repo = EntitySetMemberRepository()
 
         # Validate template variables if question contains them
         if template_processing_service.has_template_variables(
@@ -702,7 +702,7 @@ async def duplicate_question(
         batch_processing_service = get_batch_processing_service(db)
         question_template_service = QuestionTemplateVariableService(db)
         entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        member_repo = EntitySetMemberRepository()
 
         # Duplicate the question
         duplicated_question = await question_service.duplicate_question(

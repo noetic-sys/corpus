@@ -38,7 +38,7 @@ class AIService:
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         )
         self.prompts_dir = os.path.join(project_root, "prompts")
-        self.question_option_service = QuestionOptionService(db_session)
+        self.question_option_service = QuestionOptionService()
 
     @trace_span
     @lru_cache(maxsize=100)

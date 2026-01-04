@@ -22,8 +22,8 @@ logger = get_logger(__name__)
 class ExecutionFileService:
     """Service for execution file operations."""
 
-    def __init__(self, session: AsyncSession):
-        self.repository = ExecutionFileRepository(session)
+    def __init__(self):
+        self.repository = ExecutionFileRepository()
         self.storage_service = WorkflowStorageService()
 
     @trace_span

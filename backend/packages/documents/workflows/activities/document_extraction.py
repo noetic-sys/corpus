@@ -85,7 +85,7 @@ async def save_extracted_content_to_s3_activity(
         try:
             # Get company_id from document for path organization
             async for session in get_db():
-                document_repo = DocumentRepository(session)
+                document_repo = DocumentRepository()
                 document = await document_repo.get(document_id)
 
                 if not document:
@@ -129,7 +129,7 @@ async def index_document_for_search_activity(
 
         async for session in get_db():
             try:
-                document_repo = DocumentRepository(session)
+                document_repo = DocumentRepository()
                 document = await document_repo.get(document_id)
 
                 if not document:

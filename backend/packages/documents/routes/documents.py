@@ -243,7 +243,7 @@ async def upload_document(
         question_service = get_question_service(db)
         batch_processing_service = get_batch_processing_service(db)
         entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        member_repo = EntitySetMemberRepository()
 
         # Upload document as standalone entity
         document, is_duplicate = await document_service.upload_document(
@@ -390,7 +390,7 @@ async def upload_documents_from_urls(
     document_service = get_document_service(db)
     entity_set_service = get_entity_set_service(db)
     batch_processing_service = get_batch_processing_service(db)
-    member_repo = EntitySetMemberRepository(db)
+    member_repo = EntitySetMemberRepository()
     temporal_extraction_service = get_temporal_document_extraction_service(db)
 
     # Validate entity set
@@ -675,7 +675,7 @@ async def remove_document_from_matrix(
     """Remove a document from a specific matrix (removes from entity set)."""
     async with transaction(db):
         entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        member_repo = EntitySetMemberRepository()
 
         # Get matrix entity sets
         entity_sets_with_members = (
@@ -733,7 +733,7 @@ async def associate_existing_document_with_matrix(
         batch_processing_service = get_batch_processing_service(db)
         document_service = get_document_service(db)
         entity_set_service = get_entity_set_service(db)
-        member_repo = EntitySetMemberRepository(db)
+        member_repo = EntitySetMemberRepository()
 
         # Get the document for batch processing
         document = await document_service.get_document(

@@ -70,7 +70,7 @@ class TestExtractDocumentContentActivity:
 
         # Create a test document in the database
 
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",
@@ -165,7 +165,7 @@ class TestExtractDocumentContentActivity:
 
         # Create a test document in the database
 
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",
@@ -215,7 +215,7 @@ class TestExtractDocumentContentActivity:
 
         # Create a test document in the database
 
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",
@@ -372,7 +372,7 @@ class TestIndexDocumentForSearchActivity:
         """Test successful document indexing."""
         # Create a real document in the database
 
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",
@@ -456,7 +456,7 @@ class TestIndexDocumentForSearchActivity:
         """Test when search provider fails to index."""
         # Create a real document in the database
 
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",
@@ -501,7 +501,7 @@ class TestIndexDocumentForSearchActivity:
         """Test exception handling during indexing."""
         # Create a real document in the database
 
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         document_create = DocumentCreateModel(
             filename="test.pdf",
             storage_key="documents/test.pdf",

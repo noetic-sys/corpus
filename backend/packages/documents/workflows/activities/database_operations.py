@@ -49,8 +49,8 @@ async def update_extraction_status_activity(
 
         async for db_session in get_db():
             try:
-                extraction_job_service = get_document_extraction_job_service(db_session)
-                document_repo = DocumentRepository(db_session)
+                extraction_job_service = get_document_extraction_job_service()
+                document_repo = DocumentRepository()
 
                 # Update job status
                 if status == ExtractionStatusType.PROCESSING:
@@ -97,7 +97,7 @@ async def update_document_content_path_activity(
 
         async for db_session in get_db():
             try:
-                document_repo = DocumentRepository(db_session)
+                document_repo = DocumentRepository()
 
                 # Update only the S3 path, keep status as PROCESSING
                 document_update = DocumentUpdateModel(
@@ -127,8 +127,8 @@ async def update_document_completion_activity(
 
         async for db_session in get_db():
             try:
-                extraction_job_service = get_document_extraction_job_service(db_session)
-                document_repo = DocumentRepository(db_session)
+                extraction_job_service = get_document_extraction_job_service()
+                document_repo = DocumentRepository()
 
                 # Update document status
                 document_update = DocumentUpdateModel(
@@ -182,8 +182,8 @@ async def queue_qa_jobs_for_document_activity(
             try:
                 matrix_service = get_matrix_service(db_session)
                 batch_processing_service = get_batch_processing_service(db_session)
-                member_repo = EntitySetMemberRepository(db_session)
-                entity_set_repo = EntitySetRepository(db_session)
+                member_repo = EntitySetMemberRepository()
+                entity_set_repo = EntitySetRepository()
 
                 # Get all entity set members for this document
                 members = await member_repo.get_members_by_entity_id(

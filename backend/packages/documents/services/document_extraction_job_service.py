@@ -1,6 +1,5 @@
 from typing import Optional, Dict
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.messages import DocumentExtractionMessage
@@ -25,10 +24,9 @@ logger = get_logger(__name__)
 class DocumentExtractionJobService:
     """Service for handling document extraction job operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.extraction_job_repo = DocumentExtractionJobRepository()
-        self.document_repo = DocumentRepository(db_session)
+        self.document_repo = DocumentRepository()
         self.message_queue = get_message_queue()
 
     @trace_span
@@ -236,8 +234,6 @@ class DocumentExtractionJobService:
         }
 
 
-def get_document_extraction_job_service(
-    db_session: AsyncSession,
-) -> DocumentExtractionJobService:
+def get_document_extraction_job_service() -> DocumentExtractionJobService:
     """Get document extraction job service instance."""
-    return DocumentExtractionJobService(db_session)
+    return DocumentExtractionJobService()

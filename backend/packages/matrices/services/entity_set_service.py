@@ -35,10 +35,10 @@ class EntitySetService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.entity_set_repo = EntitySetRepository(db_session)
-        self.member_repo = EntitySetMemberRepository(db_session)
-        self.reference_repo = CellEntityReferenceRepository(db_session)
-        self.matrix_repo = MatrixRepository(db_session)
+        self.entity_set_repo = EntitySetRepository()
+        self.member_repo = EntitySetMemberRepository()
+        self.reference_repo = CellEntityReferenceRepository()
+        self.matrix_repo = MatrixRepository()
 
     @trace_span
     async def create_entity_set(

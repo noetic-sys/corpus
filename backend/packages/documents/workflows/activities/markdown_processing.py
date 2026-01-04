@@ -38,7 +38,7 @@ async def save_markdown_to_s3_activity(
         try:
             # Get company_id from document for centralized path
             async for session in get_db():
-                document_repo = DocumentRepository(session)
+                document_repo = DocumentRepository()
                 document = await document_repo.get(document_id)
 
                 if not document:

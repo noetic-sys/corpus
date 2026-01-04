@@ -35,7 +35,7 @@ class AgentQAService:
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
         )
         self.prompts_dir = os.path.join(project_root, "prompts")
-        self.question_option_service = QuestionOptionService(db_session)
+        self.question_option_service = QuestionOptionService()
 
     @lru_cache(maxsize=100)
     def _load_prompt(self, filename: str) -> str:

@@ -200,7 +200,7 @@ class TestQuestionService:
 
         # Verify options were created by checking through option service
 
-        option_service = QuestionOptionService(service.db_session)
+        option_service = QuestionOptionService()
         created_options = await option_service.get_options_for_question(result.id)
 
         assert len(created_options) == 3
@@ -230,7 +230,7 @@ class TestQuestionService:
 
         # Verify no options were created
 
-        option_service = QuestionOptionService(service.db_session)
+        option_service = QuestionOptionService()
         created_options = await option_service.get_options_for_question(result.id)
         assert len(created_options) == 0
 
@@ -713,7 +713,7 @@ class TestQuestionService:
 
         # Verify options were duplicated
 
-        option_service = QuestionOptionService(service.db_session)
+        option_service = QuestionOptionService()
 
         original_options = await option_service.get_options_for_question(
             original_question.id
@@ -902,7 +902,7 @@ class TestQuestionService:
 
         # Verify options were duplicated
 
-        option_service = QuestionOptionService(service.db_session)
+        option_service = QuestionOptionService()
 
         original_options = await option_service.get_options_for_question(
             original_question.id

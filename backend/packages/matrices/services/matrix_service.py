@@ -74,10 +74,10 @@ class MatrixService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.matrix_repo = MatrixRepository(db_session)
-        self.matrix_cell_repo = MatrixCellRepository(db_session)
-        self.cell_entity_ref_repo = CellEntityReferenceRepository(db_session)
-        self.member_repo = EntitySetMemberRepository(db_session)
+        self.matrix_repo = MatrixRepository()
+        self.matrix_cell_repo = MatrixCellRepository()
+        self.cell_entity_ref_repo = CellEntityReferenceRepository()
+        self.member_repo = EntitySetMemberRepository()
         self.answer_set_service = AnswerSetService()
         self.answer_service = AnswerService()
         self.citation_service = CitationService()
@@ -842,7 +842,7 @@ class MatrixService:
         Returns mapping of old_template_variable_id -> new_template_variable_id
         """
 
-        template_service = MatrixTemplateVariableService(self.db_session)
+        template_service = MatrixTemplateVariableService()
 
         # Get all template variables from source matrix
         source_variables = await template_service.get_matrix_template_variables(

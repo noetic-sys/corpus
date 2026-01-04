@@ -17,7 +17,7 @@ from packages.questions.models.domain.question_template_variable import (
 @pytest.fixture
 def matrix_template_variable_service(test_db):
     """Create a MatrixTemplateVariableService instance."""
-    return MatrixTemplateVariableService(test_db)
+    return MatrixTemplateVariableService()
 
 
 @pytest.fixture

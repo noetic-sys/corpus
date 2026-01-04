@@ -42,7 +42,7 @@ async def create_template_variable(
 ):
     """Create a new template variable for a matrix."""
     async with transaction(db):
-        template_service = MatrixTemplateVariableService(db)
+        template_service = MatrixTemplateVariableService()
         create_model = MatrixTemplateVariableCreateModel(
             template_string=variable_data.template_string,
             value=variable_data.value,
@@ -66,7 +66,7 @@ async def get_matrix_template_variables(
     db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all template variables for a matrix."""
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     return await template_service.get_matrix_template_variables(
         matrix_id, current_user.company_id
     )
@@ -82,7 +82,7 @@ async def get_template_variables_with_usage(
     db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get template variables with usage count for a matrix."""
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     usage_data = await template_service.get_template_variables_with_usage(
         matrix_id, current_user.company_id
     )
@@ -104,7 +104,7 @@ async def get_template_variable(
     db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get a specific template variable by ID."""
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     variable = await template_service.get_template_variable(
         variable_id, current_user.company_id
     )
@@ -124,7 +124,7 @@ async def update_template_variable(
 ):
     """Update a template variable and reprocess affected questions."""
     async with transaction(db):
-        template_service = MatrixTemplateVariableService(db)
+        template_service = MatrixTemplateVariableService()
         question_template_service = QuestionTemplateVariableService(db)
         reprocessing_service = get_reprocessing_service(db)
 
@@ -180,7 +180,7 @@ async def delete_template_variable(
 ):
     """Delete a template variable (only if not in use)."""
     async with transaction(db):
-        template_service = MatrixTemplateVariableService(db)
+        template_service = MatrixTemplateVariableService()
         success = await template_service.delete_template_variable(
             variable_id, current_user.company_id
         )

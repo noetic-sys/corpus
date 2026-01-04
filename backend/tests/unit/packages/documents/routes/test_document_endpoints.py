@@ -526,7 +526,7 @@ class TestDocumentStreamingEndpoints:
 
         # Mark document as COMPLETED so QA jobs will be queued on association
         # Use repository directly (imports at top of file)
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         await doc_repo.update(
             document_id,
             DocumentUpdateModel(
@@ -995,7 +995,7 @@ class TestDocumentUploadUnit:
         )
 
         # Mark the document as COMPLETED extraction using the repository
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         update_data = DocumentUpdateModel(
             extraction_status=ExtractionStatus.COMPLETED.value,
             extracted_content_path="extracted/original.md",

@@ -592,7 +592,7 @@ async def get_matrix_template_variables(
 ) -> List[MatrixTemplateVariableResponse]:
     """Get template variables for a matrix (used for duplication form)."""
 
-    template_service = MatrixTemplateVariableService(db)
+    template_service = MatrixTemplateVariableService()
     template_variables = await template_service.get_matrix_template_variables(matrix_id)
 
     return template_variables

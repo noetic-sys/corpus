@@ -1,5 +1,4 @@
 from typing import List, Dict, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.matrices.repositories.matrix_template_variable_repository import (
@@ -22,11 +21,10 @@ logger = get_logger(__name__)
 class MatrixTemplateVariableService:
     """Service for handling matrix template variable operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.template_var_repo = MatrixTemplateVariableRepository()
         self.question_template_var_repo = QuestionTemplateVariableRepository()
-        self.matrix_repo = MatrixRepository(db_session)
+        self.matrix_repo = MatrixRepository()
 
     @trace_span
     async def create_template_variable(

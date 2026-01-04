@@ -45,7 +45,7 @@ class DocumentService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.document_repo = DocumentRepository(db_session)
+        self.document_repo = DocumentRepository()
         self.storage = get_storage()
         self.bloom_filter = get_bloom_filter_provider()
         self.search_provider = get_document_search_provider(db_session)

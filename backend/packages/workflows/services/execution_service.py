@@ -35,7 +35,7 @@ class WorkflowExecutionService:
 
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
-        self.execution_repo = WorkflowExecutionRepository(db_session)
+        self.execution_repo = WorkflowExecutionRepository()
         self.workflow_repo = WorkflowRepository()
 
     @trace_span

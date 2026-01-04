@@ -122,7 +122,7 @@ async def extract_workflow_results_activity(
 
     # Create DB records for files (already in S3)
     async for db_session in get_db():
-        file_service = ExecutionFileService(db_session)
+        file_service = ExecutionFileService()
 
         # Create DB records for output files
         for file_info in manifest.output_files:

@@ -165,7 +165,7 @@ class QAWorker(BaseWorker[QAJobMessage]):
 
         # Initialize services
         matrix_service = get_matrix_service(db_session)
-        qa_job_service = get_qa_job_service(db_session)
+        qa_job_service = get_qa_job_service()
 
         try:
             logger.info(f"Processing QA job {job_id} for cell {matrix_cell_id}")

@@ -324,7 +324,7 @@ class TestHybridDocumentSearch:
         """Test hybrid search pagination works correctly."""
 
         # Create multiple documents in DB
-        doc_repo = DocumentRepository(test_db)
+        doc_repo = DocumentRepository()
         documents = []
         for i in range(10):
             doc_create = DocumentCreateModel(

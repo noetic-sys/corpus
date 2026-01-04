@@ -89,7 +89,7 @@ async def launch_agent_qa_activity(
     if question_type == QuestionTypeName.SELECT:
         activity.logger.info(f"Loading options for SELECT question {question_id}")
         async for db_session in get_db():
-            option_service = QuestionOptionService(db_session)
+            option_service = QuestionOptionService()
             option_models = await option_service.get_options_for_question(question_id)
             options = [opt.value for opt in option_models]
             activity.logger.info(f"Loaded {len(options)} options")
@@ -176,7 +176,7 @@ async def extract_agent_qa_results_activity(
 
     async for db_session in get_db():
         # Get QA job to find matrix cell
-        qa_job_service = get_qa_job_service(db_session)
+        qa_job_service = get_qa_job_service()
         qa_job = await qa_job_service.get_qa_job(qa_job_id)
 
         if not qa_job:
