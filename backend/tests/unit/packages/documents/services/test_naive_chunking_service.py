@@ -7,7 +7,6 @@ from packages.documents.services.naive_chunking_service import (
     get_naive_chunking_service,
 )
 from packages.documents.models.domain.chunking_strategy import ChunkingStrategy
-from packages.documents.models.schemas.chunk import ChunkMetadataResponse
 
 
 class TestNaiveChunkingService:
@@ -40,67 +39,89 @@ class TestNaiveChunkingService:
         service = get_naive_chunking_service()
         assert isinstance(service, NaiveChunkingService)
 
-    def test_chunk_fixed_size_includes_chunk_id_in_metadata(self, service, long_text):
-        """Test fixed-size chunking includes chunk_id in metadata."""
+    def test_chunk_id_on_object_not_in_metadata(self, service, long_text):
+        """Test chunk_id is on chunk object, NOT in metadata dict.
+
+        chunk_id is an identifier, not metadata. It's stored separately
+        and injected at the API response layer.
+        """
         chunks = service.chunk(long_text, ChunkingStrategy.FIXED_SIZE, document_id=123)
 
         assert len(chunks) > 1
 
         for chunk in chunks:
-            assert "chunk_id" in chunk.metadata
-            assert chunk.metadata["chunk_id"] == chunk.chunk_id
-            # Verify metadata can construct ChunkMetadataResponse
-            response = ChunkMetadataResponse(**chunk.metadata)
-            assert response.chunk_id == chunk.chunk_id
+            # chunk_id should be on the object
+            assert chunk.chunk_id is not None
+            assert chunk.chunk_id.startswith("chunk-123-")
 
-    def test_chunk_sentence_includes_chunk_id_in_metadata(self, service, long_text):
-        """Test sentence chunking includes chunk_id in metadata."""
+            # chunk_id should NOT be in metadata
+            assert "chunk_id" not in chunk.metadata
+
+    def test_chunk_fixed_size_metadata_fields(self, service, long_text):
+        """Test fixed-size chunking produces correct metadata fields."""
+        chunks = service.chunk(long_text, ChunkingStrategy.FIXED_SIZE, document_id=123)
+
+        assert len(chunks) > 1
+
+        for chunk in chunks:
+            assert "char_start" in chunk.metadata
+            assert "char_end" in chunk.metadata
+            assert "overlap_prev" in chunk.metadata
+            assert "overlap_next" in chunk.metadata
+            assert "strategy" in chunk.metadata
+            assert chunk.metadata["strategy"] == "fixed_size"
+
+    def test_chunk_sentence_metadata_fields(self, service, long_text):
+        """Test sentence chunking produces correct metadata fields."""
         chunks = service.chunk(long_text, ChunkingStrategy.SENTENCE, document_id=456)
 
         assert len(chunks) > 1
 
         for chunk in chunks:
-            assert "chunk_id" in chunk.metadata
-            assert chunk.metadata["chunk_id"] == chunk.chunk_id
-            response = ChunkMetadataResponse(**chunk.metadata)
-            assert response.chunk_id == chunk.chunk_id
+            assert "char_start" in chunk.metadata
+            assert "char_end" in chunk.metadata
+            assert chunk.metadata["strategy"] == "sentence"
+            # chunk_id should NOT be in metadata
+            assert "chunk_id" not in chunk.metadata
 
-    def test_chunk_paragraph_includes_chunk_id_in_metadata(self, service, long_text):
-        """Test paragraph chunking includes chunk_id in metadata."""
+    def test_chunk_paragraph_metadata_fields(self, service, long_text):
+        """Test paragraph chunking produces correct metadata fields."""
         chunks = service.chunk(long_text, ChunkingStrategy.PARAGRAPH, document_id=789)
 
         assert len(chunks) > 1
 
         for chunk in chunks:
-            assert "chunk_id" in chunk.metadata
-            assert chunk.metadata["chunk_id"] == chunk.chunk_id
-            response = ChunkMetadataResponse(**chunk.metadata)
-            assert response.chunk_id == chunk.chunk_id
+            assert "char_start" in chunk.metadata
+            assert "char_end" in chunk.metadata
+            assert chunk.metadata["strategy"] == "paragraph"
+            # chunk_id should NOT be in metadata
+            assert "chunk_id" not in chunk.metadata
 
-    def test_chunk_none_includes_chunk_id_in_metadata(self, service, sample_text):
-        """Test no-chunking strategy includes chunk_id in metadata."""
+    def test_chunk_none_metadata_fields(self, service, sample_text):
+        """Test no-chunking strategy produces correct metadata fields."""
         chunks = service.chunk(sample_text, ChunkingStrategy.NONE, document_id=101)
 
         assert len(chunks) == 1
 
         chunk = chunks[0]
-        assert "chunk_id" in chunk.metadata
-        assert chunk.metadata["chunk_id"] == chunk.chunk_id
-        response = ChunkMetadataResponse(**chunk.metadata)
-        assert response.chunk_id == chunk.chunk_id
+        assert chunk.chunk_id is not None
+        assert "chunk_id" not in chunk.metadata
+        assert chunk.metadata["strategy"] == "none"
+        assert chunk.metadata["char_start"] == 0
+        assert chunk.metadata["char_end"] == len(sample_text)
 
-    def test_metadata_has_required_fields_for_response_schema(self, service, long_text):
-        """Test all metadata fields required by ChunkMetadataResponse are present."""
+    def test_metadata_has_required_fields(self, service, long_text):
+        """Test metadata has all required fields for API response."""
         chunks = service.chunk(long_text, ChunkingStrategy.FIXED_SIZE, document_id=999)
 
         for chunk in chunks:
-            assert "chunk_id" in chunk.metadata
+            # Required fields
             assert "char_start" in chunk.metadata
             assert "char_end" in chunk.metadata
             assert "overlap_prev" in chunk.metadata
             assert "overlap_next" in chunk.metadata
 
-            assert isinstance(chunk.metadata["chunk_id"], str)
+            # Type checks
             assert isinstance(chunk.metadata["char_start"], int)
             assert isinstance(chunk.metadata["char_end"], int)
             assert isinstance(chunk.metadata["overlap_prev"], bool)
@@ -138,7 +159,9 @@ class TestNaiveChunkingService:
     def test_chunk_id_contains_document_id(self, service, sample_text):
         """Test chunk IDs contain the document ID."""
         document_id = 12345
-        chunks = service.chunk(sample_text, ChunkingStrategy.NONE, document_id=document_id)
+        chunks = service.chunk(
+            sample_text, ChunkingStrategy.NONE, document_id=document_id
+        )
 
         assert len(chunks) == 1
         assert str(document_id) in chunks[0].chunk_id

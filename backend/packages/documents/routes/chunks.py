@@ -66,8 +66,11 @@ async def list_document_chunks(
             detail="No chunks found for document. Document may not have been processed yet.",
         )
 
-    # Convert to response format
-    chunk_metadata_list = [ChunkMetadataResponse(**chunk.metadata) for chunk in chunks]
+    # Convert to response format (inject chunk_id from chunk object, not metadata)
+    chunk_metadata_list = [
+        ChunkMetadataResponse(chunk_id=chunk.chunk_id, **chunk.metadata)
+        for chunk in chunks
+    ]
 
     return ChunkListResponse(
         document_id=document_id, total_chunks=len(chunks), chunks=chunk_metadata_list
@@ -115,12 +118,12 @@ async def read_document_chunk(
             detail=f"Chunk {chunk_id} not found in document {document_id}",
         )
 
-    # Return chunk with content
+    # Return chunk with content (inject chunk_id from chunk object, not metadata)
     return ChunkResponse(
         chunk_id=chunk.chunk_id,
         document_id=chunk.document_id,
         content=chunk.content,
-        metadata=ChunkMetadataResponse(**chunk.metadata),
+        metadata=ChunkMetadataResponse(chunk_id=chunk.chunk_id, **chunk.metadata),
     )
 
 
@@ -174,9 +177,10 @@ async def search_document_chunks(
             <= (c.metadata.get("page_end") or 0)
         ]
 
-    # Convert to response format
+    # Convert to response format (inject chunk_id from chunk object, not metadata)
     chunk_metadata_list = [
-        ChunkMetadataResponse(**chunk.metadata) for chunk in filtered_chunks
+        ChunkMetadataResponse(chunk_id=chunk.chunk_id, **chunk.metadata)
+        for chunk in filtered_chunks
     ]
 
     return ChunkListResponse(
