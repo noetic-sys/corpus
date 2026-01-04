@@ -163,53 +163,52 @@ async def extract_agent_qa_results_activity(
     """
     activity.logger.info(f"Validating agent QA results for job {qa_job_id}")
 
-    async with scoped_session():
-        # Get QA job to find matrix cell
-        qa_job_service = get_qa_job_service()
-        qa_job = await qa_job_service.get_qa_job(qa_job_id)
+    # Get QA job to find matrix cell
+    qa_job_service = get_qa_job_service()
+    qa_job = await qa_job_service.get_qa_job(qa_job_id)
 
-        if not qa_job:
-            raise Exception(f"QA job {qa_job_id} not found")
+    if not qa_job:
+        raise Exception(f"QA job {qa_job_id} not found")
 
-        # Check that answer set exists for the matrix cell
-        matrix_service = get_matrix_service()
-        cell = await matrix_service.get_matrix_cell(qa_job.matrix_cell_id)
+    # Check that answer set exists for the matrix cell
+    matrix_service = get_matrix_service()
+    cell = await matrix_service.get_matrix_cell(qa_job.matrix_cell_id)
 
-        if not cell:
-            raise Exception(f"Matrix cell {qa_job.matrix_cell_id} not found")
+    if not cell:
+        raise Exception(f"Matrix cell {qa_job.matrix_cell_id} not found")
 
-        if not cell.current_answer_set_id:
-            raise Exception(
-                f"No answer set found for matrix cell {qa_job.matrix_cell_id}. "
-                "Agent may have failed to upload answer."
-            )
-
-        # Get answer set to count answers
-        answer_set = await matrix_service.answer_set_service.get_answer_set(
-            cell.current_answer_set_id, company_id
+    if not cell.current_answer_set_id:
+        raise Exception(
+            f"No answer set found for matrix cell {qa_job.matrix_cell_id}. "
+            "Agent may have failed to upload answer."
         )
 
-        if not answer_set:
-            raise Exception(f"Answer set {cell.current_answer_set_id} not found")
+    # Get answer set to count answers
+    answer_set = await matrix_service.answer_set_service.get_answer_set(
+        cell.current_answer_set_id, company_id
+    )
 
-        # Get answers for the set
-        answers = await matrix_service.answer_service.get_answers_for_answer_set(
-            cell.current_answer_set_id, company_id
-        )
+    if not answer_set:
+        raise Exception(f"Answer set {cell.current_answer_set_id} not found")
 
-        activity.logger.info(
-            f"Validated agent QA results for job {qa_job_id}: "
-            f"answer_found={answer_set.answer_found}, "
-            f"answer_count={len(answers)}"
-        )
+    # Get answers for the set
+    answers = await matrix_service.answer_service.get_answers_for_answer_set(
+        cell.current_answer_set_id, company_id
+    )
 
-        return {
-            "qa_job_id": qa_job_id,
-            "matrix_cell_id": qa_job.matrix_cell_id,
-            "answer_set_id": cell.current_answer_set_id,
-            "answer_found": answer_set.answer_found,
-            "answer_count": len(answers),
-        }
+    activity.logger.info(
+        f"Validated agent QA results for job {qa_job_id}: "
+        f"answer_found={answer_set.answer_found}, "
+        f"answer_count={len(answers)}"
+    )
+
+    return {
+        "qa_job_id": qa_job_id,
+        "matrix_cell_id": qa_job.matrix_cell_id,
+        "answer_set_id": cell.current_answer_set_id,
+        "answer_found": answer_set.answer_found,
+        "answer_count": len(answers),
+    }
 
 
 @activity.defn
