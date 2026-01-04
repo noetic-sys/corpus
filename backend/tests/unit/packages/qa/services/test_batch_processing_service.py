@@ -15,6 +15,8 @@ from unittest.mock import patch
 from packages.matrices.services.batch_processing_service import BatchProcessingService
 from packages.matrices.models.domain.matrix_enums import MatrixType, EntityType
 from packages.qa.models.domain.qa_job import QAJobStatus
+from packages.questions.repositories.question_repository import QuestionRepository
+from packages.questions.models.domain.question import QuestionCreateModel
 
 
 @pytest.fixture
@@ -422,3 +424,102 @@ class TestBatchProcessingService:
         cell_repo = MatrixCellRepository()
         all_cells = await cell_repo.get_cells_by_matrix_id(matrix.id)
         assert len(all_cells) == 1
+
+    @pytest.mark.asyncio
+    async def test_agentic_qa_usage_tracking_does_not_throw(
+        self,
+        mock_get_message_queue,
+        mock_start_span,
+        test_db,
+        sample_company,
+        sample_subscription,
+        mock_message_queue,
+    ):
+        """Test that agentic QA usage tracking works without TypeError.
+
+        This is a regression test for a bug where track_agentic_qa was called
+        with matrix_id=matrix_id instead of event_metadata={"matrix_id": matrix_id}.
+        Python doesn't statically type check, so the bug only manifested at runtime.
+        """
+        mock_get_message_queue.return_value = mock_message_queue
+        service = BatchProcessingService()
+
+        # Create matrix
+        matrix_repo = MatrixRepository()
+        matrix = await matrix_repo.create(
+            MatrixCreateModel(
+                name="Agentic Test Matrix",
+                workspace_id=1,
+                company_id=sample_company.id,
+                matrix_type=MatrixType.STANDARD,
+            )
+        )
+
+        # Create an AGENTIC question (use_agent_qa=True)
+        question_repo = QuestionRepository()
+        agentic_question = await question_repo.create(
+            QuestionCreateModel(
+                company_id=sample_company.id,
+                matrix_id=matrix.id,
+                question_text="What is the agentic answer?",
+                use_agent_qa=True,  # This is what makes it agentic
+            )
+        )
+
+        # Create entity sets
+        entity_set_repo = EntitySetRepository()
+        doc_set = await entity_set_repo.create(
+            MatrixEntitySetCreateModel(
+                matrix_id=matrix.id,
+                company_id=sample_company.id,
+                name="Documents",
+                entity_type=EntityType.DOCUMENT,
+            )
+        )
+        question_set = await entity_set_repo.create(
+            MatrixEntitySetCreateModel(
+                matrix_id=matrix.id,
+                company_id=sample_company.id,
+                name="Questions",
+                entity_type=EntityType.QUESTION,
+            )
+        )
+
+        # Add document member
+        member_repo = EntitySetMemberRepository()
+        await member_repo.create(
+            MatrixEntitySetMemberCreateModel(
+                entity_set_id=doc_set.id,
+                entity_type=EntityType.DOCUMENT,
+                entity_id=1,
+                member_order=0,
+                company_id=sample_company.id,
+            )
+        )
+
+        # Add the agentic question to the set
+        await member_repo.create(
+            MatrixEntitySetMemberCreateModel(
+                entity_set_id=question_set.id,
+                entity_type=EntityType.QUESTION,
+                entity_id=agentic_question.id,
+                member_order=0,
+                company_id=sample_company.id,
+            )
+        )
+
+        await test_db.commit()
+
+        # This should NOT throw TypeError when calling track_agentic_qa
+        # Before the fix, this would fail with:
+        # TypeError: track_agentic_qa() got an unexpected keyword argument 'matrix_id'
+        cells, jobs = await service.process_entity_added_to_set(
+            matrix_id=matrix.id,
+            entity_id=agentic_question.id,
+            entity_set_id=question_set.id,
+            create_qa_jobs=True,
+        )
+
+        # Should have created 1 cell (1 agentic question × 1 doc)
+        assert len(cells) == 1
+        assert len(jobs) == 1

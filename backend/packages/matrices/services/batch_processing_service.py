@@ -115,7 +115,9 @@ class BatchProcessingService:
         # Track agentic QA if applicable
         if agentic_count > 0:
             await usage_service.track_agentic_qa(
-                company_id=company_id, quantity=agentic_count, matrix_id=matrix_id
+                company_id=company_id,
+                quantity=agentic_count,
+                event_metadata={"matrix_id": matrix_id},
             )
             logger.info(
                 f"Tracked agentic QA usage for {agentic_count} cells in matrix {matrix_id}"
