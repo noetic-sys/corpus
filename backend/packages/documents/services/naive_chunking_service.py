@@ -81,6 +81,7 @@ class NaiveChunkingService:
                     chunk_id=chunk_id,
                     content=chunk_text,
                     metadata={
+                        "chunk_id": chunk_id,
                         "chunk_index": chunk_index,
                         "char_start": start,
                         "char_end": end,
@@ -136,6 +137,7 @@ class NaiveChunkingService:
                         chunk_id=chunk_id,
                         content=current_chunk.strip(),
                         metadata={
+                            "chunk_id": chunk_id,
                             "chunk_index": chunk_index,
                             "char_start": current_start,
                             "char_end": current_start + len(current_chunk),
@@ -162,6 +164,7 @@ class NaiveChunkingService:
                     chunk_id=chunk_id,
                     content=current_chunk.strip(),
                     metadata={
+                        "chunk_id": chunk_id,
                         "chunk_index": chunk_index,
                         "char_start": current_start,
                         "char_end": current_start + len(current_chunk),
@@ -210,6 +213,7 @@ class NaiveChunkingService:
                         chunk_id=chunk_id,
                         content=current_chunk.strip(),
                         metadata={
+                            "chunk_id": chunk_id,
                             "chunk_index": chunk_index,
                             "char_start": current_start,
                             "char_end": current_start + len(current_chunk),
@@ -236,6 +240,7 @@ class NaiveChunkingService:
                     chunk_id=chunk_id,
                     content=current_chunk.strip(),
                     metadata={
+                        "chunk_id": chunk_id,
                         "chunk_index": chunk_index,
                         "char_start": current_start,
                         "char_end": current_start + len(current_chunk),
@@ -264,6 +269,7 @@ class NaiveChunkingService:
                 chunk_id=chunk_id,
                 content=text,
                 metadata={
+                    "chunk_id": chunk_id,
                     "chunk_index": 0,
                     "char_start": 0,
                     "char_end": len(text),
