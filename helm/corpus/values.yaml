@@ -288,32 +288,42 @@ keda:
       activationValue: "1"
       maxReplicas: 20
 
+  # Temporal workers default to minReplicas: 1 because KEDA's Temporal scaler
+  # cannot detect pending tasks when no workers are polling (task queue manager
+  # gets unloaded from Temporal's memory after 5min of inactivity)
   temporalWorkers:
     routing:
       queueName: document-routing-queue
       queueLength: "5"
+      minReplicas: 1
       maxReplicas: 10
     pdf:
       queueName: pdf-processing-queue
       queueLength: "5"
+      minReplicas: 1
       maxReplicas: 10
     page:
       queueName: page-conversion-queue
       queueLength: "10"
+      minReplicas: 1
       maxReplicas: 20
     generic:
       queueName: generic-extraction-queue
       queueLength: "5"
+      minReplicas: 1
       maxReplicas: 10
     chunking:
       queueName: document-chunking-queue
       queueLength: "5"
+      minReplicas: 1
       maxReplicas: 10
     workflow:
       queueName: workflow-execution-queue
       queueLength: "3"
+      minReplicas: 1
       maxReplicas: 10
     qa:
       queueName: agent-qa-worker
       queueLength: "3"
+      minReplicas: 1
       maxReplicas: 10
