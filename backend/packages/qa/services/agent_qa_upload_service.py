@@ -5,8 +5,6 @@ Agents running in K8s jobs POST their answers directly to the API.
 This service converts the uploaded answer data to AIAnswerSet and persists it.
 """
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.qa.models.domain.answer_data import AIAnswerSet
 from packages.qa.models.schemas.agent_qa_answer import AgentQAAnswerSetRequest
@@ -19,9 +17,8 @@ logger = get_logger(__name__)
 class AgentQAUploadService:
     """Service for processing agent QA answer uploads."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-        self.matrix_service = get_matrix_service(db_session)
+    def __init__(self):
+        self.matrix_service = get_matrix_service()
 
     @trace_span
     async def process_agent_answer_upload(
@@ -86,13 +83,10 @@ class AgentQAUploadService:
         return True
 
 
-def get_agent_qa_upload_service(db_session: AsyncSession) -> AgentQAUploadService:
+def get_agent_qa_upload_service() -> AgentQAUploadService:
     """Get agent QA upload service instance.
-
-    Args:
-        db_session: Database session
 
     Returns:
         AgentQAUploadService instance
     """
-    return AgentQAUploadService(db_session)
+    return AgentQAUploadService()

@@ -1,7 +1,6 @@
 from typing import List, Optional, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.matrices.models.domain.matrix_enums import EntityType
 from packages.matrices.services.matrix_template_variable_service import (
@@ -9,7 +8,6 @@ from packages.matrices.services.matrix_template_variable_service import (
 )
 
 from packages.matrices.strategies.factory import CellStrategyFactory
-from common.db.session import get_db, get_db_readonly
 from packages.matrices.models.schemas.matrix import (
     MatrixCreate,
     MatrixUpdate,
@@ -49,7 +47,7 @@ from packages.matrices.services.entity_set_service import get_entity_set_service
 from packages.auth.dependencies import get_current_active_user, get_service_account
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from common.core.otel_axiom_exporter import trace_span, get_logger
-from common.db.transaction_utils import transaction
+from common.db.scoped import transaction
 from packages.matrices.mappers.matrix_cell_mappers import (
     build_matrix_cell_answer_response,
 )
@@ -65,9 +63,8 @@ logger = get_logger(__name__)
 async def create_matrix(
     matrix: MatrixCreate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     create_model = MatrixCreateModel(
         name=matrix.name,
         description=matrix.description,
@@ -83,9 +80,8 @@ async def list_matrices(
     skip: int = 0,
     limit: int = 100,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     return await matrix_service.list_matrices(skip, limit, current_user.company_id)
 
 
@@ -101,10 +97,9 @@ async def get_matrices_by_workspace(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all matrices for a specific workspace."""
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     return await matrix_service.get_matrices_by_workspace(
         workspace_id, skip, limit, current_user.company_id
     )
@@ -119,9 +114,8 @@ async def get_matrices_by_workspace(
 async def get_matrix(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     matrix = await matrix_service.get_matrix(matrix_id, current_user.company_id)
     if matrix is None:
         raise HTTPException(status_code=404, detail="Matrix not found")
@@ -139,7 +133,6 @@ async def get_matrix(
 async def get_matrix_entity_sets(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all entity sets for a matrix with their members.
 
@@ -148,8 +141,8 @@ async def get_matrix_entity_sets(
     2. Construct entity_set_filters for tile batch queries
     3. Map entity IDs (document/question IDs) to entity set member IDs
     """
-    matrix_service = get_matrix_service(db)
-    entity_set_service = get_entity_set_service(db)
+    matrix_service = get_matrix_service()
+    entity_set_service = get_entity_set_service()
 
     # Get matrix to verify existence and get matrix_type
     matrix = await matrix_service.get_matrix(matrix_id, current_user.company_id)
@@ -183,10 +176,9 @@ async def get_matrix_entity_sets(
 async def get_matrix_stats(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get cell statistics for a matrix (count by status)."""
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
 
     # Verify matrix exists and user has access
     matrix = await matrix_service.get_matrix(matrix_id, current_user.company_id)
@@ -204,9 +196,8 @@ async def update_matrix(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     matrix_update: MatrixUpdate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     update_model = MatrixUpdateModel(
         name=matrix_update.name,
         description=matrix_update.description,
@@ -223,9 +214,8 @@ async def update_matrix(
 async def delete_matrix(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     success = await matrix_service.delete_matrix(matrix_id, current_user.company_id)
     if not success:
         raise HTTPException(status_code=404, detail="Matrix not found")
@@ -237,9 +227,8 @@ async def delete_matrix(
 async def get_matrix_cell(
     cell_id: Annotated[int, Path(alias="cellId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     cell = await matrix_service.get_matrix_cell(cell_id, current_user.company_id)
     if cell is None:
         raise HTTPException(status_code=404, detail="Matrix cell not found")
@@ -250,9 +239,8 @@ async def get_matrix_cell(
 async def update_matrix_cell(
     cell_id: Annotated[int, Path(alias="cellId")],
     cell_update: MatrixCellUpdate,
-    db: AsyncSession = Depends(get_db),
 ):
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
 
     update_data = cell_update.model_dump(exclude_unset=True)
     cell = await matrix_service.update_matrix_cell(cell_id, **update_data)
@@ -271,11 +259,10 @@ async def get_matrix_cells(
     matrix_id: int = Path(alias="matrixId"),
     document_id: Optional[int] = Query(None, alias="documentId"),
     question_id: Optional[int] = Query(None, alias="questionId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get matrix cells with optional filtering by document_id or question_id."""
-    matrix_service = get_matrix_service(db)
-    entity_set_service = get_entity_set_service(db)
+    matrix_service = get_matrix_service()
+    entity_set_service = get_entity_set_service()
 
     if document_id and question_id:
         # Get cells filtered by document first
@@ -372,10 +359,9 @@ async def get_matrix_cells(
 @trace_span
 async def get_current_matrix_cell_answer(
     cell_id: int = Path(alias="cellId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get the current answer for a matrix cell."""
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
 
     # Verify cell exists
     cell = await matrix_service.get_matrix_cell(cell_id)
@@ -411,10 +397,9 @@ async def get_matrix_cells_with_current_answers_by_document(
     matrix_id: int = Path(alias="matrixId"),
     entity_set_id: int = Path(alias="entitySetId"),
     document_id: int = Path(alias="documentId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all matrix cells with their current answers for a specific document (entity-ref based)."""
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     return await matrix_service.get_matrix_cells_with_current_answer_sets_by_document(
         matrix_id, document_id, entity_set_id
     )
@@ -431,10 +416,9 @@ async def get_matrix_cells_with_current_answers_by_question(
     matrix_id: int = Path(alias="matrixId"),
     entity_set_id: int = Path(alias="entitySetId"),
     question_id: int = Path(alias="questionId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all matrix cells with their current answers for a specific question (entity-ref based)."""
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     return await matrix_service.get_matrix_cells_with_current_answer_sets_by_question(
         matrix_id, question_id, entity_set_id
     )
@@ -450,7 +434,6 @@ async def get_matrix_cells_with_current_answers_by_question(
 async def get_matrix_cells_batch(
     matrix_id: int = Path(alias="matrixId"),
     request: MatrixCellsBatchRequest = ...,
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Batch fetch matrix cells using entity_set_filters (entity-ref based).
 
@@ -472,7 +455,7 @@ async def get_matrix_cells_batch(
             detail="entitySetFilters must contain at least one filter",
         )
 
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
     return await matrix_service.get_matrix_cells_with_current_answer_sets_by_batch(
         matrix_id, request.entity_set_filters
     )
@@ -486,7 +469,6 @@ async def reprocess_matrix_cells(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     request: MatrixReprocessRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Reprocess matrix cells based on the specified criteria."""
 
@@ -503,7 +485,7 @@ async def reprocess_matrix_cells(
             detail="At least one reprocessing criteria must be specified (whole_matrix, entity_set_filters, or cell_ids)",
         )
 
-    reprocessing_service = get_reprocessing_service(db)
+    reprocessing_service = get_reprocessing_service()
     cells_reprocessed = await reprocessing_service.reprocess_matrix_cells(
         matrix_id, request
     )
@@ -527,7 +509,6 @@ async def reprocess_matrix_cells(
 async def soft_delete_matrix_entities(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     request: MatrixSoftDeleteRequest,
-    db: AsyncSession = Depends(get_db),
 ):
     """Soft delete matrix entities (documents, questions, or matrices) and their related cells."""
     # Validate that at least one criteria is provided
@@ -539,13 +520,13 @@ async def soft_delete_matrix_entities(
 
     # Validate matrix exists for entity set filter deletions
     if request.entity_set_filters:
-        matrix_service = get_matrix_service(db)
+        matrix_service = get_matrix_service()
         matrix = await matrix_service.get_matrix(matrix_id)
         if not matrix:
             raise HTTPException(status_code=404, detail="Matrix not found")
 
-    async with transaction(db):
-        soft_delete_service = get_soft_delete_service(db)
+    async with transaction():
+        soft_delete_service = get_soft_delete_service()
         (
             entities_deleted,
             cells_deleted,
@@ -571,10 +552,9 @@ async def duplicate_matrix(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     request: MatrixDuplicateRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Duplicate a matrix with specified duplication type (documents only, questions only, or full matrix)."""
-    matrix_service = get_matrix_service(db)
+    matrix_service = get_matrix_service()
 
     # Use the service's duplicate_matrix method which is already transactional
     # TODO: validate ownership
@@ -588,7 +568,6 @@ async def duplicate_matrix(
 @trace_span
 async def get_matrix_template_variables(
     matrix_id: int = Path(alias="matrixId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ) -> List[MatrixTemplateVariableResponse]:
     """Get template variables for a matrix (used for duplication form)."""
 
@@ -608,7 +587,6 @@ async def get_matrix_template_variables(
 async def get_matrix_structure(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_service_account),
-    db: AsyncSession = Depends(get_db_readonly),
 ) -> MatrixStructureResponse:
     """Get matrix structure metadata for understanding cell data.
 
@@ -622,8 +600,8 @@ async def get_matrix_structure(
     This helps workflow agents understand how to interpret matrix data
     when generating documents from cell data.
     """
-    matrix_service = get_matrix_service(db)
-    entity_set_service = get_entity_set_service(db)
+    matrix_service = get_matrix_service()
+    entity_set_service = get_entity_set_service()
 
     # Get matrix
     matrix = await matrix_service.get_matrix(matrix_id, current_user.company_id)
@@ -649,7 +627,7 @@ async def get_matrix_structure(
         )
 
     # Get strategy for this matrix type
-    strategy = CellStrategyFactory.get_strategy(matrix.matrix_type, db)
+    strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
     structure_metadata = strategy.get_structure_metadata()
 
     return MatrixStructureResponse(

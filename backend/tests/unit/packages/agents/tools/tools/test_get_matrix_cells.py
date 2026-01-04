@@ -150,7 +150,7 @@ class TestGetMatrixCellsTool:
 
             # Verify function was called correctly
             mock_get_matrix_cells.assert_called_once_with(
-                matrix_id=123, document_id=None, question_id=None, db=mock_session
+                matrix_id=123, document_id=None, question_id=None
             )
 
     async def test_execute_filtered_by_document(self, tool, mock_user):
@@ -199,7 +199,7 @@ class TestGetMatrixCellsTool:
 
             # Verify function was called correctly
             mock_get_matrix_cells.assert_called_once_with(
-                matrix_id=123, document_id=10, question_id=None, db=mock_session
+                matrix_id=123, document_id=10, question_id=None
             )
 
     async def test_execute_filtered_by_question(self, tool, mock_user):
@@ -257,7 +257,7 @@ class TestGetMatrixCellsTool:
 
             # Verify function was called correctly
             mock_get_matrix_cells.assert_called_once_with(
-                matrix_id=123, document_id=None, question_id=7, db=mock_session
+                matrix_id=123, document_id=None, question_id=7
             )
 
     async def test_execute_empty_result(self, tool, mock_user):
@@ -281,7 +281,7 @@ class TestGetMatrixCellsTool:
 
             # Verify function was called correctly
             mock_get_matrix_cells.assert_called_once_with(
-                matrix_id=999, document_id=None, question_id=None, db=mock_session
+                matrix_id=999, document_id=None, question_id=None
             )
 
     async def test_execute_service_exception(self, tool, mock_user):
@@ -403,7 +403,7 @@ class TestGetMatrixCellsTool:
 
             # Verify function was called with both filters
             mock_get_matrix_cells.assert_called_once_with(
-                matrix_id=123, document_id=10, question_id=7, db=mock_session
+                matrix_id=123, document_id=10, question_id=7
             )
 
     def test_tool_schema_format(self):

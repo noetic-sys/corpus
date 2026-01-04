@@ -68,7 +68,6 @@ class GetTemplateVariablesTool(Tool[GetTemplateVariablesParameters]):
             template_variables = await get_matrix_template_variables(
                 matrix_id=parameters.matrix_id,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(

@@ -98,7 +98,6 @@ class GetMatrixCellsBySliceTool(Tool[GetMatrixCellsBySliceParameters]):
             matrix_cells = await get_matrix_cells_batch(
                 matrix_id=parameters.matrix_id,
                 request=batch_request,
-                db=session,
             )
 
             return ToolResult.ok(

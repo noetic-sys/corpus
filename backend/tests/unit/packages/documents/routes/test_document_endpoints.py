@@ -266,9 +266,7 @@ class TestDocumentEndpoints:
         assert documents_response.status_code == 200
         documents = documents_response.json()
         # The document should be rolled back since the transaction failed
-        # BUT our new implementation commits the document before processing cells
-        # So we expect 1 document to exist since document creation succeeds before cell processing fails
-        assert len(documents) == 1
+        assert len(documents) == 0
 
         # Verify storage upload was still called (but document record rolled back)
         mock_storage.upload.assert_called_once()
@@ -694,7 +692,6 @@ class TestDocumentUploadUnit:
             entity_set_id=sample_document_entity_set.id,
             file=mock_file,
             current_user=test_user,
-            db=test_db,
         )
 
         # Assertions - verify the document was created
@@ -744,7 +741,6 @@ class TestDocumentUploadUnit:
                 entity_set_id=sample_document_entity_set.id,
                 file=mock_file,
                 current_user=test_user,
-                db=test_db,
             )
 
     @pytest.mark.asyncio
@@ -802,7 +798,6 @@ class TestDocumentUploadUnit:
             entity_set_id=sample_document_entity_set.id,
             file=file1,
             current_user=test_user,
-            db=test_db,
         )
 
         # Create second file with same content (actual duplicate)
@@ -822,7 +817,6 @@ class TestDocumentUploadUnit:
             entity_set_id=entity_set_2.id,
             file=file2,
             current_user=test_user,
-            db=test_db,
         )
 
         # Should return the same document (duplicate detection)
@@ -865,7 +859,6 @@ class TestDocumentUploadUnit:
             entity_set_id=sample_document_entity_set.id,
             file=mock_file,
             current_user=test_user,
-            db=test_db,
         )
 
         # Should still succeed
@@ -991,7 +984,6 @@ class TestDocumentUploadUnit:
             entity_set_id=sample_document_entity_set.id,
             file=file1,
             current_user=test_user,
-            db=test_db,
         )
 
         # Mark the document as COMPLETED extraction using the repository
@@ -1024,7 +1016,6 @@ class TestDocumentUploadUnit:
             entity_set_id=entity_set_2.id,
             file=file2,
             current_user=test_user,
-            db=test_db,
         )
 
         # Assertions

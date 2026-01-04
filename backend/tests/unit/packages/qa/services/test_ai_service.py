@@ -211,7 +211,7 @@ class TestAIService:
     @pytest.fixture
     async def ai_service(self, mock_provider, mock_prompts_dir, test_db: AsyncSession):
         """Create AIService with mocked provider and prompts directory."""
-        service = AIService(mock_provider, test_db)
+        service = AIService(mock_provider)
         service.prompts_dir = mock_prompts_dir
         return service
 
@@ -373,7 +373,7 @@ class TestAIService:
             return_value="This is not valid JSON"
         )
 
-        service = AIService(invalid_json_provider, test_db)
+        service = AIService(invalid_json_provider)
         service.prompts_dir = ai_service.prompts_dir
 
         result = await service.extract_key_information(sample_document)
@@ -390,7 +390,7 @@ class TestAIService:
         error_provider = MockAIProvider()
         error_provider.send_message = AsyncMock(side_effect=Exception("Provider error"))
 
-        service = AIService(error_provider, test_db)
+        service = AIService(error_provider)
         service.prompts_dir = ai_service.prompts_dir
         documents = [DocumentContext(document_id=1, content=sample_document)]
 
@@ -520,7 +520,7 @@ class TestAIService:
         error_provider = MockAIProvider()
         error_provider.send_message = AsyncMock(side_effect=Exception("Provider error"))
 
-        service = AIService(error_provider, test_db)
+        service = AIService(error_provider)
         service.prompts_dir = ai_service.prompts_dir
 
         with pytest.raises(Exception) as exc_info:
@@ -536,7 +536,7 @@ class TestAIService:
         error_provider = MockAIProvider()
         error_provider.send_message = AsyncMock(side_effect=Exception("Provider error"))
 
-        service = AIService(error_provider, test_db)
+        service = AIService(error_provider)
         service.prompts_dir = ai_service.prompts_dir
 
         with pytest.raises(Exception) as exc_info:
@@ -568,7 +568,7 @@ class TestAIService:
         ) as f:
             f.write("CUSTOM_ANSWER_PROMPT: You are a test assistant.")
 
-        service = AIService(mock_provider, test_db)
+        service = AIService(mock_provider)
         service.prompts_dir = mock_prompts_dir
         documents = [DocumentContext(document_id=1, content="test doc")]
 
@@ -650,7 +650,7 @@ class TestAIService:
             return_value=AI_RESPONSE_SAMPLES["date"]["valid"]
         )
 
-        service = AIService(mock_provider, test_db)
+        service = AIService(mock_provider)
         documents = [DocumentContext(document_id=1, content=sample_document)]
 
         result = await service.answer_question(
@@ -694,7 +694,7 @@ class TestAIService:
         }"""
         )
 
-        service = AIService(mock_provider, test_db)
+        service = AIService(mock_provider)
         documents = [DocumentContext(document_id=1, content=sample_document)]
 
         result = await service.answer_question(
@@ -729,7 +729,7 @@ class TestAIService:
             return_value=AI_RESPONSE_SAMPLES["currency"]["valid"]
         )
 
-        service = AIService(mock_provider, test_db)
+        service = AIService(mock_provider)
         documents = [DocumentContext(document_id=1, content=sample_document)]
 
         result = await service.answer_question(
@@ -770,7 +770,7 @@ class TestAIService:
         )
         mock_provider.send_message = AsyncMock(return_value=long_json_response)
 
-        service = AIService(mock_provider, test_db)
+        service = AIService(mock_provider)
         documents = [DocumentContext(document_id=1, content=sample_document)]
 
         result = await service.answer_question(

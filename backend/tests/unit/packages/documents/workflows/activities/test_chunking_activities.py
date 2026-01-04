@@ -20,7 +20,6 @@ from packages.billing.repositories.usage_repository import UsageEventRepository
 from packages.billing.models.database.subscription import SubscriptionEntity
 
 
-@patch("packages.documents.workflows.activities.chunking_activities.get_db")
 class TestGetChunkingStrategyActivity:
     """Unit tests for get_chunking_strategy_activity.
 
@@ -30,19 +29,11 @@ class TestGetChunkingStrategyActivity:
     @pytest.mark.asyncio
     async def test_returns_agentic_when_quota_available(
         self,
-        mock_get_db,
         test_db,
         sample_company,
     ):
         """Test returns AGENTIC strategy and reserves credit when quota available."""
-
-        def fresh_db_generator():
-            async def gen():
-                yield test_db
-
-            return gen()
-
-        mock_get_db.side_effect = fresh_db_generator
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Create FREE subscription
         subscription = SubscriptionEntity(
@@ -86,19 +77,11 @@ class TestGetChunkingStrategyActivity:
     @pytest.mark.asyncio
     async def test_falls_back_to_sentence_when_quota_exceeded(
         self,
-        mock_get_db,
         test_db,
         sample_company,
     ):
         """Test falls back to SENTENCE when quota exceeded."""
-
-        def fresh_db_generator():
-            async def gen():
-                yield test_db
-
-            return gen()
-
-        mock_get_db.side_effect = fresh_db_generator
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Create FREE subscription
         subscription = SubscriptionEntity(
@@ -142,19 +125,11 @@ class TestGetChunkingStrategyActivity:
     @pytest.mark.asyncio
     async def test_no_subscription_returns_sentence(
         self,
-        mock_get_db,
         test_db,
         sample_company,
     ):
         """Test company without subscription gets SENTENCE strategy."""
-
-        def fresh_db_generator():
-            async def gen():
-                yield test_db
-
-            return gen()
-
-        mock_get_db.side_effect = fresh_db_generator
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         document_id = 123
 
@@ -184,23 +159,17 @@ class TestGetChunkingStrategyActivity:
         assert result["quota_exceeded"] is True
 
 
-@patch("packages.documents.workflows.activities.chunking_activities.get_db")
 class TestRefundAgenticChunkingCreditActivity:
     """Unit tests for refund_agentic_chunking_credit_activity."""
 
     @pytest.mark.asyncio
     async def test_creates_negative_usage_event(
         self,
-        mock_get_db,
         test_db,
         sample_company,
     ):
         """Test that refunding credit creates a -1 quantity event."""
-
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         document_id = 123
 
@@ -212,9 +181,6 @@ class TestRefundAgenticChunkingCreditActivity:
         )
         await test_db.commit()
         original_event_id = original_event.id
-
-        # Reset mock for refund call
-        mock_get_db.return_value = mock_db_generator()
 
         refund_event_id = await refund_agentic_chunking_credit_activity(
             company_id=sample_company.id,
@@ -240,16 +206,11 @@ class TestRefundAgenticChunkingCreditActivity:
     @pytest.mark.asyncio
     async def test_refund_preserves_audit_trail(
         self,
-        mock_get_db,
         test_db,
         sample_company,
     ):
         """Test that refund event references original event."""
-
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         document_id = 456
 
@@ -261,9 +222,6 @@ class TestRefundAgenticChunkingCreditActivity:
         )
         await test_db.commit()
         original_event_id = original_event.id
-
-        # Reset mock for refund call
-        mock_get_db.return_value = mock_db_generator()
 
         await refund_agentic_chunking_credit_activity(
             company_id=sample_company.id,
@@ -288,23 +246,17 @@ class TestRefundAgenticChunkingCreditActivity:
         assert refund_event.event_metadata["reason"] == "chunking_failed"
 
 
-@patch("packages.documents.workflows.activities.chunking_activities.get_db")
 class TestUpdateAgenticChunkingMetadataActivity:
     """Unit tests for update_agentic_chunking_metadata_activity."""
 
     @pytest.mark.asyncio
     async def test_updates_event_metadata(
         self,
-        mock_get_db,
         test_db,
         sample_company,
     ):
         """Test that metadata is updated with chunk count."""
-
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         document_id = 789
 
@@ -316,9 +268,6 @@ class TestUpdateAgenticChunkingMetadataActivity:
         )
         await test_db.commit()
         event_id = event.id
-
-        # Reset mock for update call
-        mock_get_db.return_value = mock_db_generator()
 
         await update_agentic_chunking_metadata_activity(
             usage_event_id=event_id,

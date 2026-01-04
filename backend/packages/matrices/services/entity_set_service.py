@@ -6,7 +6,6 @@ Handles entity set creation, member management, and validation.
 """
 
 from typing import List, Dict, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.matrices.repositories.entity_set_repository import EntitySetRepository
@@ -33,8 +32,7 @@ logger = get_logger(__name__)
 class EntitySetService:
     """Service for handling entity set operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.entity_set_repo = EntitySetRepository()
         self.member_repo = EntitySetMemberRepository()
         self.reference_repo = CellEntityReferenceRepository()
@@ -491,6 +489,6 @@ class EntitySetService:
         return len(new_members)
 
 
-def get_entity_set_service(db_session: AsyncSession) -> EntitySetService:
+def get_entity_set_service() -> EntitySetService:
     """Get entity set service instance."""
-    return EntitySetService(db_session)
+    return EntitySetService()

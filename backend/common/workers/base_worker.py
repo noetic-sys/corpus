@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, TypeVar, Generic, Type
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from uuid import uuid4
 
-from common.db.session import AsyncSessionLocal
 from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.interface import MessageQueueInterface
 from common.core.otel_axiom_exporter import get_logger
@@ -100,26 +98,12 @@ class BaseWorker(ABC, Generic[T]):
         logger.info(f"Worker {self.worker_id} received message: {message}")
 
         try:
-            # Create database session using the configured async session
-            logger.info(f"Creating database session for worker {self.worker_id}")
-            async with AsyncSessionLocal() as db_session:
-                try:
-                    logger.info(f"Processing message with worker {self.worker_id}")
-                    # Parse message if message class is specified
-                    if self.message_class:
-                        parsed_message = self.message_class(**message)
-                        await self.process_message(parsed_message, db_session)
-                    else:
-                        await self.process_message(message, db_session)
-                    # Explicitly commit the transaction
-                    await db_session.commit()
-                    logger.info(
-                        f"Message processing completed by worker {self.worker_id}"
-                    )
-                except Exception:
-                    # Rollback on any exception
-                    await db_session.rollback()
-                    raise
+            # Services handle their own sessions - no wrapper needed here
+            if self.message_class:
+                parsed_message = self.message_class(**message)
+                await self.process_message(parsed_message)
+            else:
+                await self.process_message(message)
 
             logger.info(f"Worker {self.worker_id} successfully processed message")
 
@@ -128,10 +112,9 @@ class BaseWorker(ABC, Generic[T]):
                 f"Error processing message in worker {self.worker_id}: {e}",
                 exc_info=True,
             )
-            # In production, you might want to send to a dead letter queue
             raise
 
     @abstractmethod
-    async def process_message(self, message: T, db_session: AsyncSession):
+    async def process_message(self, message: T):
         """Process a message from the queue. Must be implemented by subclasses."""
         pass

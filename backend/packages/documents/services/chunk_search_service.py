@@ -2,7 +2,6 @@
 
 import asyncio
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.documents.providers.document_search.keyword_search_interface import (
     KeywordSearchInterface,
@@ -39,11 +38,9 @@ class ChunkSearchService:
 
     def __init__(
         self,
-        db: AsyncSession,
         keyword_provider: Optional[KeywordSearchInterface] = None,
         vector_provider: Optional[VectorSearchInterface] = None,
     ):
-        self.db = db
         self.keyword_provider = keyword_provider or get_keyword_search_provider()
         self.vector_provider = vector_provider or get_vector_search_provider()
         self.embedding_provider = get_embedding_provider()
@@ -310,7 +307,7 @@ class ChunkSearchService:
         if not chunk_hits:
             return []
 
-        chunking_service = get_document_chunking_service(self.db)
+        chunking_service = get_document_chunking_service()
 
         # Group chunks by document for efficient fetching
         chunks_by_doc = {}
@@ -364,6 +361,6 @@ class ChunkSearchService:
         return keyword_success and vector_success
 
 
-def get_chunk_search_service(db: AsyncSession) -> ChunkSearchService:
+def get_chunk_search_service() -> ChunkSearchService:
     """Get chunk search service instance."""
-    return ChunkSearchService(db)
+    return ChunkSearchService()

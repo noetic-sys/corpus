@@ -131,7 +131,7 @@ async def build_matrix_cell_with_answer_response(
 
     # Load entity refs if not provided
     if entity_refs is None:
-        ref_repo = CellEntityReferenceRepository(matrix_service.db_session)
+        ref_repo = CellEntityReferenceRepository()
         entity_refs = await ref_repo.get_by_cell_id(cell.id)
 
     return MatrixCellWithAnswerResponse(

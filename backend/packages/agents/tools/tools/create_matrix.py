@@ -70,9 +70,7 @@ class CreateMatrixTool(Tool[CreateMatrixParameters]):
             )
 
             # Call the create_matrix route function directly with authenticated user
-            matrix = await create_matrix(
-                matrix=matrix_data, current_user=as_user, db=session
-            )
+            matrix = await create_matrix(matrix=matrix_data, current_user=as_user)
 
             return ToolResult.ok(CreateMatrixSuccessResult(matrix=matrix))
 

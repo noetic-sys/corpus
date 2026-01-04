@@ -38,7 +38,6 @@ def mock_session_context():
 @patch(
     "packages.documents.workflows.activities.document_extraction.create_span_with_context"
 )
-@patch("packages.documents.workflows.activities.document_extraction.get_db")
 @patch(
     "packages.documents.workflows.activities.document_extraction.ExtractorFactory.get_extractor"
 )
@@ -55,18 +54,12 @@ class TestExtractDocumentContentActivity:
         mock_get_bloom_filter_provider,
         mock_get_storage,
         mock_get_extractor,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
     ):
         """Test successful document content extraction."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Create a test document in the database
 
@@ -117,17 +110,11 @@ class TestExtractDocumentContentActivity:
         mock_get_bloom_filter_provider,
         mock_get_storage,
         mock_get_extractor,
-        mock_get_db,
         mock_create_span,
         test_db,
     ):
         """Test when document is not found in database."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage and extractor (shouldn't be called)
         mock_storage = AsyncMock()
@@ -150,18 +137,12 @@ class TestExtractDocumentContentActivity:
         mock_get_bloom_filter_provider,
         mock_get_storage,
         mock_get_extractor,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
     ):
         """Test when document extraction fails."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Create a test document in the database
 
@@ -200,18 +181,12 @@ class TestExtractDocumentContentActivity:
         mock_get_bloom_filter_provider,
         mock_get_storage,
         mock_get_extractor,
-        mock_get_db,
         mock_create_span,
         test_db,
         sample_company,
     ):
         """Test extraction without trace headers."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Create a test document in the database
 
@@ -249,14 +224,12 @@ class TestExtractDocumentContentActivity:
     "packages.documents.workflows.activities.document_extraction.create_span_with_context"
 )
 @patch("packages.documents.workflows.activities.document_extraction.get_storage")
-@patch("packages.documents.workflows.activities.document_extraction.get_db")
 class TestSaveExtractedContentToS3Activity:
     """Unit tests for save_extracted_content_to_s3_activity."""
 
     @pytest.mark.asyncio
     async def test_save_extracted_content_success(
         self,
-        mock_get_db,
         mock_get_storage,
         mock_create_span,
         test_db,
@@ -264,12 +237,7 @@ class TestSaveExtractedContentToS3Activity:
         sample_company,
     ):
         """Test successful saving of extracted content to S3."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider
         mock_storage = AsyncMock()
@@ -300,15 +268,10 @@ class TestSaveExtractedContentToS3Activity:
 
     @pytest.mark.asyncio
     async def test_save_extracted_content_upload_failure(
-        self, mock_get_db, mock_get_storage, mock_create_span, test_db, sample_document
+        self, mock_get_storage, mock_create_span, test_db, sample_document
     ):
         """Test when S3 upload fails."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider to return False (upload failure)
         mock_storage = AsyncMock()
@@ -326,15 +289,10 @@ class TestSaveExtractedContentToS3Activity:
 
     @pytest.mark.asyncio
     async def test_save_extracted_content_storage_exception(
-        self, mock_get_db, mock_get_storage, mock_create_span, test_db, sample_document
+        self, mock_get_storage, mock_create_span, test_db, sample_document
     ):
         """Test when storage upload raises an exception."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider to raise exception
         mock_storage = AsyncMock()
@@ -355,14 +313,12 @@ class TestSaveExtractedContentToS3Activity:
 @patch(
     "packages.documents.workflows.activities.document_extraction.get_document_search_provider"
 )
-@patch("packages.documents.workflows.activities.document_extraction.get_db")
 class TestIndexDocumentForSearchActivity:
     """Unit tests for index_document_for_search_activity."""
 
     @pytest.mark.asyncio
     async def test_index_document_success(
         self,
-        mock_get_db,
         mock_get_search_provider,
         mock_start_span,
         test_db,
@@ -370,6 +326,7 @@ class TestIndexDocumentForSearchActivity:
         sample_company,
     ):
         """Test successful document indexing."""
+        # patch_lazy_sessions fixture in conftest handles test database routing
         # Create a real document in the database
 
         doc_repo = DocumentRepository()
@@ -382,18 +339,10 @@ class TestIndexDocumentForSearchActivity:
         )
         document = await doc_repo.create(document_create)
 
-        # Setup the database session mock to yield test_db
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
-
-        # Mock search provider
+        # Mock search provider - not a context manager, direct call
         mock_search_provider = AsyncMock()
         mock_search_provider.index_document.return_value = True
-        mock_get_search_provider.return_value.__aenter__.return_value = (
-            mock_search_provider
-        )
+        mock_get_search_provider.return_value = mock_search_provider
 
         # Call the activity
         result = await index_document_for_search_activity(
@@ -416,25 +365,17 @@ class TestIndexDocumentForSearchActivity:
     @pytest.mark.asyncio
     async def test_index_document_not_found(
         self,
-        mock_get_db,
         mock_get_search_provider,
         mock_start_span,
         test_db,
         mock_session_context,
     ):
         """Test when document is not found in database."""
-
-        # Setup the database session mock to yield test_db
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock search provider (shouldn't be called)
         mock_search_provider = AsyncMock()
-        mock_get_search_provider.return_value.__aenter__.return_value = (
-            mock_search_provider
-        )
+        mock_get_search_provider.return_value = mock_search_provider
 
         # Call the activity with non-existent document ID
         result = await index_document_for_search_activity(99999, "Extracted content")
@@ -446,7 +387,6 @@ class TestIndexDocumentForSearchActivity:
     @pytest.mark.asyncio
     async def test_index_document_indexing_failure(
         self,
-        mock_get_db,
         mock_get_search_provider,
         mock_start_span,
         test_db,
@@ -454,6 +394,7 @@ class TestIndexDocumentForSearchActivity:
         sample_company,
     ):
         """Test when search provider fails to index."""
+        # patch_lazy_sessions fixture in conftest handles test database routing
         # Create a real document in the database
 
         doc_repo = DocumentRepository()
@@ -466,18 +407,10 @@ class TestIndexDocumentForSearchActivity:
         )
         document = await doc_repo.create(document_create)
 
-        # Setup the database session mock to yield test_db
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
-
         # Mock search provider to return False
         mock_search_provider = AsyncMock()
         mock_search_provider.index_document.return_value = False
-        mock_get_search_provider.return_value.__aenter__.return_value = (
-            mock_search_provider
-        )
+        mock_get_search_provider.return_value = mock_search_provider
 
         # Call the activity
         result = await index_document_for_search_activity(
@@ -491,7 +424,6 @@ class TestIndexDocumentForSearchActivity:
     @pytest.mark.asyncio
     async def test_index_document_exception_handling(
         self,
-        mock_get_db,
         mock_get_search_provider,
         mock_start_span,
         test_db,
@@ -499,6 +431,7 @@ class TestIndexDocumentForSearchActivity:
         sample_company,
     ):
         """Test exception handling during indexing."""
+        # patch_lazy_sessions fixture in conftest handles test database routing
         # Create a real document in the database
 
         doc_repo = DocumentRepository()
@@ -511,20 +444,12 @@ class TestIndexDocumentForSearchActivity:
         )
         document = await doc_repo.create(document_create)
 
-        # Setup the database session mock to yield test_db
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
-
         # Mock search provider to raise exception
         mock_search_provider = AsyncMock()
         mock_search_provider.index_document.side_effect = Exception(
             "Search provider error"
         )
-        mock_get_search_provider.return_value.__aenter__.return_value = (
-            mock_search_provider
-        )
+        mock_get_search_provider.return_value = mock_search_provider
 
         # Call the activity - should not raise, but return False
         result = await index_document_for_search_activity(

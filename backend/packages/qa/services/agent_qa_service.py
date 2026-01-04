@@ -7,7 +7,6 @@ Uses Claude Agent SDK to selectively read document chunks and answer questions.
 import os
 from functools import lru_cache
 from typing import Optional, List
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from ai_config import get_prompt_file, get_analysis_prompt_file
@@ -22,14 +21,8 @@ logger = get_logger(__name__)
 class AgentQAService:
     """Service for agent-based QA using chunk-based retrieval."""
 
-    def __init__(self, db_session: AsyncSession):
-        """Initialize agent QA service.
-
-        Args:
-            db_session: Database session for loading question options
-        """
-        self.db_session = db_session
-
+    def __init__(self):
+        """Initialize agent QA service."""
         # Set up prompts directory
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -266,13 +259,10 @@ Begin by using the MCP tools to discover and read relevant chunks, then provide 
         return [option.value for option in options]
 
 
-def get_agent_qa_service(db_session: AsyncSession) -> AgentQAService:
+def get_agent_qa_service() -> AgentQAService:
     """Get agent QA service instance.
-
-    Args:
-        db_session: Database session
 
     Returns:
         AgentQAService instance
     """
-    return AgentQAService(db_session)
+    return AgentQAService()

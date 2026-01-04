@@ -76,7 +76,7 @@ def document_service(
         "packages.documents.services.document_service.DocumentIndexingJobService",
         return_value=mock_indexing_job_service,
     ):
-        return DocumentService(test_db)
+        return DocumentService()
 
 
 @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")

@@ -14,7 +14,7 @@ from temporalio import activity
 
 from common.core.config import settings
 from common.core.constants import WorkflowExecutionMode
-from common.db.session import get_db
+from common.db.scoped import transaction
 from common.execution.executors.docker import DockerExecutor
 from common.execution.executors.k8s import K8sExecutor
 from common.execution.job_spec import JobSpec
@@ -88,12 +88,11 @@ async def launch_agent_qa_activity(
     question_type = QuestionTypeName.from_id(question_type_id)
     if question_type == QuestionTypeName.SELECT:
         activity.logger.info(f"Loading options for SELECT question {question_id}")
-        async for db_session in get_db():
+        async with transaction():
             option_service = QuestionOptionService()
             option_models = await option_service.get_options_for_question(question_id)
             options = [opt.value for opt in option_models]
             activity.logger.info(f"Loaded {len(options)} options")
-            break  # Only need one iteration
 
     # Build job spec for agent QA
     job_spec = JobSpec(
@@ -174,7 +173,7 @@ async def extract_agent_qa_results_activity(
     """
     activity.logger.info(f"Validating agent QA results for job {qa_job_id}")
 
-    async for db_session in get_db():
+    async with scoped_session():
         # Get QA job to find matrix cell
         qa_job_service = get_qa_job_service()
         qa_job = await qa_job_service.get_qa_job(qa_job_id)
@@ -183,7 +182,7 @@ async def extract_agent_qa_results_activity(
             raise Exception(f"QA job {qa_job_id} not found")
 
         # Check that answer set exists for the matrix cell
-        matrix_service = get_matrix_service(db_session)
+        matrix_service = get_matrix_service()
         cell = await matrix_service.get_matrix_cell(qa_job.matrix_cell_id)
 
         if not cell:

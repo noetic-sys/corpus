@@ -12,7 +12,6 @@ Provides:
 from abc import ABC, abstractmethod
 from typing import List
 import hashlib
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.matrices.models.domain.matrix_enums import (
     MatrixType,
@@ -48,9 +47,7 @@ class BaseCellCreationStrategy(ABC):
     Strategies are ~100 lines each, mostly orchestrating these shared utilities.
     """
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
-
+    def __init__(self):
         # Local imports to avoid circular dependencies
         # TODO: need to architect better...
         from packages.questions.services.template_processing_service import (  # noqa: PLC0415
@@ -70,11 +67,11 @@ class BaseCellCreationStrategy(ABC):
         )
 
         # Initialize services (compose, don't duplicate)
-        self.template_service = TemplateProcessingService(db_session)
-        self.entity_set_service = EntitySetService(db_session)
-        self.document_service = get_document_service(db_session)
-        self.question_service = QuestionService(db_session)
-        self.matrix_service = MatrixService(db_session)
+        self.template_service = TemplateProcessingService()
+        self.entity_set_service = EntitySetService()
+        self.document_service = get_document_service()
+        self.question_service = QuestionService()
+        self.matrix_service = MatrixService()
 
     # =========================================================================
     # SHARED UTILITIES (DRY - used by all strategies)
@@ -316,7 +313,7 @@ class BaseCellCreationStrategy(ABC):
             raise ValueError(f"Question {cell_data.question.question_id} not found")
 
         # Get AI service configured for this question
-        ai_service = await get_ai_service_for_question(self.db_session, question_model)
+        ai_service = await get_ai_service_for_question(question_model)
 
         # Convert our DocumentContext to MessageBuilder's DocumentContext
         # (they have different purposes - ours has role, theirs is for AI messages)

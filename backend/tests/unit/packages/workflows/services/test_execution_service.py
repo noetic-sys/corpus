@@ -25,7 +25,7 @@ class TestWorkflowExecutionService:
     @pytest.fixture
     async def service(self, test_db: AsyncSession):
         """Create service instance."""
-        return WorkflowExecutionService(test_db)
+        return WorkflowExecutionService()
 
     async def test_trigger_execution(
         self, service, sample_workflow, sample_company, test_db, mock_temporal_client

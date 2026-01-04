@@ -5,16 +5,12 @@ Protected endpoints for subscription and usage management.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.db.session import get_db
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.billing.models.domain.enums import SubscriptionTier
 from packages.billing.services.subscription_service import SubscriptionService
 from packages.billing.services.quota_service import QuotaService
-
-# Note: QuotaService still uses db_session (not yet migrated to lazy sessions)
 from packages.billing.models.schemas.billing import (
     CheckoutSessionRequest,
     CheckoutSessionResponse,
@@ -78,7 +74,6 @@ async def get_subscription_status(
 @router.get("/usage", response_model=UsageStatsResponse)
 async def get_usage_stats(
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Get detailed usage statistics for the company.
@@ -87,7 +82,7 @@ async def get_usage_stats(
     If no subscription exists, creates a FREE tier subscription.
     """
     subscription_service = SubscriptionService()
-    quota_service = QuotaService(db_session)  # QuotaService not yet migrated
+    quota_service = QuotaService()
 
     # Ensure subscription exists (lazy backfill for existing companies)
     subscription = await subscription_service.get_by_company_id(current_user.company_id)
@@ -157,7 +152,6 @@ async def get_usage_stats(
 @router.get("/quota/cell-operations", response_model=QuotaStatusResponse)
 async def check_cell_operation_quota(
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db_session: AsyncSession = Depends(get_db),
 ):
     """
     Check current cell operation quota status.
@@ -165,7 +159,7 @@ async def check_cell_operation_quota(
     Returns detailed quota information for cell operations metric.
     Raises 429 if quota exceeded.
     """
-    quota_service = QuotaService(db_session)
+    quota_service = QuotaService()
 
     quota_check = await quota_service.check_cell_operation_quota(
         current_user.company_id

@@ -64,7 +64,6 @@ class ListQuestionsTool(Tool[ListQuestionsParameters]):
             question_responses = await get_questions_by_matrix(
                 matrix_id=parameters.matrix_id,
                 current_user=as_user,
-                db=session,
             )
 
             return ToolResult.ok(

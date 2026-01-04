@@ -1,5 +1,4 @@
 from typing import List
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.matrices.repositories.matrix_cell_repository import MatrixCellRepository
 from packages.matrices.repositories.entity_set_member_repository import (
@@ -15,20 +14,19 @@ from packages.matrices.services.batch_processing_service import BatchProcessingS
 from packages.billing.services.quota_service import QuotaService
 from packages.billing.services.usage_service import UsageService
 from common.core.otel_axiom_exporter import trace_span, get_logger
-from common.db.transaction_utils import TransactionMixin, transactional
+from common.db.context import transactional
 
 logger = get_logger(__name__)
 
 
-class ReprocessingService(TransactionMixin):
+class ReprocessingService:
     """Service for reprocessing matrix cells."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.matrix_cell_repo = MatrixCellRepository()
         self.member_repo = EntitySetMemberRepository()
         self.cell_ref_repo = CellEntityReferenceRepository()
-        self.batch_processing_service = BatchProcessingService(db_session)
+        self.batch_processing_service = BatchProcessingService()
 
     @trace_span
     @transactional
@@ -64,9 +62,8 @@ class ReprocessingService(TransactionMixin):
         )
         logger.info(f"Updated {updated_count} cells to pending status")
 
-        # Commit transaction before publishing messages
-        await self.db_session.flush()
-        logger.info("Committed bulk reprocessing changes to database")
+        # Note: transaction decorator handles commit at end
+        logger.info("Bulk update complete, continuing to create jobs")
 
         # Use batch processing service to create jobs and queue them
         jobs_created = (
@@ -153,7 +150,7 @@ class ReprocessingService(TransactionMixin):
         if not cells:
             return 0
 
-        quota_service = QuotaService(self.db_session)
+        quota_service = QuotaService()
 
         # Check cell operation quota (raises 429 if exceeded)
         await quota_service.check_cell_operation_quota(company_id)
@@ -168,7 +165,7 @@ class ReprocessingService(TransactionMixin):
                 QuestionService,
             )
 
-            question_service = QuestionService(self.db_session)
+            question_service = QuestionService()
             agentic_count = await question_service.count_agentic_questions(
                 question_ids, company_id
             )
@@ -239,6 +236,6 @@ class ReprocessingService(TransactionMixin):
             )
 
 
-def get_reprocessing_service(db_session: AsyncSession) -> ReprocessingService:
+def get_reprocessing_service() -> ReprocessingService:
     """Get reprocessing service instance."""
-    return ReprocessingService(db_session)
+    return ReprocessingService()

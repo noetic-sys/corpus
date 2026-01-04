@@ -165,38 +165,35 @@ def readonly(func: Callable[P, T]) -> Callable[P, T]:
     return wrapper
 
 
-def transactional(readonly: bool = False):
+def transactional(func: Callable[P, T]) -> Callable[P, T]:
     """
     Decorator that wraps function in an explicit transaction.
 
     All DB operations within the decorated function share one session/connection.
     The transaction commits on success, rolls back on exception.
 
-    Args:
-        readonly: If True, uses a readonly session (no commit)
+    Respects @readonly decorator - if applied, uses readonly session.
 
     Usage:
-        @transactional()
+        @transactional
         async def transfer_funds(from_id: int, to_id: int, amount: float):
             # These share a session, commit together or rollback together
             await account_repo.debit(from_id, amount)
             await account_repo.credit(to_id, amount)
 
-        @transactional(readonly=True)
+        @readonly
+        @transactional
         async def generate_report(company_id: int):
             # Read-only transaction for consistent snapshot
             data = await report_repo.get_all_data(company_id)
             return process_report(data)
     """
 
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
-        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            from common.db.scoped import transaction as tx  # noqa: PLC0415
+    @wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        from common.db.scoped import transaction as tx  # noqa: PLC0415
 
-            async with tx(readonly=readonly):
-                return await func(*args, **kwargs)
+        async with tx():
+            return await func(*args, **kwargs)
 
-        return wrapper
-
-    return decorator
+    return wrapper

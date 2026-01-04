@@ -4,7 +4,7 @@ Repository for usage event tracking.
 
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import select, func, text
+from sqlalchemy import select, func, text, update
 
 from common.repositories.base import BaseRepository
 from packages.billing.models.database.usage import UsageEventEntity
@@ -161,4 +161,20 @@ class UsageEventRepository(BaseRepository[UsageEventEntity, UsageEvent]):
             await session.execute(
                 text("SELECT pg_advisory_xact_lock(:company_id)"),
                 {"company_id": company_id},
+            )
+
+    @trace_span
+    async def update_event_metadata(self, event_id: int, metadata: dict) -> None:
+        """
+        Update the event_metadata field for a usage event.
+
+        Args:
+            event_id: The usage event ID
+            metadata: The new metadata dict to set
+        """
+        async with self._get_session() as session:
+            await session.execute(
+                update(UsageEventEntity)
+                .where(UsageEventEntity.id == event_id)
+                .values(event_metadata=metadata)
             )

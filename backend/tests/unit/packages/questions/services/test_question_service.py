@@ -1,7 +1,6 @@
 import pytest
 from packages.questions.services.question_option_service import QuestionOptionService
 from unittest.mock import patch
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.questions.services.question_service import QuestionService
@@ -23,9 +22,9 @@ class TestQuestionService:
     """Test QuestionService methods."""
 
     @pytest.fixture
-    async def service(self, test_db: AsyncSession):
+    async def service(self):
         """Create service instance."""
-        return QuestionService(test_db)
+        return QuestionService()
 
     @pytest.fixture
     async def matrix_with_entity_sets(self, test_db, sample_matrix, sample_company):
@@ -123,7 +122,7 @@ class TestQuestionService:
         assert success is False
 
     async def test_get_questions_for_matrix(
-        self, service, sample_matrix, sample_company
+        self, service, test_db, sample_matrix, sample_company
     ):
         """Test getting all questions for a matrix."""
         # Create multiple questions
@@ -150,9 +149,9 @@ class TestQuestionService:
 
         for data in questions_data:
             question = QuestionEntity(**data)
-            service.db_session.add(question)
+            test_db.add(question)
 
-        await service.db_session.commit()
+        await test_db.commit()
 
         # Get questions for matrix
         results = await service.get_questions_for_matrix(sample_matrix.id)
@@ -288,9 +287,8 @@ class TestQuestionService:
 
     async def test_service_initialization(self, test_db):
         """Test service properly initializes all repositories."""
-        service = QuestionService(test_db)
+        service = QuestionService()
 
-        assert service.db_session == test_db
         assert service.question_repo is not None
         assert service.matrix_repo is not None
         assert service.option_set_repo is not None
@@ -353,7 +351,7 @@ class TestQuestionService:
         assert text_result.question_type_id == 1
 
     async def test_get_questions_for_matrix_different_types(
-        self, service, sample_matrix, sample_company
+        self, service, test_db, sample_matrix, sample_company
     ):
         """Test getting questions of different types for a matrix."""
         # Create questions of different types
@@ -366,9 +364,9 @@ class TestQuestionService:
                 question_type_id=question_type,
                 company_id=sample_company.id,
             )
-            service.db_session.add(question)
+            test_db.add(question)
 
-        await service.db_session.commit()
+        await test_db.commit()
 
         # Get all questions
         results = await service.get_questions_for_matrix(sample_matrix.id)
@@ -448,6 +446,7 @@ class TestQuestionService:
         mock_get_message_queue,
         mock_tracer,
         service,
+        test_db,
         sample_matrix,
         sample_question,
         sample_workspace,
@@ -465,9 +464,9 @@ class TestQuestionService:
             workspace_id=sample_workspace.id,
             company_id=sample_company.id,
         )
-        service.db_session.add(other_matrix)
-        await service.db_session.commit()
-        await service.db_session.refresh(other_matrix)
+        test_db.add(other_matrix)
+        await test_db.commit()
+        await test_db.refresh(other_matrix)
 
         update_data = QuestionWithOptionsUpdateModel(question_text="Updated text")
 
@@ -517,6 +516,7 @@ class TestQuestionService:
         mock_get_message_queue,
         mock_tracer,
         service,
+        test_db,
         matrix_with_entity_sets,
         sample_company,
     ):
@@ -533,9 +533,9 @@ class TestQuestionService:
             question_type_id=5,  # SINGLE_SELECT
             company_id=sample_company.id,
         )
-        service.db_session.add(select_question)
-        await service.db_session.commit()
-        await service.db_session.refresh(select_question)
+        test_db.add(select_question)
+        await test_db.commit()
+        await test_db.refresh(select_question)
 
         update_data = QuestionWithOptionsUpdateModel(
             options=[
@@ -562,6 +562,7 @@ class TestQuestionService:
         mock_get_message_queue,
         mock_tracer,
         service,
+        test_db,
         matrix_with_entity_sets,
         sample_company,
     ):
@@ -578,9 +579,9 @@ class TestQuestionService:
             question_type_id=5,  # SINGLE_SELECT
             company_id=sample_company.id,
         )
-        service.db_session.add(select_question)
-        await service.db_session.commit()
-        await service.db_session.refresh(select_question)
+        test_db.add(select_question)
+        await test_db.commit()
+        await test_db.refresh(select_question)
 
         update_data = QuestionWithOptionsUpdateModel(options=[])  # Clear options
 
@@ -726,7 +727,7 @@ class TestQuestionService:
 
     @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")
     async def test_duplicate_question_with_label_none(
-        self, mock_tracer, service, sample_matrix, sample_company
+        self, mock_tracer, service, test_db, sample_matrix, sample_company
     ):
         """Test duplicating question with no label."""
         # Setup mocks
@@ -741,9 +742,9 @@ class TestQuestionService:
             company_id=sample_company.id,
             label=None,
         )
-        service.db_session.add(question)
-        await service.db_session.commit()
-        await service.db_session.refresh(question)
+        test_db.add(question)
+        await test_db.commit()
+        await test_db.refresh(question)
 
         result = await service.duplicate_question(question.id)
 

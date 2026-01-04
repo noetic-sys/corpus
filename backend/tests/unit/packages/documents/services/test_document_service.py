@@ -81,7 +81,7 @@ def document_service(
         "packages.documents.services.document_service.QuotaService",
         return_value=mock_quota_service,
     ):
-        yield DocumentService(test_db)
+        yield DocumentService()
 
 
 @pytest.fixture
@@ -619,7 +619,7 @@ class TestUrlUploadQuotaEnforcement:
             "packages.documents.utils.url_helpers.httpx.AsyncClient",
             return_value=mock_httpx_client,
         ):
-            document_service = DocumentService(test_db)
+            document_service = DocumentService()
             urls = ["https://example.com/large-document.pdf"]
 
             # Should include error for the file that exceeded quota
@@ -700,7 +700,7 @@ class TestUrlUploadQuotaEnforcement:
             "packages.documents.utils.url_helpers.httpx.AsyncClient",
             return_value=mock_httpx_client,
         ):
-            document_service = DocumentService(test_db)
+            document_service = DocumentService()
             urls = ["https://example.com/small-document.pdf"]
 
             documents, errors = await document_service.upload_documents_from_urls(

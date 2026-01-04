@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.matrices.repositories.matrix_repository import MatrixRepository
 from packages.matrices.repositories.matrix_cell_repository import MatrixCellRepository
@@ -10,17 +9,16 @@ from packages.matrices.repositories.cell_entity_reference_repository import (
     CellEntityReferenceRepository,
 )
 from packages.matrices.models.schemas.matrix import MatrixSoftDeleteRequest
-from common.db.transaction_utils import TransactionMixin, transactional
+from common.db.context import transactional
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
 logger = get_logger(__name__)
 
 
-class SoftDeleteService(TransactionMixin):
+class SoftDeleteService:
     """Service for performing soft delete operations on matrix entities."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.matrix_repo = MatrixRepository()
         self.matrix_cell_repo = MatrixCellRepository()
         self.member_repo = EntitySetMemberRepository()
@@ -172,6 +170,6 @@ class SoftDeleteService(TransactionMixin):
         return matrix_count, cell_count
 
 
-def get_soft_delete_service(db_session: AsyncSession) -> SoftDeleteService:
+def get_soft_delete_service() -> SoftDeleteService:
     """Get soft delete service instance."""
-    return SoftDeleteService(db_session)
+    return SoftDeleteService()

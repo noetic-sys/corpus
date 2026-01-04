@@ -31,8 +31,8 @@ class TestSoftDeleteService:
 
     @pytest.fixture
     async def service(self, test_db):
-        """Create a SoftDeleteService instance with real database session."""
-        return SoftDeleteService(test_db)
+        """Create a SoftDeleteService instance."""
+        return SoftDeleteService()
 
     @pytest.mark.asyncio
     @pytest.mark.skip(
@@ -474,9 +474,8 @@ class TestSoftDeleteService:
     @pytest.mark.asyncio
     async def test_service_initialization(self, test_db):
         """Test service properly initializes all repositories."""
-        service = SoftDeleteService(test_db)
+        service = SoftDeleteService()
 
-        assert service.db_session == test_db
         assert service.matrix_repo is not None
         assert service.matrix_cell_repo is not None
         assert service.member_repo is not None

@@ -73,7 +73,7 @@ def document_service(
         "packages.documents.services.document_service.DocumentIndexingJobService",
         return_value=mock_indexing_job_service,
     ):
-        return DocumentService(test_db)
+        return DocumentService()
 
 
 @pytest.fixture

@@ -1,8 +1,6 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from common.db.session import get_db
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.qa.services.qa_job_service import get_qa_job_service
@@ -25,14 +23,13 @@ logger = get_logger(__name__)
 @router.post("/queue/process-pending", response_model=QueuePendingCellsResponse)
 async def queue_pending_cells(
     request: QueuePendingCellsRequest,
-    db: AsyncSession = Depends(get_db),
 ) -> QueuePendingCellsResponse:
     """Queue matrix cells in PENDING state for processing.
 
     If matrix_id is provided in the request, only queues cells for that specific matrix.
     Otherwise, queues all pending cells across all matrices.
     """
-    qa_job_service = get_qa_job_service(db)
+    qa_job_service = get_qa_job_service()
     result = await qa_job_service.queue_pending_cells(matrix_id=request.matrix_id)
 
     # Convert domain result to schema response
@@ -53,7 +50,6 @@ async def upload_agent_qa_answer(
     qa_job_id: Annotated[int, Path(alias="qaJobId")],
     answer_request: AgentQAAnswerSetRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ) -> AgentQAAnswerUploadResponse:
     """
     Upload answer from agent QA container.
@@ -66,14 +62,14 @@ async def upload_agent_qa_answer(
     )
 
     # Get QA job and validate
-    qa_job_service = get_qa_job_service(db)
+    qa_job_service = get_qa_job_service()
     qa_job = await qa_job_service.get_qa_job(qa_job_id)
 
     if not qa_job:
         raise HTTPException(status_code=404, detail="QA job not found")
 
     # Process the answer upload
-    agent_upload_service = get_agent_qa_upload_service(db)
+    agent_upload_service = get_agent_qa_upload_service()
     success = await agent_upload_service.process_agent_answer_upload(
         qa_job_id=qa_job_id,
         matrix_cell_id=answer_request.matrix_cell_id,

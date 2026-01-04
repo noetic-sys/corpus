@@ -30,7 +30,7 @@ def reprocessing_service(test_db, mock_message_queue):
         "packages.matrices.services.batch_processing_service.get_message_queue",
         return_value=mock_message_queue,
     ):
-        return ReprocessingService(test_db)
+        return ReprocessingService()
 
 
 # Mock both tracing and the message queue BEFORE importing anything

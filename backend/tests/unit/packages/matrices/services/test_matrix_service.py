@@ -22,8 +22,8 @@ class TestMatrixService:
 
     @pytest.fixture
     def matrix_service(self, test_db):
-        """Create a MatrixService instance with real database session."""
-        return MatrixService(test_db)
+        """Create a MatrixService instance."""
+        return MatrixService()
 
     @pytest.mark.asyncio
     async def test_create_matrix(
@@ -139,7 +139,7 @@ class TestMatrixService:
         await test_db.refresh(doc2)
 
         # Get document entity set and add members
-        entity_set_service = EntitySetService(test_db)
+        entity_set_service = EntitySetService()
         entity_sets = await entity_set_service.get_matrix_entity_sets(
             source_matrix.id, sample_company.id
         )
@@ -240,7 +240,7 @@ class TestMatrixService:
         await test_db.refresh(question2)
 
         # Get question entity set and add members
-        entity_set_service = EntitySetService(test_db)
+        entity_set_service = EntitySetService()
         entity_sets = await entity_set_service.get_matrix_entity_sets(
             source_matrix.id, sample_company.id
         )
@@ -276,7 +276,7 @@ class TestMatrixService:
         assert "Successfully duplicated matrix" in result.message
 
         # Verify target matrix has the questions
-        question_service = QuestionService(test_db)
+        question_service = QuestionService()
         target_questions = await question_service.get_questions_for_matrix(
             result.duplicate_matrix_id
         )
@@ -290,7 +290,7 @@ class TestMatrixServiceStreamingMethods:
     @pytest.fixture
     def mock_matrix_service(self, test_db):
         """Create a MatrixService with mocked repository."""
-        service = MatrixService(test_db)
+        service = MatrixService()
         service.matrix_cell_repo = AsyncMock()
         return service
 

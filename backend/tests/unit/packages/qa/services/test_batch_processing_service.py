@@ -24,7 +24,7 @@ def batch_service(test_db, mock_message_queue):
         "packages.matrices.services.batch_processing_service.get_message_queue",
         return_value=mock_message_queue,
     ):
-        return BatchProcessingService(test_db)
+        return BatchProcessingService()
 
 
 @patch("common.core.otel_axiom_exporter.axiom_tracer.start_as_current_span")
@@ -43,7 +43,7 @@ class TestBatchProcessingService:
     ):
         """Test batch creation with empty entity set list."""
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Test with empty entity sets
         cells, jobs = await service.batch_create_matrix_cells_and_jobs(
@@ -65,7 +65,7 @@ class TestBatchProcessingService:
         """Test successful processing of entity added to entity set."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
         matrix_repo = MatrixRepository()
@@ -148,7 +148,7 @@ class TestBatchProcessingService:
         """Test that adding question creates QA jobs."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
         matrix_repo = MatrixRepository()
@@ -229,7 +229,7 @@ class TestBatchProcessingService:
         """Test successful creation and queueing of jobs for existing cells."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
         matrix_repo = MatrixRepository()
@@ -319,7 +319,7 @@ class TestBatchProcessingService:
     ):
         """Test that empty matrix cells list returns 0."""
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Call with empty list
         jobs_created = await service.create_jobs_and_queue_for_cells([])
@@ -345,7 +345,7 @@ class TestBatchProcessingService:
         """Test that adding entities incrementally doesn't create duplicate cells."""
 
         mock_get_message_queue.return_value = mock_message_queue
-        service = BatchProcessingService(test_db)
+        service = BatchProcessingService()
 
         # Create matrix
         matrix_repo = MatrixRepository()

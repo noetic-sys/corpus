@@ -3,7 +3,6 @@ Service for managing workflow execution files.
 """
 
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.workflows.repositories.execution_file_repository import (
     ExecutionFileRepository,

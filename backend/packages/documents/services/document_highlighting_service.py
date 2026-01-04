@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from packages.documents.providers.document_highlighting.factory import (
     get_highlight_provider,
 )
@@ -19,13 +17,12 @@ logger = get_logger(__name__)
 class DocumentHighlightingService:
     """Service for highlighting documents with citations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.citation_service = CitationService()
-        self.document_service = DocumentService(db_session)
+        self.document_service = DocumentService()
         self.answer_service = AnswerService()
         self.answer_set_service = AnswerSetService()
-        self.matrix_service = MatrixService(db_session)
+        self.matrix_service = MatrixService()
 
     @trace_span
     async def get_document_with_citations_highlighted(
@@ -139,8 +136,6 @@ class DocumentHighlightingService:
         )
 
 
-def get_document_highlighting_service(
-    db_session: AsyncSession,
-) -> DocumentHighlightingService:
-    """Get question service instance."""
-    return DocumentHighlightingService(db_session)
+def get_document_highlighting_service() -> DocumentHighlightingService:
+    """Get document highlighting service instance."""
+    return DocumentHighlightingService()

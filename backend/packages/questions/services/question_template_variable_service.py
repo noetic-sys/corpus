@@ -1,5 +1,4 @@
 from typing import List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.questions.repositories.question_template_variable_repository import (
@@ -27,12 +26,11 @@ logger = get_logger(__name__)
 class QuestionTemplateVariableService:
     """Service for managing question-template variable associations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.question_template_var_repo = QuestionTemplateVariableRepository()
         self.question_repo = QuestionRepository()
         self.template_var_repo = MatrixTemplateVariableRepository()
-        self.template_processing_service = TemplateProcessingService(db_session)
+        self.template_processing_service = TemplateProcessingService()
 
     @trace_span
     async def create_association(

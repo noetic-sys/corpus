@@ -3,7 +3,7 @@ from datetime import datetime
 from temporalio import activity
 
 from common.core.otel_axiom_exporter import create_span_with_context, get_logger
-from common.db.session import get_db
+from common.db.scoped import transaction
 from packages.documents.services.document_extraction_job_service import (
     get_document_extraction_job_service,
 )
@@ -47,39 +47,30 @@ async def update_extraction_status_activity(
             f"Updating extraction status for job {extraction_job_id} to {status.value}"
         )
 
-        async for db_session in get_db():
-            try:
-                extraction_job_service = get_document_extraction_job_service()
-                document_repo = DocumentRepository()
+        # Multiple writes need to be atomic
+        async with transaction():
+            extraction_job_service = get_document_extraction_job_service()
+            document_repo = DocumentRepository()
 
-                # Update job status
-                if status == ExtractionStatusType.PROCESSING:
-                    await extraction_job_service.update_job_status(
-                        extraction_job_id, DocumentExtractionJobStatus.PROCESSING
-                    )
-                    document_update = DocumentUpdateModel(
-                        extraction_status=ExtractionStatus.PROCESSING,
-                        extraction_started_at=datetime.utcnow(),
-                    )
-                    await document_repo.update(document_id, document_update)
-                elif status == ExtractionStatusType.FAILED:
-                    await extraction_job_service.update_job_status(
-                        extraction_job_id,
-                        DocumentExtractionJobStatus.FAILED,
-                        error_message=error_message,
-                    )
-                    document_update = DocumentUpdateModel(
-                        extraction_status=ExtractionStatus.FAILED,
-                    )
-                    await document_repo.update(document_id, document_update)
-
-                await db_session.commit()
-                break
-
-            except Exception as e:
-                logger.error(f"Error updating extraction status: {e}")
-                await db_session.rollback()
-                raise
+            if status == ExtractionStatusType.PROCESSING:
+                await extraction_job_service.update_job_status(
+                    extraction_job_id, DocumentExtractionJobStatus.PROCESSING
+                )
+                document_update = DocumentUpdateModel(
+                    extraction_status=ExtractionStatus.PROCESSING,
+                    extraction_started_at=datetime.utcnow(),
+                )
+                await document_repo.update(document_id, document_update)
+            elif status == ExtractionStatusType.FAILED:
+                await extraction_job_service.update_job_status(
+                    extraction_job_id,
+                    DocumentExtractionJobStatus.FAILED,
+                    error_message=error_message,
+                )
+                document_update = DocumentUpdateModel(
+                    extraction_status=ExtractionStatus.FAILED,
+                )
+                await document_repo.update(document_id, document_update)
 
 
 @activity.defn
@@ -95,24 +86,13 @@ async def update_document_content_path_activity(
     ):
         logger.info(f"Updating content path for document {document_id} to {s3_key}")
 
-        async for db_session in get_db():
-            try:
-                document_repo = DocumentRepository()
+        document_repo = DocumentRepository()
+        document_update = DocumentUpdateModel(
+            extracted_content_path=s3_key,
+        )
+        await document_repo.update(document_id, document_update)
 
-                # Update only the S3 path, keep status as PROCESSING
-                document_update = DocumentUpdateModel(
-                    extracted_content_path=s3_key,
-                )
-                await document_repo.update(document_id, document_update)
-                await db_session.commit()
-
-                logger.info(f"Updated content path for document {document_id}")
-                break
-
-            except Exception as e:
-                logger.error(f"Error updating document content path: {e}")
-                await db_session.rollback()
-                raise
+        logger.info(f"Updated content path for document {document_id}")
 
 
 @activity.defn
@@ -125,39 +105,28 @@ async def update_document_completion_activity(
     ):
         logger.info(f"Completing document extraction for document {document_id}")
 
-        async for db_session in get_db():
-            try:
-                extraction_job_service = get_document_extraction_job_service()
-                document_repo = DocumentRepository()
+        # Multiple writes need to be atomic
+        async with transaction():
+            extraction_job_service = get_document_extraction_job_service()
+            document_repo = DocumentRepository()
 
-                # Update document status
-                document_update = DocumentUpdateModel(
-                    extracted_content_path=s3_key,
-                    extraction_status=ExtractionStatus.COMPLETED,
-                    extraction_completed_at=datetime.utcnow(),
-                )
-                await document_repo.update(document_id, document_update)
+            # Update document status
+            document_update = DocumentUpdateModel(
+                extracted_content_path=s3_key,
+                extraction_status=ExtractionStatus.COMPLETED,
+                extraction_completed_at=datetime.utcnow(),
+            )
+            await document_repo.update(document_id, document_update)
 
-                # Mark job as completed
-                await extraction_job_service.update_job_status(
-                    extraction_job_id,
-                    DocumentExtractionJobStatus.COMPLETED,
-                    completed_at=datetime.utcnow(),
-                    extracted_content_path=s3_key,
-                )
+            # Mark job as completed
+            await extraction_job_service.update_job_status(
+                extraction_job_id,
+                DocumentExtractionJobStatus.COMPLETED,
+                completed_at=datetime.utcnow(),
+                extracted_content_path=s3_key,
+            )
 
-                # Commit the transaction so QA workers can see the updated document
-                await db_session.commit()
-
-                logger.info(
-                    f"Successfully completed extraction for document {document_id}"
-                )
-                break
-
-            except Exception as e:
-                logger.error(f"Error completing document extraction: {e}")
-                await db_session.rollback()
-                raise
+        logger.info(f"Successfully completed extraction for document {document_id}")
 
 
 @activity.defn
@@ -178,62 +147,56 @@ async def queue_qa_jobs_for_document_activity(
     ):
         logger.info(f"Queueing QA jobs for document {document_id}")
 
-        async for db_session in get_db():
-            try:
-                matrix_service = get_matrix_service(db_session)
-                batch_processing_service = get_batch_processing_service(db_session)
-                member_repo = EntitySetMemberRepository()
-                entity_set_repo = EntitySetRepository()
+        matrix_service = get_matrix_service()
+        batch_processing_service = get_batch_processing_service()
+        member_repo = EntitySetMemberRepository()
+        entity_set_repo = EntitySetRepository()
 
-                # Get all entity set members for this document
-                members = await member_repo.get_members_by_entity_id(
-                    document_id, EntityType.DOCUMENT
+        # Get all entity set members for this document
+        members = await member_repo.get_members_by_entity_id(
+            document_id, EntityType.DOCUMENT
+        )
+        logger.info(
+            f"Found {len(members)} entity set members for document {document_id}"
+        )
+
+        # Group by entity set to get unique entity sets and their matrices
+        entity_set_ids = list(set(member.entity_set_id for member in members))
+        entity_sets = await entity_set_repo.get_by_ids(entity_set_ids)
+        logger.info(
+            f"Found {len(entity_sets)} entity sets: {[(es.id, es.matrix_id, es.name) for es in entity_sets]}"
+        )
+
+        # Get cells for each matrix
+        all_matrix_cells = []
+        for entity_set in entity_sets:
+            matrix_cells = await matrix_service.get_matrix_cells_by_document(
+                entity_set.matrix_id, document_id, entity_set.id
+            )
+            logger.info(
+                f"Found {len(matrix_cells)} cells for entity_set {entity_set.id} "
+                f"(matrix {entity_set.matrix_id}, name '{entity_set.name}')"
+            )
+            all_matrix_cells.extend(matrix_cells)
+
+        matrix_ids = list(set(es.matrix_id for es in entity_sets))
+
+        queued_count = 0
+        if all_matrix_cells:
+            queued_count = (
+                await batch_processing_service.create_jobs_and_queue_for_cells(
+                    all_matrix_cells
                 )
-                logger.info(
-                    f"Found {len(members)} entity set members for document {document_id}"
-                )
+            )
+            logger.info(
+                f"Queued {queued_count} QA jobs across {len(matrix_ids)} matrices for document {document_id}"
+            )
+        else:
+            logger.info(
+                f"No matrix cells found for document {document_id}, skipping QA job queueing"
+            )
 
-                # Group by entity set to get unique entity sets and their matrices
-                entity_set_ids = list(set(member.entity_set_id for member in members))
-                entity_sets = await entity_set_repo.get_by_ids(entity_set_ids)
-                logger.info(
-                    f"Found {len(entity_sets)} entity sets: {[(es.id, es.matrix_id, es.name) for es in entity_sets]}"
-                )
-
-                # Get cells for each matrix
-                all_matrix_cells = []
-                for entity_set in entity_sets:
-                    matrix_cells = await matrix_service.get_matrix_cells_by_document(
-                        entity_set.matrix_id, document_id, entity_set.id
-                    )
-                    logger.info(
-                        f"Found {len(matrix_cells)} cells for entity_set {entity_set.id} "
-                        f"(matrix {entity_set.matrix_id}, name '{entity_set.name}')"
-                    )
-                    all_matrix_cells.extend(matrix_cells)
-
-                matrix_ids = list(set(es.matrix_id for es in entity_sets))
-
-                queued_count = 0
-                if all_matrix_cells:
-                    queued_count = (
-                        await batch_processing_service.create_jobs_and_queue_for_cells(
-                            all_matrix_cells
-                        )
-                    )
-                    logger.info(
-                        f"Queued {queued_count} QA jobs across {len(matrix_ids)} matrices for document {document_id}"
-                    )
-                else:
-                    logger.info(
-                        f"No matrix cells found for document {document_id}, skipping QA job queueing"
-                    )
-
-                return queued_count
-
-            except Exception as e:
-                logger.error(f"Error queueing QA jobs for document {document_id}: {e}")
-                raise
+        return queued_count
 
 
 @activity.defn
@@ -246,27 +209,21 @@ async def get_document_details_activity(
     ):
         logger.info(f"Getting document details for document {document_id}")
 
-        async for db_session in get_db():
-            try:
-                document_service = get_document_service(db_session)
-                document = await document_service.get_document(document_id)
+        document_service = get_document_service()
+        document = await document_service.get_document(document_id)
 
-                if not document:
-                    raise ValueError(f"Document {document_id} not found")
+        if not document:
+            raise ValueError(f"Document {document_id} not found")
 
-                file_type = document_service.get_file_type_from_document(document)
+        file_type = document_service.get_file_type_from_document(document)
 
-                result = {
-                    "file_type": file_type,
-                    "content_type": document.content_type,
-                    "company_id": document.company_id,
-                }
+        result = {
+            "file_type": file_type,
+            "content_type": document.content_type,
+            "company_id": document.company_id,
+        }
 
-                logger.info(
-                    f"Document {document_id} details: file_type={file_type}, content_type={document.content_type}, company_id={document.company_id}"
-                )
-                return result
-
-            except Exception as e:
-                logger.error(f"Error getting document details: {e}")
-                raise
+        logger.info(
+            f"Document {document_id} details: file_type={file_type}, content_type={document.content_type}, company_id={document.company_id}"
+        )
+        return result

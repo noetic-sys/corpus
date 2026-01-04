@@ -24,7 +24,7 @@ from packages.workspaces.models.database.workspace import WorkspaceEntity
 @pytest.fixture
 def question_template_variable_service(test_db):
     """Create a QuestionTemplateVariableService instance."""
-    return QuestionTemplateVariableService(test_db)
+    return QuestionTemplateVariableService()
 
 
 @pytest.fixture

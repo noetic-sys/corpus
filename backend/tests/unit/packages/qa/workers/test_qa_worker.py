@@ -105,8 +105,8 @@ class TestQAWorker:
         mock_lock_provider.acquire_lock.return_value = "test_lock_token"
         mock_lock_provider.release_lock.return_value = True
 
-        # Process message - all services work with real database
-        await qa_worker.process_message(sample_message, test_db)
+        # Process message - services handle their own sessions
+        await qa_worker.process_message(sample_message)
 
         # Verify external calls
         mock_strategy.process_cell_to_completion.assert_called_once_with(
@@ -208,7 +208,7 @@ class TestQAWorker:
         mock_lock_provider.acquire_lock.return_value = "test_lock_token"
         mock_lock_provider.release_lock.return_value = True
 
-        await qa_worker.process_message(sample_message, test_db)
+        await qa_worker.process_message(sample_message)
 
         # Verify lock was acquired and released
         mock_lock_provider.acquire_lock.assert_called_once_with(
@@ -245,7 +245,7 @@ class TestQAWorker:
         # Mock failed lock acquisition
         mock_lock_provider.acquire_lock.return_value = None
 
-        await qa_worker.process_message(sample_message, test_db)
+        await qa_worker.process_message(sample_message)
 
         # Verify lock acquisition was attempted
         mock_lock_provider.acquire_lock.assert_called_once_with(
@@ -268,7 +268,7 @@ class TestQAWorker:
     ):
         """Test processing when cell is already completed (with lock held)."""
         # Create an answer first using matrix service
-        matrix_service = MatrixService(test_db)
+        matrix_service = MatrixService()
         answer_data = TextAnswerData(type="text", value="Already completed answer")
         ai_answer_set = AIAnswerSet.found([answer_data])
         await matrix_service.create_matrix_cell_answer_set_from_ai(
@@ -286,7 +286,7 @@ class TestQAWorker:
         mock_lock_provider.acquire_lock.return_value = "test_lock_token"
         mock_lock_provider.release_lock.return_value = True
 
-        await qa_worker.process_message(sample_message, test_db)
+        await qa_worker.process_message(sample_message)
 
         # Verify lock was acquired and released
         mock_lock_provider.acquire_lock.assert_called_once()
@@ -327,7 +327,7 @@ class TestQAWorker:
         mock_lock_provider.release_lock.return_value = True
 
         with pytest.raises(Exception, match="Strategy processing failed"):
-            await qa_worker.process_message(sample_message, test_db)
+            await qa_worker.process_message(sample_message)
 
         # Verify lock was acquired and released despite the exception
         mock_lock_provider.acquire_lock.assert_called_once()
@@ -365,7 +365,7 @@ class TestQAWorker:
         mock_lock_provider.release_lock.return_value = True
 
         with pytest.raises(Exception, match="Strategy processing failed"):
-            await qa_worker.process_message(sample_message, test_db)
+            await qa_worker.process_message(sample_message)
 
         # Verify lock was acquired and released
         mock_lock_provider.acquire_lock.assert_called_once()
@@ -397,7 +397,7 @@ class TestQAWorker:
             matrix_cell_id=99999,  # Non-existent
         )
 
-        await qa_worker.process_message(invalid_message, test_db)
+        await qa_worker.process_message(invalid_message)
 
         # Verify lock was acquired and released
         mock_lock_provider.acquire_lock.assert_called_once()
@@ -421,7 +421,7 @@ class TestQAWorker:
         # Simulate that lock acquisition fails (another worker got it)
         mock_lock_provider.acquire_lock.return_value = None
 
-        await qa_worker.process_message(sample_message, test_db)
+        await qa_worker.process_message(sample_message)
 
         # Verify lock acquisition was attempted
         mock_lock_provider.acquire_lock.assert_called_once_with(
@@ -444,7 +444,7 @@ class TestQAWorker:
     ):
         """Test that multiple workers processing the same cell handle idempotency correctly."""
         # Create an answer first using matrix service
-        matrix_service = MatrixService(test_db)
+        matrix_service = MatrixService()
         answer_data = TextAnswerData(type="text", value="First worker completed this")
         ai_answer_set = AIAnswerSet.found([answer_data])
         await matrix_service.create_matrix_cell_answer_set_from_ai(
@@ -462,7 +462,7 @@ class TestQAWorker:
         mock_lock_provider.acquire_lock.return_value = "test_lock_token"
         mock_lock_provider.release_lock.return_value = True
 
-        await qa_worker.process_message(sample_message, test_db)
+        await qa_worker.process_message(sample_message)
 
         # Verify lock was acquired and released
         mock_lock_provider.acquire_lock.assert_called_once()

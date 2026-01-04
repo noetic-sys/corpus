@@ -1,11 +1,8 @@
 from typing import List, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from common.db.session import get_db, get_db_readonly
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
-from common.db.transaction_utils import transaction
+from common.db.scoped import transaction
 from packages.questions.models.schemas.question import (
     QuestionCreate,
     QuestionUpdate,
@@ -78,15 +75,14 @@ async def create_question(
         ),
     ],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    async with transaction(db):
-        question_service = get_question_service(db)
-        document_service = get_document_service(db)
-        batch_processing_service = get_batch_processing_service(db)
-        template_processing_service = TemplateProcessingService(db)
-        question_template_service = QuestionTemplateVariableService(db)
-        entity_set_service = get_entity_set_service(db)
+    async with transaction():
+        question_service = get_question_service()
+        document_service = get_document_service()
+        batch_processing_service = get_batch_processing_service()
+        template_processing_service = TemplateProcessingService()
+        question_template_service = QuestionTemplateVariableService()
+        entity_set_service = get_entity_set_service()
         member_repo = EntitySetMemberRepository()
 
         # Validate template variables if question contains them
@@ -192,9 +188,8 @@ async def create_question(
 async def get_question(
     question_id: int = Path(alias="questionId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
-    question_service = get_question_service(db)
+    question_service = get_question_service()
 
     question = await question_service.get_question(question_id, current_user.company_id)
     if question is None:
@@ -220,13 +215,12 @@ async def update_question(
     question_id: Annotated[int, Path(alias="questionId")],
     question_update: QuestionUpdate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    async with transaction(db):
-        question_service = get_question_service(db)
-        reprocessing_service = get_reprocessing_service(db)
-        template_processing_service = TemplateProcessingService(db)
-        question_template_service = QuestionTemplateVariableService(db)
+    async with transaction():
+        question_service = get_question_service()
+        reprocessing_service = get_reprocessing_service()
+        template_processing_service = TemplateProcessingService()
+        question_template_service = QuestionTemplateVariableService()
 
         # First, get the question to get the matrix_id
         existing_question = await question_service.get_question(
@@ -296,11 +290,10 @@ async def update_question(
 async def update_question_label(
     question_id: Annotated[int, Path(alias="questionId")],
     label_update: QuestionLabelUpdate,
-    db: AsyncSession = Depends(get_db),
 ):
     """Update only the label of a question. This operation does not trigger reprocessing."""
-    async with transaction(db):
-        question_service = get_question_service(db)
+    async with transaction():
+        question_service = get_question_service()
 
         # Convert schema to domain model preserving field set
         label_domain_update = map_preserving_fields_set(
@@ -322,9 +315,8 @@ async def update_question_label(
 async def delete_question(
     question_id: int = Path(alias="questionId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    question_service = get_question_service(db)
+    question_service = get_question_service()
     success = await question_service.delete_question(
         question_id, current_user.company_id
     )
@@ -343,10 +335,9 @@ async def delete_question(
 async def get_questions_by_matrix(
     matrix_id: int = Path(alias="matrixId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all questions for a specific matrix."""
-    question_service = get_question_service(db)
+    question_service = get_question_service()
 
     questions = await question_service.get_questions_for_matrix(
         matrix_id, current_user.company_id
@@ -368,17 +359,16 @@ async def create_question_with_options(
         ),
     ],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     # TODO: verify user company owns matrix
     """Create a question with options transactionally (for SINGLE_SELECT questions)."""
-    async with transaction(db):
-        question_service = get_question_service(db)
-        document_service = get_document_service(db)
-        batch_processing_service = get_batch_processing_service(db)
-        template_processing_service = TemplateProcessingService(db)
-        question_template_service = QuestionTemplateVariableService(db)
-        entity_set_service = get_entity_set_service(db)
+    async with transaction():
+        question_service = get_question_service()
+        document_service = get_document_service()
+        batch_processing_service = get_batch_processing_service()
+        template_processing_service = TemplateProcessingService()
+        question_template_service = QuestionTemplateVariableService()
+        entity_set_service = get_entity_set_service()
         member_repo = EntitySetMemberRepository()
 
         # Validate template variables if question contains them
@@ -511,13 +501,12 @@ async def update_question_with_options(
     question_id: Annotated[int, Path(alias="questionId")],
     question_update: QuestionWithOptionsUpdate,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Update a question with options and automatically reprocess affected cells."""
-    async with transaction(db):
-        question_service = get_question_service(db)
-        template_processing_service = TemplateProcessingService(db)
-        question_template_service = QuestionTemplateVariableService(db)
+    async with transaction():
+        question_service = get_question_service()
+        template_processing_service = TemplateProcessingService()
+        question_template_service = QuestionTemplateVariableService()
 
         # Validate template variables if question_text is being updated
         if (
@@ -578,7 +567,6 @@ async def update_question_with_options(
 async def create_question_option_set(
     question_id: Annotated[int, Path(alias="questionId")],
     option_set: QuestionOptionSetCreate,
-    db: AsyncSession = Depends(get_db),
 ):
     """Create an option set for a question."""
     # Convert schema to domain model
@@ -587,7 +575,7 @@ async def create_question_option_set(
     ]
     domain_option_set = QuestionOptionSetCreateModel(options=domain_options)
 
-    question_option_service = get_question_option_service(db)
+    question_option_service = get_question_option_service()
     return await question_option_service.create_option_set(
         question_id, domain_option_set
     )
@@ -598,10 +586,9 @@ async def create_question_option_set(
 )
 async def get_question_option_set(
     question_id: int = Path(alias="questionId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get option set for a question."""
-    question_option_service = get_question_option_service(db)
+    question_option_service = get_question_option_service()
     option_set = await question_option_service.get_option_set_with_options(question_id)
     if option_set is None:
         raise HTTPException(status_code=404, detail="Option set not found")
@@ -614,7 +601,6 @@ async def get_question_option_set(
 async def update_question_option_set(
     question_id: Annotated[int, Path(alias="questionId")],
     option_set_update: QuestionOptionSetUpdate,
-    db: AsyncSession = Depends(get_db),
 ):
     """Update option set for a question."""
     # Convert schema to domain model
@@ -626,7 +612,7 @@ async def update_question_option_set(
         ]
     domain_option_set_update = QuestionOptionSetUpdateModel(options=domain_options)
 
-    question_option_service = get_question_option_service(db)
+    question_option_service = get_question_option_service()
     option_set = await question_option_service.update_option_set(
         question_id, domain_option_set_update
     )
@@ -637,10 +623,10 @@ async def update_question_option_set(
 
 @router.delete("/questions/{questionId}/option-sets/")
 async def delete_question_option_set(
-    question_id: int = Path(alias="questionId"), db: AsyncSession = Depends(get_db)
+    question_id: int = Path(alias="questionId"),
 ):
     """Delete option set for a question."""
-    question_option_service = get_question_option_service(db)
+    question_option_service = get_question_option_service()
     success = await question_option_service.delete_option_set(question_id)
     if not success:
         raise HTTPException(status_code=404, detail="Option set not found")
@@ -651,13 +637,12 @@ async def delete_question_option_set(
 async def add_option_to_question(
     question_id: Annotated[int, Path(alias="questionId")],
     option: QuestionOptionCreateSchema,
-    db: AsyncSession = Depends(get_db),
 ):
     """Add a single option to a question's option set."""
     # Convert schema to domain model
     domain_option = QuestionOptionCreateModel(value=option.value)
 
-    question_option_service = get_question_option_service(db)
+    question_option_service = get_question_option_service()
     return await question_option_service.add_option_to_set(question_id, domain_option)
 
 
@@ -666,10 +651,9 @@ async def add_option_to_question(
 )
 async def get_question_options(
     question_id: int = Path(alias="questionId"),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Get all options for a question."""
-    question_option_service = get_question_option_service(db)
+    question_option_service = get_question_option_service()
     return await question_option_service.get_options_for_question(question_id)
 
 
@@ -680,10 +664,9 @@ async def get_question_options(
 async def validate_question_template_variables(
     question_id: int = Path(alias="questionId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """Validate template variables for a question."""
-    question_template_service = QuestionTemplateVariableService(db)
+    question_template_service = QuestionTemplateVariableService()
     return await question_template_service.validate_question_template_variables(
         question_id, current_user.company_id
     )
@@ -693,15 +676,14 @@ async def validate_question_template_variables(
 async def duplicate_question(
     question_id: int = Path(alias="questionId"),
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ):
     """Duplicate a question within the same matrix, including its options."""
-    async with transaction(db):
-        question_service = get_question_service(db)
-        document_service = get_document_service(db)
-        batch_processing_service = get_batch_processing_service(db)
-        question_template_service = QuestionTemplateVariableService(db)
-        entity_set_service = get_entity_set_service(db)
+    async with transaction():
+        question_service = get_question_service()
+        document_service = get_document_service()
+        batch_processing_service = get_batch_processing_service()
+        question_template_service = QuestionTemplateVariableService()
+        entity_set_service = get_entity_set_service()
         member_repo = EntitySetMemberRepository()
 
         # Duplicate the question

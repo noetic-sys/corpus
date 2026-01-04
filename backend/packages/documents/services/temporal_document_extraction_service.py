@@ -1,6 +1,5 @@
 from typing import Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from temporalio.client import Client
 from temporalio.common import WorkflowIDConflictPolicy
@@ -31,10 +30,7 @@ logger = get_logger(__name__)
 class TemporalDocumentExtractionService:
     """Service for handling document extraction using Temporal workflows."""
 
-    def __init__(
-        self, db_session: AsyncSession, temporal_client: Optional[Client] = None
-    ):
-        self.db_session = db_session
+    def __init__(self, temporal_client: Optional[Client] = None):
         self.extraction_job_repo = DocumentExtractionJobRepository()
         self.document_repo = DocumentRepository()
         self._temporal_client = temporal_client
@@ -367,8 +363,6 @@ class TemporalDocumentExtractionService:
             raise
 
 
-def get_temporal_document_extraction_service(
-    db_session: AsyncSession,
-) -> TemporalDocumentExtractionService:
+def get_temporal_document_extraction_service() -> TemporalDocumentExtractionService:
     """Get Temporal document extraction service instance."""
-    return TemporalDocumentExtractionService(db_session)
+    return TemporalDocumentExtractionService()

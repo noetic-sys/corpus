@@ -1,6 +1,5 @@
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 
 from packages.workflows.models.domain.execution import (
@@ -15,7 +14,7 @@ from packages.workflows.repositories.workflow_repository import WorkflowReposito
 from packages.workflows.temporal.workflow_execution_workflow import (
     WorkflowExecutionWorkflow,
 )
-from common.db.transaction_utils import transactional
+from common.db.context import transactional
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from common.core.config import settings
 
@@ -33,8 +32,7 @@ class WorkflowExecutionService:
     Actual execution happens in Temporal workflows/activities.
     """
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.execution_repo = WorkflowExecutionRepository()
         self.workflow_repo = WorkflowRepository()
 
@@ -146,6 +144,6 @@ class WorkflowExecutionService:
         return await self.execution_repo.update(execution_id, update_data)
 
 
-def get_execution_service(db_session: AsyncSession) -> WorkflowExecutionService:
+def get_execution_service() -> WorkflowExecutionService:
     """Get execution service instance."""
-    return WorkflowExecutionService(db_session)
+    return WorkflowExecutionService()

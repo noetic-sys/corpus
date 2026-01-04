@@ -61,7 +61,7 @@ class GetMatrixTool(Tool[GetMatrixParameters]):
     ) -> ToolResult:
         try:
             matrix = await get_matrix(
-                matrix_id=parameters.matrix_id, current_user=as_user, db=session
+                matrix_id=parameters.matrix_id, current_user=as_user
             )
 
             return ToolResult.ok(GetMatrixSuccessResult(matrix=matrix))

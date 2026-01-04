@@ -7,9 +7,6 @@ via the workflow-agent tag.
 
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from common.db.session import get_db_readonly, get_db
 from packages.auth.dependencies import get_current_active_user
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.documents.models.schemas.chunk import (
@@ -44,7 +41,6 @@ logger = get_logger(__name__)
 async def list_document_chunks(
     document_id: Annotated[int, Path(alias="documentId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """
     Get chunk metadata for a document (without content).
@@ -53,13 +49,13 @@ async def list_document_chunks(
     allowing agents to discover available chunks before reading specific ones.
     """
     # Verify document exists and user has access
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     document = await document_service.get_document(document_id, current_user.company_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Get chunks
-    chunking_service = get_document_chunking_service(db)
+    chunking_service = get_document_chunking_service()
     chunks = await chunking_service.get_chunks_for_document(
         document_id=document_id, company_id=current_user.company_id
     )
@@ -89,7 +85,6 @@ async def read_document_chunk(
     document_id: Annotated[int, Path(alias="documentId")],
     chunk_id: Annotated[str, Path(alias="chunkId")],
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """
     Read the full content of a specific chunk.
@@ -98,13 +93,13 @@ async def read_document_chunk(
     then read specific chunks as needed for answering questions.
     """
     # Verify document exists and user has access
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     document = await document_service.get_document(document_id, current_user.company_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Get all chunks for document
-    chunking_service = get_document_chunking_service(db)
+    chunking_service = get_document_chunking_service()
     chunks = await chunking_service.get_chunks_for_document(
         document_id=document_id, company_id=current_user.company_id
     )
@@ -141,7 +136,6 @@ async def search_document_chunks(
     section: Annotated[str | None, Query(description="Filter by section title")] = None,
     page: Annotated[int | None, Query(description="Filter by page number")] = None,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """
     Search chunks by metadata filters (section, page, etc.).
@@ -149,13 +143,13 @@ async def search_document_chunks(
     Useful for agents to narrow down relevant chunks before reading content.
     """
     # Verify document exists and user has access
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     document = await document_service.get_document(document_id, current_user.company_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Get all chunks
-    chunking_service = get_document_chunking_service(db)
+    chunking_service = get_document_chunking_service()
     chunks = await chunking_service.get_chunks_for_document(
         document_id=document_id, company_id=current_user.company_id
     )
@@ -216,7 +210,6 @@ async def hybrid_search_chunks(
         bool, Query(description="Enable vector search (default: true)")
     ] = True,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db_readonly),
 ):
     """
     Hybrid search across chunks using BM25 + vector search.
@@ -239,7 +232,7 @@ async def hybrid_search_chunks(
     )
 
     # Execute hybrid search
-    search_service = get_chunk_search_service(db)
+    search_service = get_chunk_search_service()
     result = await search_service.hybrid_search_chunks(
         query=query,
         filters=filters,
@@ -278,7 +271,6 @@ async def upload_document_chunks(
     document_id: Annotated[int, Path(alias="documentId")],
     upload_request: ChunksUploadRequest,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
 ) -> ChunksUploadResponse:
     """
     Upload chunks from chunking agent container.
@@ -302,13 +294,13 @@ async def upload_document_chunks(
         )
 
     # Verify document exists
-    document_service = get_document_service(db)
+    document_service = get_document_service()
     document = await document_service.get_document(document_id, current_user.company_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Process chunk upload
-    chunk_upload_service = get_chunk_upload_service(db)
+    chunk_upload_service = get_chunk_upload_service()
     s3_prefix = await chunk_upload_service.process_chunk_upload(
         document_id=document_id,
         company_id=current_user.company_id,

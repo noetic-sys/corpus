@@ -2,7 +2,6 @@ import asyncio
 import hashlib
 import os
 from typing import List, Optional, Tuple, Dict
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile, HTTPException
 
 from common.providers.storage.factory import get_storage
@@ -36,6 +35,7 @@ from packages.documents.models.domain.document_search import (
 )
 from packages.billing.services.quota_service import QuotaService
 from common.core.otel_axiom_exporter import trace_span, get_logger
+from common.db.scoped import transaction
 
 logger = get_logger(__name__)
 
@@ -43,12 +43,11 @@ logger = get_logger(__name__)
 class DocumentService:
     """Service for handling document operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.document_repo = DocumentRepository()
         self.storage = get_storage()
         self.bloom_filter = get_bloom_filter_provider()
-        self.search_provider = get_document_search_provider(db_session)
+        self.search_provider = get_document_search_provider()
         self.indexing_job_service = DocumentIndexingJobService()
 
     async def _calculate_checksum_from_stream(self, file: UploadFile) -> str:
@@ -131,33 +130,32 @@ class DocumentService:
         if not success:
             raise HTTPException(status_code=500, detail="Failed to upload file")
 
-        # Create document record
-        document_create = DocumentCreateModel(
-            filename=file.filename,
-            storage_key=storage_key,
-            content_type=file.content_type,
-            file_size=file.size,
-            checksum=checksum,
-            company_id=company_id,
-            extraction_status=ExtractionStatus.PENDING,
-        )
-        document = await self.document_repo.create(document_create)
+        # Create document record in transaction - commits when exiting context
+        async with transaction():
+            document_create = DocumentCreateModel(
+                filename=file.filename,
+                storage_key=storage_key,
+                content_type=file.content_type,
+                file_size=file.size,
+                checksum=checksum,
+                company_id=company_id,
+                extraction_status=ExtractionStatus.PENDING,
+            )
+            document = await self.document_repo.create(document_create)
 
-        logger.info(f"Created document with ID: {document.id} for company {company_id}")
+            logger.info(
+                f"Created document with ID: {document.id} for company {company_id}"
+            )
 
-        # Add checksum to company-specific bloom filter
-        filter_name = f"document_checksums_{company_id}"
-        await self.bloom_filter.add(filter_name, checksum)
-        logger.debug(
-            f"Added checksum {checksum} to bloom filter for company {company_id}"
-        )
+            # Add checksum to company-specific bloom filter
+            filter_name = f"document_checksums_{company_id}"
+            await self.bloom_filter.add(filter_name, checksum)
+            logger.debug(
+                f"Added checksum {checksum} to bloom filter for company {company_id}"
+            )
 
-        # IMPORTANT: Commit the document before queueing extraction and indexing
-        # so the workers can see it when processing the messages
-        await self.db_session.commit()
-        logger.info(
-            "Committed document to database before queueing extraction and indexing"
-        )
+        # Transaction committed - workers can now see the document
+        logger.info("Committed document to database before queueing indexing")
 
         # Queue document for async indexing instead of synchronous indexing
         try:
@@ -418,7 +416,7 @@ class DocumentService:
         file_size = os.path.getsize(temp_file_path)
 
         # Check storage quota with actual file size before uploading
-        quota_service = QuotaService(self.db_session)
+        quota_service = QuotaService()
         quota_check = await quota_service.check_storage_quota(
             company_id=company_id,
             file_size_bytes=file_size,
@@ -497,7 +495,7 @@ class DocumentService:
         self, company_id: int, query: str, limit: int, snippets_per_doc: int
     ) -> Dict[int, DocumentMatchData]:
         """Search chunks and group by document."""
-        chunk_search_service = get_chunk_search_service(self.db_session)
+        chunk_search_service = get_chunk_search_service()
         filters = ChunkSearchFilters(company_id=company_id)
 
         result = await chunk_search_service.hybrid_search_chunks(
@@ -553,6 +551,6 @@ class DocumentService:
         return chunk_matches
 
 
-def get_document_service(db_session: AsyncSession) -> DocumentService:
+def get_document_service() -> DocumentService:
     """Get document service instance."""
-    return DocumentService(db_session)
+    return DocumentService()

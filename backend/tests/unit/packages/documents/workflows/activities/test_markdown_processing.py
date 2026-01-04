@@ -162,14 +162,12 @@ class TestCombineMarkdownActivity:
     "packages.documents.workflows.activities.markdown_processing.create_span_with_context"
 )
 @patch("packages.documents.workflows.activities.markdown_processing.get_storage")
-@patch("packages.documents.workflows.activities.markdown_processing.get_db")
 class TestSaveMarkdownToS3Activity:
     """Unit tests for save_markdown_to_s3_activity."""
 
     @pytest.mark.asyncio
     async def test_save_markdown_success(
         self,
-        mock_get_db,
         mock_get_storage,
         mock_create_span,
         test_db,
@@ -177,12 +175,7 @@ class TestSaveMarkdownToS3Activity:
         sample_company,
     ):
         """Test successful saving of markdown content to S3."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider
         mock_storage = AsyncMock()
@@ -220,15 +213,10 @@ class TestSaveMarkdownToS3Activity:
 
     @pytest.mark.asyncio
     async def test_save_markdown_upload_failure(
-        self, mock_get_db, mock_get_storage, mock_create_span, test_db, sample_document
+        self, mock_get_storage, mock_create_span, test_db, sample_document
     ):
         """Test when S3 upload returns False (failure)."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider to return False (upload failure)
         mock_storage = AsyncMock()
@@ -247,15 +235,10 @@ class TestSaveMarkdownToS3Activity:
 
     @pytest.mark.asyncio
     async def test_save_markdown_storage_exception(
-        self, mock_get_db, mock_get_storage, mock_create_span, test_db, sample_document
+        self, mock_get_storage, mock_create_span, test_db, sample_document
     ):
         """Test when storage upload raises an exception."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider to raise exception
         mock_storage = AsyncMock()
@@ -275,7 +258,6 @@ class TestSaveMarkdownToS3Activity:
     @pytest.mark.asyncio
     async def test_save_markdown_no_trace_headers(
         self,
-        mock_get_db,
         mock_get_storage,
         mock_create_span,
         test_db,
@@ -283,12 +265,7 @@ class TestSaveMarkdownToS3Activity:
         sample_company,
     ):
         """Test saving markdown without trace headers."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider
         mock_storage = AsyncMock()
@@ -315,7 +292,6 @@ class TestSaveMarkdownToS3Activity:
     @pytest.mark.asyncio
     async def test_save_markdown_unicode_content(
         self,
-        mock_get_db,
         mock_get_storage,
         mock_create_span,
         test_db,
@@ -323,12 +299,7 @@ class TestSaveMarkdownToS3Activity:
         sample_company,
     ):
         """Test saving markdown with unicode characters."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider
         mock_storage = AsyncMock()
@@ -357,7 +328,6 @@ class TestSaveMarkdownToS3Activity:
     @pytest.mark.asyncio
     async def test_save_markdown_empty_content(
         self,
-        mock_get_db,
         mock_get_storage,
         mock_create_span,
         test_db,
@@ -365,12 +335,7 @@ class TestSaveMarkdownToS3Activity:
         sample_company,
     ):
         """Test saving empty markdown content."""
-
-        # Setup database mock
-        async def mock_db_generator():
-            yield test_db
-
-        mock_get_db.return_value = mock_db_generator()
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage provider
         mock_storage = AsyncMock()

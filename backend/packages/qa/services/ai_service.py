@@ -3,7 +3,6 @@ import os
 from deprecated import deprecated
 from functools import lru_cache
 from typing import Optional, Dict, Any, List
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.providers.ai import get_ai_provider
 from common.providers.ai.interface import AIProviderInterface
@@ -29,10 +28,8 @@ logger = get_logger(__name__)
 class AIService:
     """Service that handles AI-related business logic using any AI provider."""
 
-    def __init__(self, provider: AIProviderInterface, db_session: AsyncSession):
-
+    def __init__(self, provider: AIProviderInterface):
         self.provider = provider
-        self.db_session = db_session
         # Navigate to project root and find prompts directory
         project_root = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -245,18 +242,16 @@ Please return a JSON object with the extracted information."""
 
 @deprecated
 def get_ai_service(
-    db_session: AsyncSession,
     provider_type: Optional[str] = None,
     model_name: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> AIService:
     """Get AI service instance with specified provider and model."""
     provider = get_ai_provider(provider_type, model_name)
-    return AIService(provider, db_session)
+    return AIService(provider)
 
 
 async def get_ai_service_for_question(
-    db_session: AsyncSession,
     question: QuestionModel,
     ai_config_override: Optional[dict] = None,
 ) -> AIService:
@@ -278,8 +273,8 @@ async def get_ai_service_for_question(
 
             # Create provider with specific model
             provider = get_ai_provider(provider_type, model_name)
-            return AIService(provider, db_session)
+            return AIService(provider)
 
     # Use global default
     provider = get_ai_provider()
-    return AIService(provider, db_session)
+    return AIService(provider)

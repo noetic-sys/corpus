@@ -98,7 +98,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_creates_cells_for_all_document_question_combinations(self, test_db):
         """Test that strategy creates one cell for each document × question."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -123,7 +123,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_cell_has_correct_attributes(self, test_db):
         """Test that created cells have correct matrix_id, company_id, status, and cell_type."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -150,7 +150,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_cell_has_two_entity_refs(self, test_db):
         """Test that standard matrix cells have exactly 2 entity references (document + question)."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -174,7 +174,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_entity_refs_have_correct_roles(self, test_db):
         """Test that entity refs have DOCUMENT and QUESTION roles."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -200,7 +200,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_entity_refs_have_correct_entity_ids(self, test_db):
         """Test that entity refs map to correct entity IDs."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -237,7 +237,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_correct_combinations_generated(self, test_db):
         """Test that all document × question combinations are generated."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -273,7 +273,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_empty_documents_returns_empty_list(self, test_db):
         """Test that empty document list returns no cells."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -296,7 +296,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_empty_questions_returns_empty_list(self, test_db):
         """Test that empty question list returns no cells."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -319,7 +319,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_adding_new_document_pairs_with_all_questions(self, test_db):
         """Test that adding a new document creates cells with all questions."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -344,7 +344,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_adding_new_question_pairs_with_all_documents(self, test_db):
         """Test that adding a new question creates cells with all documents."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -369,7 +369,7 @@ class TestStandardMatrixStrategy:
     @pytest.mark.asyncio
     async def test_ten_documents_creates_correct_cells_for_new_question(self, test_db):
         """Test that adding a question to 10 documents creates 10 cells."""
-        strategy = StandardMatrixStrategy(test_db)
+        strategy = StandardMatrixStrategy()
 
         matrix_id = 1
         company_id = 100

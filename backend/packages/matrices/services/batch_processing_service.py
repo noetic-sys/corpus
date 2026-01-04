@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.matrices.strategies.factory import CellStrategyFactory
 from packages.matrices.models.domain.matrix import (
@@ -28,7 +27,7 @@ from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.messages import QAJobMessage
 from common.providers.messaging.constants import QueueName
 from common.core.otel_axiom_exporter import trace_span, get_logger
-from common.db.transaction_utils import TransactionMixin
+from common.db.scoped import transaction
 from packages.billing.services.usage_service import UsageService
 from packages.billing.services.quota_service import QuotaService
 from packages.matrices.models.domain.matrix_enums import EntityType
@@ -39,16 +38,15 @@ from packages.matrices.models.domain.matrix_enums import EntityType
 logger = get_logger(__name__)
 
 
-class BatchProcessingService(TransactionMixin):
+class BatchProcessingService:
     """Service for batch processing matrix cells and QA jobs."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.matrix_repo = MatrixRepository()
         self.matrix_cell_repo = MatrixCellRepository()
         self.cell_entity_ref_repo = CellEntityReferenceRepository()
         self.entity_set_member_repo = EntitySetMemberRepository()
-        self.entity_set_service = EntitySetService(db_session)
+        self.entity_set_service = EntitySetService()
         # TODO: i think this actually needs to be a service call here
         self.qa_job_repo = QAJobRepository()
         self.message_queue = get_message_queue()
@@ -66,7 +64,7 @@ class BatchProcessingService(TransactionMixin):
         if not cell_models:
             return 0
 
-        quota_service = QuotaService(self.db_session)
+        quota_service = QuotaService()
 
         # Check cell operation quota (raises 429 if exceeded)
         await quota_service.check_cell_operation_quota(company_id)
@@ -86,7 +84,7 @@ class BatchProcessingService(TransactionMixin):
                 QuestionService,
             )
 
-            question_service = QuestionService(self.db_session)
+            question_service = QuestionService()
             agentic_count = await question_service.count_agentic_questions(
                 question_ids, company_id
             )
@@ -240,97 +238,98 @@ class BatchProcessingService(TransactionMixin):
         if not entity_set_ids:
             return [], []
 
-        try:
-            # Get matrix
-            matrix = await self.matrix_repo.get(matrix_id)
-            if not matrix:
-                raise ValueError(f"Matrix {matrix_id} not found")
+        # Get matrix
+        matrix = await self.matrix_repo.get(matrix_id)
+        if not matrix:
+            raise ValueError(f"Matrix {matrix_id} not found")
 
-            # Get all members from each entity set
-            entity_ids_by_set = {}
-            for entity_set_id in entity_set_ids:
-                members = await self.entity_set_service.get_entity_set_members(
-                    entity_set_id, matrix.company_id
-                )
-                entity_ids_by_set[entity_set_id] = [m.entity_id for m in members]
-                logger.info(f"Entity set {entity_set_id} has {len(members)} members")
-
-            # Check if any entity set is empty
-            if any(len(ids) == 0 for ids in entity_ids_by_set.values()):
-                logger.warning("One or more entity sets are empty, no cells to create")
-                return [], []
-
-            # Get strategy and use it to create cell models
-            # We'll call the strategy for each entity in the first entity set
-            # This is a bit hacky but maintains the deduplication logic
-
-            all_cell_models = []
-            strategy = CellStrategyFactory.get_strategy(
-                matrix.matrix_type, self.db_session
+        # Get all members from each entity set
+        entity_ids_by_set = {}
+        for entity_set_id in entity_set_ids:
+            members = await self.entity_set_service.get_entity_set_members(
+                entity_set_id, matrix.company_id
             )
+            entity_ids_by_set[entity_set_id] = [m.entity_id for m in members]
+            logger.info(f"Entity set {entity_set_id} has {len(members)} members")
 
-            # Get first entity set to iterate over
-            first_entity_set_id = entity_set_ids[0]
-            first_entity_ids = entity_ids_by_set[first_entity_set_id]
+        # Check if any entity set is empty
+        if any(len(ids) == 0 for ids in entity_ids_by_set.values()):
+            logger.warning("One or more entity sets are empty, no cells to create")
+            return [], []
 
-            logger.info(
-                f"Creating cells by processing {len(first_entity_ids)} entities from first entity set"
+        # Get strategy and use it to create cell models
+        # We'll call the strategy for each entity in the first entity set
+        # This is a bit hacky but maintains the deduplication logic
+
+        all_cell_models = []
+        strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
+
+        # Get first entity set to iterate over
+        first_entity_set_id = entity_set_ids[0]
+        first_entity_ids = entity_ids_by_set[first_entity_set_id]
+
+        logger.info(
+            f"Creating cells by processing {len(first_entity_ids)} entities from first entity set"
+        )
+
+        # Process each entity in the first set
+        for entity_id in first_entity_ids:
+            cell_models = await strategy.create_cells_for_new_entity(
+                matrix_id,
+                matrix.company_id,
+                entity_id,
+                first_entity_set_id,
             )
+            all_cell_models.extend(cell_models)
 
-            # Process each entity in the first set
-            for entity_id in first_entity_ids:
-                cell_models = await strategy.create_cells_for_new_entity(
-                    matrix_id,
-                    matrix.company_id,
-                    entity_id,
-                    first_entity_set_id,
-                )
-                all_cell_models.extend(cell_models)
+        logger.info(f"Strategy generated {len(all_cell_models)} total cell models")
 
-            logger.info(f"Strategy generated {len(all_cell_models)} total cell models")
+        # FAST PATH DEDUPLICATION: Check if matrix has any cells
+        matrix_has_cells = await self.matrix_cell_repo.matrix_has_cells(
+            matrix_id, matrix.company_id
+        )
 
-            # FAST PATH DEDUPLICATION: Check if matrix has any cells
-            matrix_has_cells = await self.matrix_cell_repo.matrix_has_cells(
-                matrix_id, matrix.company_id
+        if matrix_has_cells:
+            logger.info("Matrix has existing cells, loading refs for deduplication")
+            # SLOW PATH: Load all refs for deduplication
+            all_existing_refs = await self.cell_entity_ref_repo.get_by_matrix_id(
+                matrix_id
             )
+            refs_by_cell = {}
+            for ref in all_existing_refs:
+                if ref.matrix_cell_id not in refs_by_cell:
+                    refs_by_cell[ref.matrix_cell_id] = []
+                refs_by_cell[ref.matrix_cell_id].append(ref)
 
-            if matrix_has_cells:
-                logger.info("Matrix has existing cells, loading refs for deduplication")
-                # SLOW PATH: Load all refs for deduplication
-                all_existing_refs = await self.cell_entity_ref_repo.get_by_matrix_id(
-                    matrix_id
-                )
-                refs_by_cell = {}
-                for ref in all_existing_refs:
-                    if ref.matrix_cell_id not in refs_by_cell:
-                        refs_by_cell[ref.matrix_cell_id] = []
-                    refs_by_cell[ref.matrix_cell_id].append(ref)
+            existing_combos = set()
+            for cell_id, refs in refs_by_cell.items():
+                key = self._get_entity_ref_key(refs)
+                existing_combos.add(key)
+            logger.info(f"Found {len(existing_combos)} existing cell combinations")
+        else:
+            logger.info("Matrix is empty, skipping deduplication")
+            existing_combos = set()
 
-                existing_combos = set()
-                for cell_id, refs in refs_by_cell.items():
-                    key = self._get_entity_ref_key(refs)
-                    existing_combos.add(key)
-                logger.info(f"Found {len(existing_combos)} existing cell combinations")
-            else:
-                logger.info("Matrix is empty, skipping deduplication")
-                existing_combos = set()
+        # Filter out duplicates
+        new_cell_models = []
+        for cell_model in all_cell_models:
+            cell_key = self._get_entity_ref_key(cell_model.entity_refs)
+            if cell_key not in existing_combos:
+                new_cell_models.append(cell_model)
 
-            # Filter out duplicates
-            new_cell_models = []
-            for cell_model in all_cell_models:
-                cell_key = self._get_entity_ref_key(cell_model.entity_refs)
-                if cell_key not in existing_combos:
-                    new_cell_models.append(cell_model)
+        logger.info(
+            f"Creating {len(new_cell_models)} new cells (filtered {len(all_cell_models) - len(new_cell_models)} duplicates)"
+        )
 
-            logger.info(
-                f"Creating {len(new_cell_models)} new cells (filtered {len(all_cell_models) - len(new_cell_models)} duplicates)"
-            )
+        # Check quota before creating cells (raises 429 if exceeded)
+        agentic_count = await self._check_quota_for_cells(
+            new_cell_models, matrix.company_id
+        )
 
-            # Check quota before creating cells (raises 429 if exceeded)
-            agentic_count = await self._check_quota_for_cells(
-                new_cell_models, matrix.company_id
-            )
-
+        # All DB operations in transaction - commits when exiting context
+        created_cells = []
+        created_jobs = []
+        async with transaction():
             # Insert cells
             created_cells = await self._batch_insert_matrix_cells(new_cell_models)
 
@@ -340,35 +339,21 @@ class BatchProcessingService(TransactionMixin):
             )
 
             # Optionally create QA jobs
-            created_jobs = []
             if create_qa_jobs and created_cells:
                 job_models = self._create_qa_job_models(created_cells)
                 created_jobs = await self._batch_insert_qa_jobs(job_models)
 
-                # Commit before publishing messages
-                await self.db_session.commit()
-                logger.info(
-                    "Committed cells and jobs to database before publishing messages"
-                )
+        # Transaction committed - now safe to publish messages
+        logger.info("Committed cells and jobs to database")
 
-                # Queue all jobs for processing
-                await self._batch_queue_jobs(created_jobs, created_cells)
-                logger.info(f"Created and queued {len(created_jobs)} QA jobs")
-            else:
-                await self.db_session.commit()
-                logger.info("Committed matrix cells to database")
+        if created_jobs:
+            await self._batch_queue_jobs(created_jobs, created_cells)
+            logger.info(f"Created and queued {len(created_jobs)} QA jobs")
 
-            logger.info(
-                f"Successfully created {len(created_cells)} matrix cells and {len(created_jobs)} QA jobs"
-            )
-            return created_cells, created_jobs
-
-        except Exception as e:
-            logger.error(
-                f"Error in batch processing for matrix {matrix_id}: {e}", exc_info=True
-            )
-            await self.db_session.rollback()
-            raise
+        logger.info(
+            f"Successfully created {len(created_cells)} matrix cells and {len(created_jobs)} QA jobs"
+        )
+        return created_cells, created_jobs
 
     @trace_span
     def _prepare_job_messages(
@@ -432,7 +417,6 @@ class BatchProcessingService(TransactionMixin):
 
         await self._publish_messages(messages)
 
-    # TODO: do we need transactional semantics / pushing job models before publishing messages?
     @trace_span
     async def create_jobs_and_queue_for_cells(
         self, matrix_cells: List[MatrixCellModel]
@@ -441,12 +425,12 @@ class BatchProcessingService(TransactionMixin):
         if not matrix_cells:
             return 0
 
-        # Create QA jobs for all cells
-        job_models = self._create_qa_job_models(matrix_cells)
-        created_jobs = await self._batch_insert_qa_jobs(job_models)
+        # Create QA jobs in transaction - commits when exiting context
+        async with transaction():
+            job_models = self._create_qa_job_models(matrix_cells)
+            created_jobs = await self._batch_insert_qa_jobs(job_models)
 
-        # IMPORTANT: Commit before publishing messages so workers can see the data
-        await self.db_session.commit()
+        # Transaction committed - now safe to publish messages
         logger.info("Committed QA jobs to database before publishing messages")
 
         await self._batch_queue_jobs(created_jobs, matrix_cells)
@@ -480,105 +464,105 @@ class BatchProcessingService(TransactionMixin):
         Returns:
             Tuple of (created cells, created jobs)
         """
-        try:
-            # Get matrix to determine type
-            matrix = await self.matrix_repo.get(matrix_id)
-            if not matrix:
-                raise ValueError(f"Matrix {matrix_id} not found")
+        # Get matrix to determine type
+        matrix = await self.matrix_repo.get(matrix_id)
+        if not matrix:
+            raise ValueError(f"Matrix {matrix_id} not found")
 
-            logger.info(
-                f"Processing entity {entity_id} added to entity set {entity_set_id} "
-                f"in matrix {matrix_id} ({matrix.matrix_type.value})"
+        logger.info(
+            f"Processing entity {entity_id} added to entity set {entity_set_id} "
+            f"in matrix {matrix_id} ({matrix.matrix_type.value})"
+        )
+
+        # Get strategy and let it handle everything
+        strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
+        cell_models = await strategy.create_cells_for_new_entity(
+            matrix_id,
+            matrix.company_id,
+            entity_id,
+            entity_set_id,
+        )
+
+        logger.info(f"Strategy generated {len(cell_models)} cell models")
+
+        # SANITY CHECK: Validate that all cell models actually reference the new entity
+        # This prevents bugs where strategies generate cells unrelated to the new entity
+        invalid_cells = []
+        for i, cell_model in enumerate(cell_models):
+            entity_ids_in_cell = [ref.entity_id for ref in cell_model.entity_refs]
+            if entity_id not in entity_ids_in_cell:
+                invalid_cells.append(i)
+
+        if invalid_cells:
+            raise ValueError(
+                f"Strategy bug: Generated {len(invalid_cells)}/{len(cell_models)} cells that don't reference new entity {entity_id}. "
+                f"This indicates the strategy is creating too many cells. "
+                f"First invalid cell refs: {[cell_models[invalid_cells[0]].entity_refs if invalid_cells else None]}"
             )
 
-            # Get strategy and let it handle everything
+        # FAST PATH DEDUPLICATION: Check if entity already has cells
+        entity_set = await self.entity_set_service.get_entity_set(
+            entity_set_id, matrix.company_id
+        )
+        if not entity_set:
+            raise ValueError(f"Entity set {entity_set_id} not found")
 
-            strategy = CellStrategyFactory.get_strategy(
-                matrix.matrix_type, self.db_session
-            )
-            cell_models = await strategy.create_cells_for_new_entity(
-                matrix_id,
-                matrix.company_id,
-                entity_id,
-                entity_set_id,
-            )
+        # Get entity set members for this entity (service layer orchestrates repositories)
+        members = await self.entity_set_member_repo.get_members_by_entity_id(
+            entity_id, entity_set.entity_type, matrix.company_id
+        )
 
-            logger.info(f"Strategy generated {len(cell_models)} cell models")
+        if not members:
+            logger.info(f"Entity {entity_id} has no members, skipping deduplication")
+            existing_combos = set()
+        else:
+            member_ids = [m.id for m in members]
 
-            # SANITY CHECK: Validate that all cell models actually reference the new entity
-            # This prevents bugs where strategies generate cells unrelated to the new entity
-            invalid_cells = []
-            for i, cell_model in enumerate(cell_models):
-                entity_ids_in_cell = [ref.entity_id for ref in cell_model.entity_refs]
-                if entity_id not in entity_ids_in_cell:
-                    invalid_cells.append(i)
-
-            if invalid_cells:
-                raise ValueError(
-                    f"Strategy bug: Generated {len(invalid_cells)}/{len(cell_models)} cells that don't reference new entity {entity_id}. "
-                    f"This indicates the strategy is creating too many cells. "
-                    f"First invalid cell refs: {[cell_models[invalid_cells[0]].entity_refs if invalid_cells else None]}"
+            # Check if any of these members have cells in the matrix
+            members_have_cells = (
+                await self.cell_entity_ref_repo.members_have_cells_in_matrix(
+                    matrix_id, member_ids, matrix.company_id
                 )
-
-            # FAST PATH DEDUPLICATION: Check if entity already has cells
-            entity_set = await self.entity_set_service.get_entity_set(
-                entity_set_id, matrix.company_id
-            )
-            if not entity_set:
-                raise ValueError(f"Entity set {entity_set_id} not found")
-
-            # Get entity set members for this entity (service layer orchestrates repositories)
-            members = await self.entity_set_member_repo.get_members_by_entity_id(
-                entity_id, entity_set.entity_type, matrix.company_id
             )
 
-            if not members:
+            if members_have_cells:
                 logger.info(
-                    f"Entity {entity_id} has no members, skipping deduplication"
+                    f"Entity {entity_id} already has cells, using targeted deduplication"
+                )
+                existing_combos = (
+                    await self.cell_entity_ref_repo.get_cell_combinations_for_members(
+                        matrix_id, member_ids, matrix.company_id
+                    )
+                )
+            else:
+                logger.info(
+                    f"Entity {entity_id} is new to matrix, skipping deduplication"
                 )
                 existing_combos = set()
+
+        # Filter out cells that already exist
+        new_cell_models = []
+        skipped_count = 0
+        for cell_model in cell_models:
+            cell_key = self._get_entity_ref_key(cell_model.entity_refs)
+            if cell_key not in existing_combos:
+                new_cell_models.append(cell_model)
             else:
-                member_ids = [m.id for m in members]
+                skipped_count += 1
 
-                # Check if any of these members have cells in the matrix
-                members_have_cells = (
-                    await self.cell_entity_ref_repo.members_have_cells_in_matrix(
-                        matrix_id, member_ids, matrix.company_id
-                    )
-                )
+        logger.info(
+            f"Creating {len(new_cell_models)} new cells, skipped {skipped_count} duplicates"
+        )
 
-                if members_have_cells:
-                    logger.info(
-                        f"Entity {entity_id} already has cells, using targeted deduplication"
-                    )
-                    existing_combos = await self.cell_entity_ref_repo.get_cell_combinations_for_members(
-                        matrix_id, member_ids, matrix.company_id
-                    )
-                else:
-                    logger.info(
-                        f"Entity {entity_id} is new to matrix, skipping deduplication"
-                    )
-                    existing_combos = set()
+        # Check quota before creating cells (raises 429 if exceeded)
+        agentic_count = await self._check_quota_for_cells(
+            new_cell_models, matrix.company_id
+        )
 
-            # Filter out cells that already exist
-            new_cell_models = []
-            skipped_count = 0
-            for cell_model in cell_models:
-                cell_key = self._get_entity_ref_key(cell_model.entity_refs)
-                if cell_key not in existing_combos:
-                    new_cell_models.append(cell_model)
-                else:
-                    skipped_count += 1
-
-            logger.info(
-                f"Creating {len(new_cell_models)} new cells, skipped {skipped_count} duplicates"
-            )
-
-            # Check quota before creating cells (raises 429 if exceeded)
-            agentic_count = await self._check_quota_for_cells(
-                new_cell_models, matrix.company_id
-            )
-
+        # All DB operations in transaction - commits when exiting context
+        created_cells = []
+        created_jobs = []
+        async with transaction():
             # Insert the new cells
             created_cells = await self._batch_insert_matrix_cells(new_cell_models)
             logger.info(
@@ -591,39 +575,23 @@ class BatchProcessingService(TransactionMixin):
             )
 
             # Optionally create QA jobs
-            created_jobs = []
             if create_qa_jobs and created_cells:
-                logger.info("Creating and queueing QA jobs for cells")
+                logger.info("Creating QA jobs for cells")
                 job_models = self._create_qa_job_models(created_cells)
                 created_jobs = await self._batch_insert_qa_jobs(job_models)
 
-                # Commit before publishing messages
-                await self.db_session.commit()
-                logger.info(
-                    "Committed cells and jobs to database before publishing messages"
-                )
+        # Transaction committed - now safe to publish messages
+        logger.info("Committed cells and jobs to database")
 
-                # Queue all jobs for processing
-                await self._batch_queue_jobs(created_jobs, created_cells)
-                logger.info(f"Created and queued {len(created_jobs)} QA jobs")
-            else:
-                # Just commit cells
-                await self.db_session.commit()
-                logger.info("Committed matrix cells to database")
-                if not create_qa_jobs:
-                    logger.info("QA jobs will be created later (create_qa_jobs=False)")
+        if created_jobs:
+            await self._batch_queue_jobs(created_jobs, created_cells)
+            logger.info(f"Queued {len(created_jobs)} QA jobs")
+        elif not create_qa_jobs:
+            logger.info("QA jobs will be created later (create_qa_jobs=False)")
 
-            return created_cells, created_jobs
-
-        except Exception as e:
-            logger.error(
-                f"Error processing entity {entity_id} for matrix {matrix_id}: {e}",
-                exc_info=True,
-            )
-            await self.db_session.rollback()
-            raise
+        return created_cells, created_jobs
 
 
-def get_batch_processing_service(db_session: AsyncSession) -> BatchProcessingService:
+def get_batch_processing_service() -> BatchProcessingService:
     """Get batch processing service instance."""
-    return BatchProcessingService(db_session)
+    return BatchProcessingService()

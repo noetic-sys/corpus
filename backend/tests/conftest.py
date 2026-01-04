@@ -1,7 +1,6 @@
 # Shared pytest configuration and fixtures for all test types
 import hashlib
 import pytest_asyncio
-from contextlib import asynccontextmanager
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy import select
@@ -75,31 +74,59 @@ from packages.billing.models.domain.subscription import Subscription
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
+@pytest_asyncio.fixture(scope="function")
+async def test_engine():
+    """Create test database engine and initialize schema."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_connection(test_engine):
+    """Create test connection with outer transaction for rollback isolation."""
+    async with test_engine.connect() as connection:
+        trans = await connection.begin()
+        yield connection
+        await trans.rollback()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_session_factory(test_connection):
+    """Create session factory bound to test connection.
+
+    Using join_transaction_mode="create_savepoint" so nested transaction()
+    calls create savepoints instead of real nested transactions.
+    """
+    return async_sessionmaker(
+        bind=test_connection,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        join_transaction_mode="create_savepoint",
+    )
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_db(test_session_factory):
+    """Create a test database session."""
+    async with test_session_factory() as session:
+        yield session
+
+
 @pytest_asyncio.fixture(scope="function", autouse=True)
-async def patch_lazy_sessions(test_db: AsyncSession, monkeypatch):
+async def patch_lazy_sessions(test_session_factory, monkeypatch):
     """
-    Patch lazy session factories to use the test database.
+    Patch session factories to use test database.
 
-    This is critical for repositories that use the new lazy session pattern
-    via get_session() instead of dependency-injected sessions.
+    This allows real transaction() and get_session() to run with proper
+    commit/rollback/ContextVar semantics while using the test database.
     """
-
-    @asynccontextmanager
-    async def mock_get_session(readonly: bool = False):
-        """Mock get_session that returns the test_db session."""
-        yield test_db
-
-    @asynccontextmanager
-    async def mock_transaction(readonly: bool = False):
-        """Mock transaction that returns the test_db session."""
-        yield test_db
-
-    # Patch the lazy session functions where they're imported
-    # Must patch at the usage site, not the definition site, due to Python import semantics
-    monkeypatch.setattr("common.db.scoped.get_session", mock_get_session)
-    monkeypatch.setattr("common.db.scoped.transaction", mock_transaction)
-    # Patch where BaseRepository imports it
-    monkeypatch.setattr("common.repositories.base.get_session", mock_get_session)
+    monkeypatch.setattr("common.db.scoped.AsyncSessionLocal", test_session_factory)
+    monkeypatch.setattr(
+        "common.db.scoped.AsyncSessionLocalReadonly", test_session_factory
+    )
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -126,35 +153,6 @@ async def client(test_db: AsyncSession, test_user):
             yield ac
     finally:
         app.dependency_overrides.clear()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def test_db():
-    """Create a test database with transaction rollback."""
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    # Create a connection that will be shared across the test
-    async with engine.connect() as connection:
-        # Begin a transaction on the connection
-        trans = await connection.begin()
-
-        # Create a session bound to this connection
-        TestSessionLocal = async_sessionmaker(
-            bind=connection,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            join_transaction_mode="create_savepoint",
-        )
-
-        async with TestSessionLocal() as session:
-            yield session
-
-        # Rollback the transaction after the test
-        await trans.rollback()
-
-    await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="function")

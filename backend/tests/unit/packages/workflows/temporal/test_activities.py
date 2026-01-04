@@ -113,7 +113,6 @@ class TestCheckWorkflowAgentStatusActivity:
         assert result["exit_code"] == 0
 
 
-@patch("packages.workflows.temporal.activities.get_db")
 class TestExtractWorkflowResultsActivity:
     """Tests for extract_workflow_results_activity."""
 
@@ -124,20 +123,11 @@ class TestExtractWorkflowResultsActivity:
         self,
         mock_storage_service_class,
         mock_get_storage,
-        mock_get_db,
         test_db,
         mock_storage,
     ):
         """Test extracting results from S3 manifest and creating DB records."""
-
-        # Mock get_db to yield test database session
-        def make_mock_db_generator():
-            async def mock_db_generator():
-                yield test_db
-
-            return mock_db_generator()
-
-        mock_get_db.side_effect = make_mock_db_generator
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock storage factory to prevent real GCS initialization
         mock_get_storage.return_value = mock_storage
@@ -268,25 +258,16 @@ class TestCleanupWorkflowAgentActivity:
         # Service account should still be cleaned up (verify via DB later if needed)
 
 
-@patch("packages.workflows.temporal.activities.get_db")
 class TestUpdateExecutionStatusActivity:
     """Tests for update_execution_status_activity."""
 
     @pytest.mark.asyncio
     @patch("packages.workflows.temporal.activities.activity")
     async def test_update_status_completed(
-        self, mock_activity, mock_get_db, test_db, sample_workflow_execution
+        self, mock_activity, test_db, sample_workflow_execution
     ):
         """Test updating execution status to completed with real DB."""
-
-        # Mock get_db to yield test database session (fresh for each call)
-        def make_mock_db_generator():
-            async def mock_db_generator():
-                yield test_db
-
-            return mock_db_generator()
-
-        mock_get_db.side_effect = make_mock_db_generator
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock activity logger
         mock_activity.logger = MagicMock()
@@ -308,18 +289,10 @@ class TestUpdateExecutionStatusActivity:
     @pytest.mark.asyncio
     @patch("packages.workflows.temporal.activities.activity")
     async def test_update_status_failed(
-        self, mock_activity, mock_get_db, test_db, sample_workflow_execution
+        self, mock_activity, test_db, sample_workflow_execution
     ):
         """Test updating execution status to failed with real DB."""
-
-        # Mock get_db to yield test database session (fresh for each call)
-        def make_mock_db_generator():
-            async def mock_db_generator():
-                yield test_db
-
-            return mock_db_generator()
-
-        mock_get_db.side_effect = make_mock_db_generator
+        # patch_lazy_sessions fixture in conftest handles test database routing
 
         # Mock activity logger
         mock_activity.logger = MagicMock()

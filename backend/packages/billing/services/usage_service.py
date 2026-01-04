@@ -316,6 +316,17 @@ class UsageService:
         return event
 
     @trace_span
+    async def update_event_metadata(self, event_id: int, metadata: dict) -> None:
+        """
+        Update the metadata for a usage event.
+
+        Args:
+            event_id: The usage event ID
+            metadata: The new metadata dict to set
+        """
+        await self.usage_repo.update_event_metadata(event_id, metadata)
+
+    @trace_span
     async def get_user_usage(self, user_id: int, limit: int = 100) -> list[UsageEvent]:
         """Get usage events for a user."""
         return await self.usage_repo.get_by_user(user_id, limit=limit)

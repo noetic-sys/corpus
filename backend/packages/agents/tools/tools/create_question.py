@@ -111,7 +111,6 @@ class CreateQuestionTool(Tool[CreateQuestionParameters]):
                     entity_set_id=parameters.entity_set_id,
                     question_data=question_data,
                     current_user=as_user,
-                    db=session,
                 )
             else:
                 question_data = QuestionCreate(
@@ -129,7 +128,6 @@ class CreateQuestionTool(Tool[CreateQuestionParameters]):
                     entity_set_id=parameters.entity_set_id,
                     question=question_data,
                     current_user=as_user,
-                    db=session,
                 )
 
             return ToolResult.ok(CreateQuestionSuccessResult(question=question))

@@ -100,7 +100,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_creates_correct_number_of_cells(self, test_db):
         """Test that strategy creates N*(N-1) pairs × questions cells."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -125,7 +125,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_three_documents_creates_six_pairs(self, test_db):
         """Test that adding doc1 creates pairs involving doc1 only."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -150,7 +150,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_cell_has_correct_attributes(self, test_db):
         """Test that cells have correct matrix_id, company_id, status, and cell_type."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -177,7 +177,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_cell_has_three_entity_refs(self, test_db):
         """Test that correlation cells have exactly 3 entity refs (left, right, question)."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -201,7 +201,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_entity_refs_have_correct_roles(self, test_db):
         """Test that entity refs have LEFT, RIGHT, and QUESTION roles."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -228,7 +228,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_pairs_include_all_non_diagonal_combinations(self, test_db):
         """Test that pairs include only combinations involving the new document."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -265,7 +265,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_no_self_pairs(self, test_db):
         """Test that no document is paired with itself."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -295,7 +295,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_each_pair_has_all_questions(self, test_db):
         """Test that each document pair gets a cell for each question."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -338,7 +338,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_single_document_returns_no_cells(self, test_db):
         """Test that a single document creates no pairs."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -361,7 +361,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_empty_questions_returns_empty_list(self, test_db):
         """Test that empty question list returns no cells."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100
@@ -384,7 +384,7 @@ class TestCrossCorrelationStrategy:
     @pytest.mark.asyncio
     async def test_eight_documents_one_question_creates_56_cells(self, test_db):
         """Test that 8 documents × 1 question creates exactly 56 cells (8*7 pairs)."""
-        strategy = CrossCorrelationStrategy(test_db)
+        strategy = CrossCorrelationStrategy()
 
         matrix_id = 1
         company_id = 100

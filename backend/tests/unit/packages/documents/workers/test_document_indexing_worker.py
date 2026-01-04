@@ -99,7 +99,7 @@ class TestDocumentIndexingWorker:
         mock_get_search_provider.return_value = mock_search_provider
 
         # Process message
-        await indexing_worker.process_message(sample_message, test_db)
+        await indexing_worker.process_message(sample_message)
 
         # Verify search provider was called
         mock_search_provider.index_document.assert_called_once()
@@ -136,7 +136,7 @@ class TestDocumentIndexingWorker:
 
         # Process message - should raise ValueError
         with pytest.raises(ValueError, match="Document 999999 not found"):
-            await indexing_worker.process_message(message, test_db)
+            await indexing_worker.process_message(message)
 
         # Verify job was marked as failed
         await test_db.refresh(test_data["job"])
@@ -165,7 +165,7 @@ class TestDocumentIndexingWorker:
 
         # Process message - should raise exception
         with pytest.raises(Exception, match="Search index connection failed"):
-            await indexing_worker.process_message(sample_message, test_db)
+            await indexing_worker.process_message(sample_message)
 
         # Verify job was marked as failed
         await test_db.refresh(test_data["job"])
@@ -218,7 +218,7 @@ class TestDocumentIndexingWorker:
         mock_get_search_provider.return_value = mock_search_provider
 
         # Process message
-        await indexing_worker.process_message(message, test_db)
+        await indexing_worker.process_message(message)
 
         # Verify search provider was still called (indexes metadata only)
         mock_search_provider.index_document.assert_called_once()
@@ -273,7 +273,7 @@ class TestDocumentIndexingWorker:
         mock_get_search_provider.return_value = mock_search_provider
 
         # Process message
-        await indexing_worker.process_message(message, test_db)
+        await indexing_worker.process_message(message)
 
         # Verify search provider was called (indexes metadata)
         mock_search_provider.index_document.assert_called_once()
@@ -328,7 +328,7 @@ class TestDocumentIndexingWorker:
         mock_get_search_provider.return_value = mock_search_provider
 
         # Process message
-        await indexing_worker.process_message(message, test_db)
+        await indexing_worker.process_message(message)
 
         # Verify search provider was still called (indexes metadata only)
         mock_search_provider.index_document.assert_called_once()
@@ -358,7 +358,7 @@ class TestDocumentIndexingWorker:
         assert test_data["job"].status == DocumentIndexingJobStatus.QUEUED.value
 
         # Process message
-        await indexing_worker.process_message(sample_message, test_db)
+        await indexing_worker.process_message(sample_message)
 
         # Verify final status
         await test_db.refresh(test_data["job"])
@@ -415,7 +415,7 @@ class TestDocumentIndexingWorker:
 
                 # Process message - should raise the database exception
                 with pytest.raises(Exception, match="Database connection lost"):
-                    await indexing_worker.process_message(sample_message, test_db)
+                    await indexing_worker.process_message(sample_message)
 
     @pytest.mark.asyncio
     @patch(
@@ -447,14 +447,14 @@ class TestDocumentIndexingWorker:
             job_id=test_data["job"].id,
             document_id=test_data["document"].id,
         )
-        await indexing_worker.process_message(message1, test_db)
+        await indexing_worker.process_message(message1)
 
         # Process second job
         message2 = DocumentIndexingMessage(
             job_id=job2.id,
             document_id=test_data["document"].id,
         )
-        await indexing_worker.process_message(message2, test_db)
+        await indexing_worker.process_message(message2)
 
         # Verify both jobs completed
         await test_db.refresh(test_data["job"])

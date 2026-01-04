@@ -38,15 +38,13 @@ class TestCellStrategyFactory:
     def test_get_strategy_for_standard_matrix(self):
         """Test that STANDARD matrix type returns StandardMatrixStrategy."""
         mock_db = AsyncMock()
-        strategy = CellStrategyFactory.get_strategy(MatrixType.STANDARD, mock_db)
+        strategy = CellStrategyFactory.get_strategy(MatrixType.STANDARD)
         assert isinstance(strategy, StandardMatrixStrategy)
 
     def test_get_strategy_for_cross_correlation_matrix(self):
         """Test that CROSS_CORRELATION matrix type returns CrossCorrelationStrategy."""
         mock_db = AsyncMock()
-        strategy = CellStrategyFactory.get_strategy(
-            MatrixType.CROSS_CORRELATION, mock_db
-        )
+        strategy = CellStrategyFactory.get_strategy(MatrixType.CROSS_CORRELATION)
         assert isinstance(strategy, CrossCorrelationStrategy)
 
     def test_get_strategy_for_unknown_type_raises_error(self):
@@ -58,9 +56,7 @@ class TestCellStrategyFactory:
         )
         try:
             with pytest.raises(ValueError, match="No strategy found for matrix type"):
-                CellStrategyFactory.get_strategy(
-                    MatrixType.GENERIC_CORRELATION, mock_db
-                )
+                CellStrategyFactory.get_strategy(MatrixType.GENERIC_CORRELATION)
         finally:
             # Restore it if it existed
             if saved_strategy:
@@ -106,9 +102,7 @@ class TestCellStrategyFactory:
         )
 
         # Verify we can retrieve it (note: factory returns instance, not class)
-        strategy = CellStrategyFactory.get_strategy(
-            MatrixType.GENERIC_CORRELATION, AsyncMock()
-        )
+        strategy = CellStrategyFactory.get_strategy(MatrixType.GENERIC_CORRELATION)
         assert isinstance(strategy, CustomStrategy)
 
         # Clean up: remove the custom strategy from the registry
@@ -156,9 +150,7 @@ class TestCellStrategyFactory:
             )
 
             # Verify it's been replaced
-            strategy = CellStrategyFactory.get_strategy(
-                MatrixType.STANDARD, AsyncMock()
-            )
+            strategy = CellStrategyFactory.get_strategy(MatrixType.STANDARD)
             assert isinstance(strategy, CustomStandardStrategy)
             assert not isinstance(strategy, StandardMatrixStrategy)
 
@@ -171,8 +163,8 @@ class TestCellStrategyFactory:
     def test_get_strategy_returns_new_instance_each_time(self):
         """Test that get_strategy returns a new instance on each call."""
         mock_db = AsyncMock()
-        strategy1 = CellStrategyFactory.get_strategy(MatrixType.STANDARD, mock_db)
-        strategy2 = CellStrategyFactory.get_strategy(MatrixType.STANDARD, mock_db)
+        strategy1 = CellStrategyFactory.get_strategy(MatrixType.STANDARD)
+        strategy2 = CellStrategyFactory.get_strategy(MatrixType.STANDARD)
 
         # Should be same type but different instances
         assert type(strategy1) == type(strategy2)

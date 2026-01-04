@@ -77,7 +77,6 @@ class ListDocumentsTool(Tool[ListDocumentsParameters]):
                     skip=parameters.skip,
                     limit=parameters.limit,
                     current_user=as_user,
-                    db=session,
                 )
             else:
                 # Call list_documents route function
@@ -86,7 +85,6 @@ class ListDocumentsTool(Tool[ListDocumentsParameters]):
                     skip=parameters.skip,
                     limit=parameters.limit,
                     current_user=as_user,
-                    db=session,
                 )
 
             return ToolResult.ok(

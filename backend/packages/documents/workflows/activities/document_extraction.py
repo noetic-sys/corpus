@@ -13,13 +13,12 @@ from common.providers.storage.paths import get_document_extracted_path
 from packages.documents.providers.document_extraction.extractor_factory import (
     ExtractorFactory,
 )
-from common.db.session import get_db
 from packages.documents.providers.document_search.factory import (
     get_document_search_provider,
 )
 from packages.documents.repositories.document_repository import DocumentRepository
 from packages.documents.models.domain.document import DocumentModel
-from packages.documents.services.document_service import DocumentService
+from packages.documents.services.document_service import get_document_service
 
 logger = get_logger(__name__)
 
@@ -37,37 +36,35 @@ async def extract_document_content_activity(
     ):
         logger.info(f"Extracting content from document {document_id}")
 
-        async for session in get_db():
-            try:
-                document_service = DocumentService(session)
-                # Get document model from database
-                document = await document_service.get_document(document_id)
+        try:
+            document_service = get_document_service()
+            document = await document_service.get_document(document_id)
 
-                if not document:
-                    raise ValueError(f"Document {document_id} not found in database")
+            if not document:
+                raise ValueError(f"Document {document_id} not found in database")
 
-                logger.info(
-                    f"Extracting content from {document.content_type} document: {document.storage_key}"
-                )
-                file_type = DocumentService.get_file_type_from_document(document)
+            logger.info(
+                f"Extracting content from {document.content_type} document: {document.storage_key}"
+            )
+            file_type = document_service.get_file_type_from_document(document)
 
-                # Get appropriate extractor for this file type
-                extractor = ExtractorFactory.get_extractor(file_type or "")
-                logger.info(
-                    f"Using {extractor.__class__.__name__} for {document.content_type} extraction"
-                )
+            # Get appropriate extractor for this file type
+            extractor = ExtractorFactory.get_extractor(file_type or "")
+            logger.info(
+                f"Using {extractor.__class__.__name__} for {document.content_type} extraction"
+            )
 
-                # Extract content using the appropriate extractor
-                extracted_content = await extractor.extract_text(document)
+            # Extract content using the appropriate extractor
+            extracted_content = await extractor.extract_text(document)
 
-                logger.info(
-                    f"Successfully extracted content ({len(extracted_content)} characters)"
-                )
-                return extracted_content
+            logger.info(
+                f"Successfully extracted content ({len(extracted_content)} characters)"
+            )
+            return extracted_content
 
-            except Exception as e:
-                logger.error(f"Error extracting document content: {e}")
-                raise
+        except Exception as e:
+            logger.error(f"Error extracting document content: {e}")
+            raise
 
 
 @activity.defn
@@ -84,14 +81,13 @@ async def save_extracted_content_to_s3_activity(
 
         try:
             # Get company_id from document for path organization
-            async for session in get_db():
-                document_repo = DocumentRepository()
-                document = await document_repo.get(document_id)
+            document_repo = DocumentRepository()
+            document = await document_repo.get(document_id)
 
-                if not document:
-                    raise ValueError(f"Document {document_id} not found in database")
+            if not document:
+                raise ValueError(f"Document {document_id} not found in database")
 
-                company_id = document.company_id
+            company_id = document.company_id
 
             # Generate S3 key with filesystem locality using centralized path utility
             s3_key = get_document_extracted_path(company_id, document_id)
@@ -127,34 +123,30 @@ async def index_document_for_search_activity(
             f"Indexing document {document_id} for search with extracted content"
         )
 
-        async for session in get_db():
-            try:
-                document_repo = DocumentRepository()
-                document = await document_repo.get(document_id)
+        try:
+            document_repo = DocumentRepository()
+            document = await document_repo.get(document_id)
 
-                if not document:
-                    raise ValueError(f"Document {document_id} not found in database")
+            if not document:
+                raise ValueError(f"Document {document_id} not found in database")
 
-                # Convert database entity to domain model
-                document_model = DocumentModel.model_validate(document)
+            # Convert database entity to domain model
+            document_model = DocumentModel.model_validate(document)
 
-                # Get search provider
-                async with get_document_search_provider(session) as search_provider:
-                    # Index the document with extracted content
-                    success = await search_provider.index_document(
-                        document_model, extracted_content
-                    )
+            # Get search provider and index
+            search_provider = get_document_search_provider()
+            success = await search_provider.index_document(
+                document_model, extracted_content
+            )
 
-                if success:
-                    logger.info(
-                        f"Successfully indexed document {document_id} for search"
-                    )
-                    return True
-                else:
-                    logger.warning(f"Failed to index document {document_id} for search")
-                    return False
-
-            except Exception as e:
-                logger.error(f"Error indexing document {document_id} for search: {e}")
-                # Don't raise - we don't want indexing failures to fail the entire extraction workflow
+            if success:
+                logger.info(f"Successfully indexed document {document_id} for search")
+                return True
+            else:
+                logger.warning(f"Failed to index document {document_id} for search")
                 return False
+
+        except Exception as e:
+            logger.error(f"Error indexing document {document_id} for search: {e}")
+            # Don't raise - we don't want indexing failures to fail the entire extraction workflow
+            return False

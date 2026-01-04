@@ -10,7 +10,6 @@ from packages.matrices.models.domain.matrix_template_variable import (
     MatrixTemplateVariableCreateModel,
 )
 from packages.questions.services.question_service import QuestionService
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from packages.matrices.repositories.matrix_repository import (
@@ -55,7 +54,7 @@ from packages.qa.services.answer_set_service import AnswerSetService
 from packages.qa.services.citation_service import CitationService
 from packages.qa.services.answer_service import AnswerService
 from packages.documents.services.document_service import DocumentService
-from common.db.transaction_utils import transactional
+from common.db.context import transactional
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from packages.matrices.services.batch_processing_service import BatchProcessingService
 from packages.matrices.services.entity_set_service import EntitySetService
@@ -72,8 +71,7 @@ logger = get_logger(__name__)
 class MatrixService:
     """Service for handling matrix operations."""
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.matrix_repo = MatrixRepository()
         self.matrix_cell_repo = MatrixCellRepository()
         self.cell_entity_ref_repo = CellEntityReferenceRepository()
@@ -92,13 +90,13 @@ class MatrixService:
         matrix = await self.matrix_repo.create(matrix_data)
 
         # Get strategy for this matrix type
-        strategy = CellStrategyFactory.get_strategy(matrix.matrix_type, self.db_session)
+        strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
 
         # Get entity set definitions from strategy
         entity_set_definitions = strategy.get_entity_set_definitions()
 
         # Create entity sets based on strategy definitions
-        entity_set_service = EntitySetService(self.db_session)
+        entity_set_service = EntitySetService()
 
         for definition in entity_set_definitions:
             entity_set = MatrixEntitySetCreateModel(
@@ -155,7 +153,7 @@ class MatrixService:
         cell_stats = await self.matrix_cell_repo.get_cell_stats_by_matrix(matrix_id)
 
         # Get document extraction stats
-        entity_set_service = EntitySetService(self.db_session)
+        entity_set_service = EntitySetService()
         entity_sets = await entity_set_service.get_matrix_entity_sets(
             matrix_id, company_id
         )
@@ -171,7 +169,7 @@ class MatrixService:
 
         # Get document extraction stats if there are documents
         if document_ids:
-            document_service = DocumentService(self.db_session)
+            document_service = DocumentService()
             doc_stats = await document_service.get_extraction_stats_for_document_ids(
                 document_ids, company_id
             )
@@ -668,11 +666,11 @@ class MatrixService:
         company_id = source_matrix.company_id
 
         # Check quotas BEFORE creating anything (prevents bypass via large matrix duplication)
-        quota_service = QuotaService(self.db_session)
+        quota_service = QuotaService()
         await quota_service.check_cell_operation_quota(company_id)
 
         # Check agentic quota if we're duplicating question entity sets
-        entity_set_service = EntitySetService(self.db_session)
+        entity_set_service = EntitySetService()
         source_entity_sets = await entity_set_service.get_matrix_entity_sets(
             matrix_id, company_id
         )
@@ -683,7 +681,7 @@ class MatrixService:
         )
         if has_question_set:
             # Get questions and check if any are agentic
-            question_service = QuestionService(self.db_session)
+            question_service = QuestionService()
             questions = await question_service.get_questions_for_matrix(matrix_id)
             question_ids = [q.id for q in questions]
             if question_ids:
@@ -723,7 +721,7 @@ class MatrixService:
         # Duplicate questions if any question entity sets are being duplicated
         question_id_mapping = {}
         if has_question_set:
-            question_service = QuestionService(self.db_session)
+            question_service = QuestionService()
 
             # Use existing duplicate_questions_to_matrix_with_template_mapping method
             duplicated_questions = await question_service.duplicate_questions_to_matrix_with_template_mapping(
@@ -802,7 +800,7 @@ class MatrixService:
         # Create cells for all populated entity sets
         cells_created = 0
         if len(target_entity_set_ids) > 0:
-            batch_service = BatchProcessingService(self.db_session)
+            batch_service = BatchProcessingService()
             created_cells, created_jobs = (
                 await batch_service.batch_create_matrix_cells_and_jobs(
                     duplicate_matrix.id,
@@ -900,6 +898,6 @@ class MatrixService:
         return id_mapping
 
 
-def get_matrix_service(db_session: AsyncSession) -> MatrixService:
+def get_matrix_service() -> MatrixService:
     """Get matrix service instance."""
-    return MatrixService(db_session)
+    return MatrixService()

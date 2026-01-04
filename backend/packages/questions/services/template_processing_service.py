@@ -1,7 +1,6 @@
 from __future__ import annotations
 import re
 from typing import List, Set
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.matrices.repositories.matrix_template_variable_repository import (
     MatrixTemplateVariableRepository,
@@ -32,8 +31,7 @@ class TemplateProcessingService:
     # Template pattern (ID-based only)
     TEMPLATE_PATTERN = ID_PATTERN
 
-    def __init__(self, db_session: AsyncSession):
-        self.db_session = db_session
+    def __init__(self):
         self.template_var_repo = MatrixTemplateVariableRepository()
         self.question_template_var_repo = QuestionTemplateVariableRepository()
 
@@ -189,8 +187,6 @@ class TemplateProcessingService:
                 logger.info(
                     f"Question {question_id}: Soft deleted association for template variable {id_to_name.get(template_var_id, template_var_id)}"
                 )
-
-        await self.db_session.flush()
 
         logger.info(
             f"Question {question_id}: Sync complete. Final template variable count: {len(new_template_var_ids)}"
