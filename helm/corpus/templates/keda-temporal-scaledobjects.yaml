@@ -47,7 +47,7 @@ metadata:
 spec:
   scaleTargetRef:
     name: {{ $fullname }}-temporal-pdf-worker
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: {{ .Values.keda.temporalWorkers.pdf.maxReplicas }}
   pollingInterval: {{ .Values.keda.pollingInterval }}
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
@@ -77,7 +77,7 @@ metadata:
 spec:
   scaleTargetRef:
     name: {{ $fullname }}-temporal-page-worker
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: {{ .Values.keda.temporalWorkers.page.maxReplicas }}
   pollingInterval: {{ .Values.keda.pollingInterval }}
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
@@ -107,7 +107,7 @@ metadata:
 spec:
   scaleTargetRef:
     name: {{ $fullname }}-temporal-generic-worker
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: {{ .Values.keda.temporalWorkers.generic.maxReplicas }}
   pollingInterval: {{ .Values.keda.pollingInterval }}
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
@@ -137,7 +137,7 @@ metadata:
 spec:
   scaleTargetRef:
     name: {{ $fullname }}-temporal-chunking-worker
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: {{ .Values.keda.temporalWorkers.chunking.maxReplicas }}
   pollingInterval: {{ .Values.keda.pollingInterval }}
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
@@ -167,7 +167,7 @@ metadata:
 spec:
   scaleTargetRef:
     name: {{ $fullname }}-temporal-workflow-worker
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: {{ .Values.keda.temporalWorkers.workflow.maxReplicas }}
   pollingInterval: {{ .Values.keda.pollingInterval }}
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
@@ -197,7 +197,7 @@ metadata:
 spec:
   scaleTargetRef:
     name: {{ $fullname }}-temporal-qa-worker
-  minReplicaCount: 0
+  minReplicaCount: 1
   maxReplicaCount: {{ .Values.keda.temporalWorkers.qa.maxReplicas }}
   pollingInterval: {{ .Values.keda.pollingInterval }}
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
