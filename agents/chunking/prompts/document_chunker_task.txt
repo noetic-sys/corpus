@@ -36,7 +36,6 @@ Save to: `{output_dir}/chunk_NNN.meta.json`
 
 ```json
 {{
-    "chunk_id": "chunk_001",
     "page_start": 1,
     "page_end": 3,
     "section": "Introduction",
@@ -48,7 +47,6 @@ Save to: `{output_dir}/chunk_NNN.meta.json`
 ```
 
 **Field requirements:**
-- `chunk_id`: Must match filename (chunk_001, chunk_002, etc.)
 - `page_start`/`page_end`: Integer or null if unknown
 - `section`: String or null if no clear section
 - `char_start`/`char_end`: Integer positions in original document (REQUIRED)

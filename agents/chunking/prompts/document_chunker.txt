@@ -108,7 +108,6 @@ Metadata enables efficient retrieval. Without proper metadata, agents must read 
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| chunk_id | string | Unique identifier (chunk_001, chunk_002) |
 | char_start | int | Starting character position in original document |
 | char_end | int | Ending character position in original document |
 | page_start | int/null | First page number in chunk |
@@ -121,7 +120,6 @@ Metadata enables efficient retrieval. Without proper metadata, agents must read 
 
 ```json
 {
-  "chunk_id": "chunk_003",
   "char_start": 24000,
   "char_end": 36000,
   "page_start": 8,

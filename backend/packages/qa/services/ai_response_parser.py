@@ -45,13 +45,18 @@ class AIResponseParser:
             AIAnswerSet with answer_found status and list of answers
         """
         try:
+            logger.info(
+                f"RAW AI RESPONSE (len={len(json_response) if json_response else 0}): {repr(json_response)}"
+            )
+
             # Clean up the response
             json_response = AIResponseParser._clean_response(json_response)
             logger.info(
                 f"Parsing AI response for type {question_type.name if question_type else 'DEFAULT'}"
             )
-            logger.info("Raw response")
-            logger.info(f"{json_response}")
+            logger.info(
+                f"After cleaning (len={len(json_response)}): {repr(json_response)}"
+            )
 
             # Check for not found format - now returns empty answer set
             if json_response in [
