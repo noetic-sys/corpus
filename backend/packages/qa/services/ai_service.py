@@ -129,7 +129,6 @@ class AIService:
             )
 
             # Combine BOTH system prompts into a single system message
-            # (aisuite only supports one system message, extracts the first one)
             # Message order optimized for prompt caching:
             # 1. Combined system prompt (analysis + answer format)
             # 2. User messages (documents + question)
@@ -242,12 +241,10 @@ Please return a JSON object with the extracted information."""
 
 @deprecated
 def get_ai_service(
-    provider_type: Optional[str] = None,
     model_name: Optional[str] = None,
-    api_key: Optional[str] = None,
 ) -> AIService:
-    """Get AI service instance with specified provider and model."""
-    provider = get_ai_provider(provider_type, model_name)
+    """Get AI service instance with specified model."""
+    provider = get_ai_provider(model_name)
     return AIService(provider)
 
 
@@ -268,11 +265,11 @@ async def get_ai_service_for_question(
             and ai_model.provider
             and ai_model.provider.enabled
         ):
-            provider_type = ai_model.provider.name
-            model_name = ai_model.model_name
+            # Build OpenRouter model name: provider/model
+            model_name = f"{ai_model.provider.name}/{ai_model.model_name}"
 
             # Create provider with specific model
-            provider = get_ai_provider(provider_type, model_name)
+            provider = get_ai_provider(model_name)
             return AIService(provider)
 
     # Use global default

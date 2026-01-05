@@ -1,56 +1,38 @@
 import pytest
 import json
 
-from common.providers.ai.openai_provider import OpenAIProvider
-from common.providers.ai.anthropic_provider import AnthropicProvider
+from common.providers.ai.openrouter_provider import OpenRouterProvider
 from common.core.config import settings
 
 
 class TestAIProvidersIntegration:
     """Integration tests for AI providers that call real APIs."""
 
-    @pytest.fixture(
-        params=[
-            ("openai", OpenAIProvider),
-            ("anthropic", AnthropicProvider),
-        ],
-        ids=["openai", "anthropic"],
-    )
-    def ai_provider(self, request):
+    @pytest.fixture
+    def ai_provider(self):
         """Create AI provider with API key from settings."""
-        provider_name, provider_class = request.param
-
         try:
-            if provider_name == "openai":
-                api_key = (
-                    settings.openai_api_keys[0] if settings.openai_api_keys else None
-                )
-                if not api_key:
-                    pytest.skip("OpenAI API key not configured in settings")
-                return provider_class(api_key=api_key)
-            elif provider_name == "anthropic":
-                api_key = getattr(settings, "anthropic_api_key", None)
-                if not api_key:
-                    pytest.skip("Anthropic API key not configured in settings")
-                return provider_class(api_key=api_key)
+            if not settings.openrouter_api_key:
+                pytest.skip("OpenRouter API key not configured in settings")
+            return OpenRouterProvider()
         except Exception:
-            pytest.skip(f"{provider_name} API key not configured in settings")
+            pytest.skip("OpenRouter API key not configured in settings")
 
     @pytest.fixture
     def sample_document_content(self):
         """Sample document content for testing."""
         return """
         Python Programming Language
-        
-        Python is a high-level, interpreted programming language with dynamic semantics. 
-        Its high-level built in data structures, combined with dynamic typing and dynamic binding, 
-        make it very attractive for Rapid Application Development, as well as for use as a 
+
+        Python is a high-level, interpreted programming language with dynamic semantics.
+        Its high-level built in data structures, combined with dynamic typing and dynamic binding,
+        make it very attractive for Rapid Application Development, as well as for use as a
         scripting or glue language to connect existing components together.
-        
-        Python's simple, easy to learn syntax emphasizes readability and therefore reduces 
-        the cost of program maintenance. Python supports modules and packages, which encourages 
+
+        Python's simple, easy to learn syntax emphasizes readability and therefore reduces
+        the cost of program maintenance. Python supports modules and packages, which encourages
         program modularity and code reuse.
-        
+
         Key Features:
         - Easy to learn and use
         - Interpreted language
@@ -167,43 +149,6 @@ Please return a JSON object with the extracted information."""
         assert len(key_info) > 0
         print(f"Provider: {ai_provider.__class__.__name__}")
         print(f"Extracted key information: {key_info}")
-
-    @pytest.mark.asyncio
-    async def test_invalid_api_key_handling(self, request):
-        """Test handling of invalid API key for each provider."""
-        # Get the current provider type from the parameterized test
-        if hasattr(request, "node") and hasattr(request.node, "callspec"):
-            provider_name, provider_class = request.node.callspec.params.get(
-                "ai_provider", ("openai", OpenAIProvider)
-            )
-        else:
-            # Fallback - test both
-            for provider_name, provider_class in [
-                ("openai", OpenAIProvider),
-                ("anthropic", AnthropicProvider),
-            ]:
-                invalid_provider = provider_class(api_key="invalid-key-123")
-
-                with pytest.raises(Exception) as exc_info:
-                    await invalid_provider.send_message(
-                        system_prompt="You are a helpful assistant.",
-                        user_message="Test message",
-                        temperature=0.7,
-                    )
-
-                assert "Failed to get response from" in str(exc_info.value)
-            return
-
-        invalid_provider = provider_class(api_key="invalid-key-123")
-
-        with pytest.raises(Exception) as exc_info:
-            await invalid_provider.send_message(
-                system_prompt="You are a helpful assistant.",
-                user_message="Test message",
-                temperature=0.7,
-            )
-
-        assert "Failed to get response from" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_empty_document_handling(self, ai_provider):

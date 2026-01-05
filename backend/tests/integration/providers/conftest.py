@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from common.providers.messaging.rabbitmq_async import RabbitMQClient
 from common.providers.storage.s3 import S3Storage
-from common.providers.ai.openai_provider import OpenAIProvider
+from common.providers.ai.openrouter_provider import OpenRouterProvider
 from packages.documents.providers.document_extraction.text_extractor import (
     TextExtractor,
 )
@@ -122,20 +122,18 @@ def sample_file_content():
 
 
 @pytest.fixture
-def openai_provider():
+def ai_provider():
     """
-    Provide an OpenAI provider for integration tests.
+    Provide an OpenRouter AI provider for integration tests.
     Uses API key from settings (loaded from .env file).
     """
     try:
-        # Try to access the API key from settings (use first key from rotation)
-        api_key = settings.openai_api_keys[0] if settings.openai_api_keys else None
-        if not api_key:
-            pytest.skip("OpenAI API key not configured in settings")
+        if not settings.openrouter_api_key:
+            pytest.skip("OpenRouter API key not configured in settings")
     except Exception:
-        pytest.skip("OpenAI API key not configured in settings")
+        pytest.skip("OpenRouter API key not configured in settings")
 
-    return OpenAIProvider(api_key=api_key)
+    return OpenRouterProvider()
 
 
 @pytest.fixture
