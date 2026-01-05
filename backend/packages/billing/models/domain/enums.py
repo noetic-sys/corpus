@@ -33,20 +33,20 @@ class SubscriptionTier(str, Enum):
     Maps to Stripe price IDs.
     """
 
-    FREE = "free"  # $0/mo - lead generation
-    STARTER = "starter"  # $19/mo - individual prosumers
-    PROFESSIONAL = "professional"  # $49/mo - power users & small teams
-    BUSINESS = "business"  # $179/mo - teams & departments
-    ENTERPRISE = "enterprise"  # $499+/mo - custom/high volume
+    FREE = "free"
+    STARTER = "starter"
+    PROFESSIONAL = "professional"
+    BUSINESS = "business"
+    ENTERPRISE = "enterprise"
 
     def get_price_cents(self) -> int:
-        """Get monthly price in cents."""
+        """Get monthly price in cents (fallback - Stripe is source of truth)."""
         prices = {
             SubscriptionTier.FREE: 0,
-            SubscriptionTier.STARTER: 1900,  # $19
-            SubscriptionTier.PROFESSIONAL: 4900,  # $49
-            SubscriptionTier.BUSINESS: 17900,  # $179
-            SubscriptionTier.ENTERPRISE: 49900,  # $499 base
+            SubscriptionTier.STARTER: 2900,  # $29
+            SubscriptionTier.PROFESSIONAL: 7900,  # $79
+            SubscriptionTier.BUSINESS: 19900,  # $199
+            SubscriptionTier.ENTERPRISE: 99900,  # $999
         }
         return prices[self]
 
@@ -69,7 +69,7 @@ class SubscriptionTier(str, Enum):
             SubscriptionTier.FREE: {
                 "cell_operations_per_month": 100,
                 "agentic_qa_per_month": 5,
-                "workflows_per_month": 1,
+                "workflows_per_month": 0,
                 "storage_bytes_per_month": 100 * MB,
                 "agentic_chunking_per_month": 0,
                 "documents_per_month": 10,
@@ -99,12 +99,12 @@ class SubscriptionTier(str, Enum):
                 "documents_per_month": 1_000,
             },
             SubscriptionTier.ENTERPRISE: {
-                "cell_operations_per_month": 100_000,
-                "agentic_qa_per_month": 5_000,
-                "workflows_per_month": 500,
+                "cell_operations_per_month": 50_000,
+                "agentic_qa_per_month": 2_000,
+                "workflows_per_month": 200,
                 "storage_bytes_per_month": 50 * GB,
-                "agentic_chunking_per_month": 999_999,  # Effectively unlimited
-                "documents_per_month": 10_000,
+                "agentic_chunking_per_month": 1_000,
+                "documents_per_month": 5_000,
             },
         }
         return limits[self]
