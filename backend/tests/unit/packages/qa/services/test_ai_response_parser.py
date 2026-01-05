@@ -1,5 +1,6 @@
 """Unit tests for AIResponseParser service."""
 
+import json
 import pytest
 from packages.qa.services.ai_response_parser import AIResponseParser
 from questions.question_type import QuestionTypeName
@@ -430,7 +431,9 @@ class TestAIResponseParserUtils:
 
     def test_clean_response_plain_json(self):
         """Test that plain JSON passes through unchanged."""
-        plain_json = '{"items": [{"value": "test", "confidence": 0.9, "citations": []}]}'
+        plain_json = (
+            '{"items": [{"value": "test", "confidence": 0.9, "citations": []}]}'
+        )
         result = AIResponseParser._clean_response(plain_json)
         assert result == plain_json
 
@@ -461,7 +464,7 @@ class TestAIResponseParserUtils:
     def test_clean_response_nested_braces(self):
         """Test extracting JSON with nested objects."""
         nested_json = '{"items": [{"value": "test", "nested": {"key": "value"}}]}'
-        response = f'Some text\n```json\n{nested_json}\n```'
+        response = f"Some text\n```json\n{nested_json}\n```"
         result = AIResponseParser._clean_response(response)
         assert result == nested_json
 
@@ -479,7 +482,7 @@ class TestAIResponseParserUtils:
 
     def test_clean_response_real_world_example(self):
         """Test with real-world AI response format (the actual bug case)."""
-        response = '''The laws of the State of Nevada govern this Agreement [[cite:1]].
+        response = """The laws of the State of Nevada govern this Agreement [[cite:1]].
 ```json
 {
   "items": [
@@ -496,20 +499,23 @@ class TestAIResponseParserUtils:
     }
   ]
 }
-```'''
+```"""
         result = AIResponseParser._clean_response(response)
         # Should extract just the JSON
-        assert result.startswith('{')
-        assert result.endswith('}')
+        assert result.startswith("{")
+        assert result.endswith("}")
         assert '"items"' in result
-        assert 'The laws of the State of Nevada' not in result.split('{')[0]  # Preamble removed
+        assert (
+            "The laws of the State of Nevada" not in result.split("{")[0]
+        )  # Preamble removed
 
     def test_clean_response_json_array(self):
         """Test extracting JSON array from code block."""
-        response = 'Here is the list:\n```json\n[{"value": "item1"}, {"value": "item2"}]\n```'
+        response = (
+            'Here is the list:\n```json\n[{"value": "item1"}, {"value": "item2"}]\n```'
+        )
         result = AIResponseParser._clean_response(response)
         assert result == '[{"value": "item1"}, {"value": "item2"}]'
-        import json
         parsed = json.loads(result)
         assert len(parsed) == 2
 
@@ -518,12 +524,11 @@ class TestAIResponseParserUtils:
         response = 'Some text\n```json\n{"items": [{"value": "test"}]}'
         result = AIResponseParser._clean_response(response)
         assert result == '{"items": [{"value": "test"}]}'
-        import json
         json.loads(result)  # Should not raise
 
     def test_clean_response_multiple_code_blocks(self):
         """Test that first code block is extracted when multiple exist."""
-        response = '''First:\n```json\n{"first": true}\n```\nSecond:\n```json\n{"second": true}\n```'''
+        response = """First:\n```json\n{"first": true}\n```\nSecond:\n```json\n{"second": true}\n```"""
         result = AIResponseParser._clean_response(response)
         assert result == '{"first": true}'
 
