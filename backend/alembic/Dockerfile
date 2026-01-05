@@ -24,6 +24,9 @@ RUN poetry config virtualenvs.create false \
 # Production stage (no development stage needed for migrations)
 FROM python:3.11-slim as production
 
+# Ensure Python output is not buffered (logs appear immediately in containers)
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 # Install runtime dependencies only
