@@ -322,16 +322,26 @@ class AIResponseParser:
         # Strip whitespace
         json_response = json_response.strip()
 
-        # Remove markdown code blocks like ```json ... ``` or ``` ... ```
-        if json_response.startswith("```"):
-            lines = json_response.split("\n")
-            # Remove first line (```json or ```)
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            # Remove last line if it's ```
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            json_response = "\n".join(lines).strip()
+        # Extract JSON from markdown code blocks anywhere in the response
+        # Handles: ```json {...} ``` or ```json [...] ``` (objects or arrays)
+        code_block_match = re.search(
+            r"```(?:json)?\s*([\{\[].*?[\}\]])\s*```", json_response, re.DOTALL
+        )
+        if code_block_match:
+            json_response = code_block_match.group(1).strip()
+        else:
+            # Fallback: look for ```json without closing ``` (unclosed code block)
+            unclosed_match = re.search(r"```(?:json)?\s*([\{\[].*)", json_response, re.DOTALL)
+            if unclosed_match:
+                json_response = unclosed_match.group(1).strip()
+            elif json_response.startswith("```"):
+                # Last resort: strip ``` wrapper from start
+                lines = json_response.split("\n")
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                json_response = "\n".join(lines).strip()
 
         # Remove trailing commas before closing braces/brackets (common LLM mistake)
         json_response = re.sub(r",(\s*[}\]])", r"\1", json_response)
