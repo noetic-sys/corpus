@@ -504,6 +504,29 @@ class TestAIResponseParserUtils:
         assert '"items"' in result
         assert 'The laws of the State of Nevada' not in result.split('{')[0]  # Preamble removed
 
+    def test_clean_response_json_array(self):
+        """Test extracting JSON array from code block."""
+        response = 'Here is the list:\n```json\n[{"value": "item1"}, {"value": "item2"}]\n```'
+        result = AIResponseParser._clean_response(response)
+        assert result == '[{"value": "item1"}, {"value": "item2"}]'
+        import json
+        parsed = json.loads(result)
+        assert len(parsed) == 2
+
+    def test_clean_response_unclosed_code_block(self):
+        """Test extracting JSON when code block is not properly closed."""
+        response = 'Some text\n```json\n{"items": [{"value": "test"}]}'
+        result = AIResponseParser._clean_response(response)
+        assert result == '{"items": [{"value": "test"}]}'
+        import json
+        json.loads(result)  # Should not raise
+
+    def test_clean_response_multiple_code_blocks(self):
+        """Test that first code block is extracted when multiple exist."""
+        response = '''First:\n```json\n{"first": true}\n```\nSecond:\n```json\n{"second": true}\n```'''
+        result = AIResponseParser._clean_response(response)
+        assert result == '{"first": true}'
+
     def test_is_iso_date_valid(self):
         """Test ISO date validation with valid dates."""
         valid_dates = [
