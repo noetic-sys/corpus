@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Ensure Python output is not buffered (logs appear immediately in containers)
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 # Install system dependencies

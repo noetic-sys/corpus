@@ -24,6 +24,9 @@ RUN poetry config virtualenvs.create false \
 # Development stage
 FROM python:3.11-slim as development
 
+# Ensure Python output is not buffered (logs appear immediately in containers)
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 # Copy installed packages from builder
@@ -45,6 +48,9 @@ WORKDIR /app/backend
 
 # Production stage
 FROM python:3.11-slim as production
+
+# Ensure Python output is not buffered (logs appear immediately in containers)
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
