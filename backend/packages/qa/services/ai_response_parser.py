@@ -322,13 +322,16 @@ class AIResponseParser:
         # Strip whitespace
         json_response = json_response.strip()
 
-        # Remove markdown code blocks like ```json ... ``` or ``` ... ```
-        if json_response.startswith("```"):
+        # Extract JSON from markdown code blocks anywhere in the response
+        # Handles: ```json {...} ``` or ``` {...} ```
+        code_block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", json_response, re.DOTALL)
+        if code_block_match:
+            json_response = code_block_match.group(1).strip()
+        elif json_response.startswith("```"):
+            # Fallback for responses that start with ``` but regex didn't match
             lines = json_response.split("\n")
-            # Remove first line (```json or ```)
             if lines[0].startswith("```"):
                 lines = lines[1:]
-            # Remove last line if it's ```
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
             json_response = "\n".join(lines).strip()
