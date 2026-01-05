@@ -6,7 +6,6 @@ Handles Word, Excel, PowerPoint, images, text files, etc.
 from temporalio import workflow
 from datetime import timedelta
 
-from common.core.otel_axiom_exporter import get_logger
 from .common import (
     DocumentProcessingInput,
     EXTRACT_DOCUMENT_CONTENT_ACTIVITY,
@@ -14,8 +13,6 @@ from .common import (
     INDEX_DOCUMENT_FOR_SEARCH_ACTIVITY,
     GET_DOCUMENT_DETAILS_ACTIVITY,
 )
-
-logger = get_logger(__name__)
 
 
 @workflow.defn
@@ -26,7 +23,7 @@ class GenericDocumentWorkflow:
         Generic workflow for extracting content from non-PDF documents.
         Much simpler than PDF workflow since no page splitting is needed.
         """
-        logger.info(
+        workflow.logger.info(
             f"Starting generic document extraction for document {input_data.document_id}"
         )
 
@@ -50,7 +47,7 @@ class GenericDocumentWorkflow:
             ),  # Generous timeout for large files
         )
 
-        logger.info(
+        workflow.logger.info(
             f"Extracted {len(extracted_content)} characters from document {input_data.document_id}"
         )
 
@@ -76,7 +73,7 @@ class GenericDocumentWorkflow:
             start_to_close_timeout=timedelta(minutes=2),
         )
 
-        logger.info(
+        workflow.logger.info(
             f"Generic document extraction completed for document {input_data.document_id}"
         )
         return s3_key

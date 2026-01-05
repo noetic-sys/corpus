@@ -7,7 +7,6 @@ from temporalio import workflow
 from datetime import timedelta
 import asyncio
 
-from common.core.otel_axiom_exporter import get_logger
 from .common import (
     PDFProcessingInput,
     TaskQueueType,
@@ -17,8 +16,6 @@ from .common import (
     INDEX_DOCUMENT_FOR_SEARCH_ACTIVITY,
 )
 from .convert_page_workflow import ConvertPageWorkflow
-
-logger = get_logger(__name__)
 
 
 @workflow.defn
@@ -32,7 +29,7 @@ class PDFToMarkdownWorkflow:
         3. Combines all markdown content in order
         4. Returns S3 key (status updates handled by parent workflow)
         """
-        logger.info(
+        workflow.logger.info(
             f"Starting PDF to Markdown workflow for document {input_data.document_id}"
         )
 
@@ -43,7 +40,7 @@ class PDFToMarkdownWorkflow:
             start_to_close_timeout=timedelta(minutes=10),
         )
 
-        logger.info(f"PDF split into {len(page_urls)} pages")
+        workflow.logger.info(f"PDF split into {len(page_urls)} pages")
 
         # Step 2: Convert each page to markdown in parallel using child workflows
         child_workflow_tasks = []
@@ -62,7 +59,7 @@ class PDFToMarkdownWorkflow:
         # Sort by page number (in case they complete out of order)
         markdown_pages.sort(key=lambda x: x.page_number)
 
-        logger.info(f"All {len(markdown_pages)} pages converted successfully")
+        workflow.logger.info(f"All {len(markdown_pages)} pages converted successfully")
 
         # Step 4: Combine all markdown content
         combined_markdown = await workflow.execute_activity(
@@ -99,7 +96,7 @@ class PDFToMarkdownWorkflow:
             # ),
         )
 
-        logger.info(
+        workflow.logger.info(
             f"PDF to Markdown workflow completed successfully for document {input_data.document_id}"
         )
         return s3_key

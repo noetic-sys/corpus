@@ -7,7 +7,6 @@ from temporalio import workflow
 from temporalio.common import RetryPolicy
 from datetime import timedelta
 
-from common.core.otel_axiom_exporter import get_logger
 from .common import (
     DocumentProcessingInput,
     ExtractionStatusType,
@@ -23,8 +22,6 @@ from .pdf_to_markdown_workflow import PDFToMarkdownWorkflow
 from .generic_document_workflow import GenericDocumentWorkflow
 from .chunking_workflow import DocumentChunkingWorkflow
 
-logger = get_logger(__name__)
-
 
 @workflow.defn
 class DocumentExtractionWorkflow:
@@ -35,7 +32,7 @@ class DocumentExtractionWorkflow:
         - PDF files: Use PDF-specific workflow (multi-page processing)
         - All other files: Use generic document workflow (single-pass extraction)
         """
-        logger.info(
+        workflow.logger.info(
             f"Starting document extraction workflow for document {input_data.document_id}"
         )
 
@@ -50,7 +47,7 @@ class DocumentExtractionWorkflow:
             file_type = document_details["file_type"]
             content_type = document_details["content_type"]
 
-            logger.info(
+            workflow.logger.info(
                 f"Document {input_data.document_id} details: file_type={file_type}, content_type={content_type}"
             )
 
@@ -69,7 +66,7 @@ class DocumentExtractionWorkflow:
 
             # Step 3: Route to appropriate child workflow based on file type
             if self._is_pdf_file(file_type, content_type):
-                logger.info(
+                workflow.logger.info(
                     f"Routing document {input_data.document_id} to PDF workflow"
                 )
                 s3_key = await workflow.execute_child_workflow(
@@ -79,7 +76,7 @@ class DocumentExtractionWorkflow:
                     task_queue=TaskQueueType.PDF_PROCESSING.value,
                 )
             else:
-                logger.info(
+                workflow.logger.info(
                     f"Routing document {input_data.document_id} to generic document workflow"
                 )
                 s3_key = await workflow.execute_child_workflow(
@@ -96,7 +93,7 @@ class DocumentExtractionWorkflow:
                 start_to_close_timeout=timedelta(seconds=30),
             )
 
-            logger.info(
+            workflow.logger.info(
                 f"Updated document {input_data.document_id} content path: {s3_key}"
             )
 
@@ -112,7 +109,7 @@ class DocumentExtractionWorkflow:
                 task_queue=TaskQueueType.DOCUMENT_CHUNKING.value,
             )
 
-            logger.info(
+            workflow.logger.info(
                 f"Chunked document {input_data.document_id} into {chunk_result['chunk_count']} chunks at {chunk_result['s3_prefix']}"
             )
 
@@ -130,7 +127,7 @@ class DocumentExtractionWorkflow:
                 ),
             )
 
-            logger.info(
+            workflow.logger.info(
                 f"Indexed chunks for document {input_data.document_id} for hybrid search"
             )
 
@@ -164,13 +161,13 @@ class DocumentExtractionWorkflow:
                 ),
             )
 
-            logger.info(
+            workflow.logger.info(
                 f"Document extraction workflow completed successfully for document {input_data.document_id}"
             )
             return s3_key
 
         except Exception as e:
-            logger.error(
+            workflow.logger.error(
                 f"Document extraction workflow failed for document {input_data.document_id}: {e}"
             )
 

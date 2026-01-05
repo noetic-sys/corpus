@@ -6,13 +6,10 @@ Much simpler than Datalab since Gemini is synchronous.
 from temporalio import workflow
 from datetime import timedelta
 
-from common.core.otel_axiom_exporter import get_logger
 from .common import (
     MarkdownPage,
     CONVERT_PAGE_TO_MARKDOWN_ACTIVITY,
 )
-
-logger = get_logger(__name__)
 
 
 @workflow.defn
@@ -25,7 +22,7 @@ class ConvertPageWorkflow:
         Child workflow that converts a single PDF page to markdown using Gemini.
         No polling needed since Gemini extraction is synchronous!
         """
-        logger.info(f"Starting page conversion workflow for page {page_number}")
+        workflow.logger.info(f"Starting page conversion workflow for page {page_number}")
 
         # Convert page directly using Gemini (synchronous)
         markdown_content = await workflow.execute_activity(
@@ -36,5 +33,5 @@ class ConvertPageWorkflow:
             ),  # Longer timeout for Gemini processing
         )
 
-        logger.info(f"Page {page_number} conversion completed")
+        workflow.logger.info(f"Page {page_number} conversion completed")
         return MarkdownPage(page_number=page_number, content=markdown_content)
