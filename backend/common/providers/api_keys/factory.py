@@ -44,15 +44,10 @@ def _get_keys_for_provider(provider: APIProviderType) -> Optional[List[str]]:
     match provider:
         case APIProviderType.OPENAI:
             return settings.openai_api_keys
-        case APIProviderType.ANTHROPIC:
-            return settings.anthropic_api_keys
         case APIProviderType.GEMINI:
             return settings.gemini_api_keys
-        case APIProviderType.XAI:
-            return settings.xai_api_keys
-        case APIProviderType.GOOGLE:
-            # Google uses service account credentials, not rotated
-            return None
+        case APIProviderType.VOYAGE:
+            return settings.voyage_api_keys
         case _:
             return None
 

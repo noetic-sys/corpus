@@ -2,9 +2,8 @@ from enum import Enum
 
 
 class APIProviderType(str, Enum):
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    GEMINI = "gemini"  # For direct Gemini API (document extraction)
-    GOOGLE = "google"  # For Vertex AI / aisuite
-    XAI = "xai"
-    VOYAGE = "voyage"
+    """API providers that use key rotation."""
+
+    OPENAI = "openai"  # For embeddings and whisper
+    GEMINI = "gemini"  # For document extraction
+    VOYAGE = "voyage"  # For embeddings (optional)

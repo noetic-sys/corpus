@@ -1,41 +1,22 @@
 from typing import Optional
+
 from .interface import AIProviderInterface
-from .openai_provider import OpenAIProvider
-from .anthropic_provider import AnthropicProvider
-from .google_provider import GoogleProvider
-from .xai_provider import XAIProvider
-from .provider_enum import AIProviderType
+from .openrouter_provider import OpenRouterProvider
 from common.core.config import settings
 
 
 def get_ai_provider(
-    provider_type: Optional[str] = None,
     model_name: Optional[str] = None,
 ) -> AIProviderInterface:
     """
-    Get AI provider instance.
+    Get AI provider instance via OpenRouter.
 
     Args:
-        provider_type: Type of provider ('openai', 'anthropic').
-                      If None, uses the default from settings.
-        model_name: Specific model to use. If None, uses provider default.
+        model_name: Model in OpenRouter format (e.g., 'anthropic/claude-3.5-sonnet').
+                   If None, uses the default from settings.
 
     Returns:
-        An instance of the requested AI provider.
+        An instance of OpenRouterProvider configured with the specified model.
     """
-    if provider_type is None:
-        provider_type = settings.default_ai_provider
-
-    provider_type = provider_type.lower()
-
-    match provider_type:
-        case AIProviderType.OPENAI:
-            return OpenAIProvider(model_name=model_name)
-        case AIProviderType.ANTHROPIC:
-            return AnthropicProvider(model_name=model_name)
-        case AIProviderType.GOOGLE:
-            return GoogleProvider(model_name=model_name)
-        case AIProviderType.XAI:
-            return XAIProvider(model_name=model_name)
-        case _:
-            raise ValueError(f"Unknown AI provider type: {provider_type}")
+    model = model_name or settings.default_model
+    return OpenRouterProvider(model_name=model)

@@ -12,7 +12,6 @@ class MessageRole(str, Enum):
     TOOL = "tool"
 
 
-# from aisuite.framework.message import Function, ChatCompletionMessageToolCall, Message
 class Function(BaseModel):
     """Represents a function call."""
 

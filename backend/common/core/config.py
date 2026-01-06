@@ -64,9 +64,15 @@ class Settings(BaseSettings):
         else:
             return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
-    # OpenAI
+    # OpenRouter (unified AI provider)
+    openrouter_api_key: str
+    default_model: str = "google/gemini-2.0-flash-001"
+
+    # Anthropic (for workflow agent execution)
+    anthropic_api_key: str
+
+    # OpenAI (for embeddings)
     openai_api_keys: List[str]
-    openai_model: str = "gpt-4o-mini"
 
     # Embeddings
     embedding_provider: str = "openai"  # openai or voyage
@@ -74,13 +80,6 @@ class Settings(BaseSettings):
 
     # Voyage AI (optional embedding provider)
     voyage_api_keys: Optional[List[str]] = None
-
-    anthropic_api_keys: List[str]
-    anthropic_api_key: str  # Single key for workflow agent execution
-    anthropic_model: str = "claude-3-7-sonnet-20250219"
-
-    xai_api_keys: List[str]
-    xai_model: str = "grok-3"
 
     # OpenTelemetry
     otel_service_name: str
@@ -113,9 +112,6 @@ class Settings(BaseSettings):
     google_application_credentials: Optional[str] = (
         None  # Optional - falls back to pod identity with Workload Identity
     )
-
-    # AI Provider Selection
-    default_ai_provider: str = "google"
 
     # PDF Processing
     pdf_page_split_size: int = 1

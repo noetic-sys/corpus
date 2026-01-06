@@ -3,7 +3,7 @@ import os
 from functools import lru_cache
 from typing import List, Optional, Dict, Any
 
-from common.providers.ai import AnthropicProvider
+from common.providers.ai import get_ai_provider
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from packages.agents.services.conversation_service import ConversationService
 from packages.agents.services.tool_service import ToolService
@@ -33,7 +33,7 @@ class AgentService:
         self.tool_service = ToolService()
 
         # Default AI provider - could be configurable per conversation
-        self.ai_provider = ai_provider or AnthropicProvider()
+        self.ai_provider = ai_provider or get_ai_provider()
 
         # Set up prompts directory path
         project_root = os.path.dirname(
