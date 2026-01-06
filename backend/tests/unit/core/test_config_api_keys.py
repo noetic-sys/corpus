@@ -90,6 +90,8 @@ class TestAPIKeyListConfiguration:
         """Test that voyage keys are optional."""
         os.environ["OPENAI_API_KEYS"] = '["sk-key1"]'
         os.environ["GEMINI_API_KEYS"] = '["gem-key1"]'
+        # Ensure voyage keys are not set (may be in .env)
+        voyage_backup = os.environ.pop("VOYAGE_API_KEYS", None)
 
         try:
             settings = TestSettings()
@@ -97,3 +99,5 @@ class TestAPIKeyListConfiguration:
         finally:
             del os.environ["OPENAI_API_KEYS"]
             del os.environ["GEMINI_API_KEYS"]
+            if voyage_backup is not None:
+                os.environ["VOYAGE_API_KEYS"] = voyage_backup
