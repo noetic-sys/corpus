@@ -86,6 +86,7 @@ api:
     - corpus-project-env
     - corpus-api-keys-env
     - corpus-infrastructure-env
+    - corpus-billing-env
 
   # -- Extra environment variables
   env: []
