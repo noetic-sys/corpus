@@ -16,7 +16,7 @@ Document Q&A powered by AI. Upload documents, ask questions, get answers with ci
 
 ### Video Walkthroughs
 
-See [backend/demos](backend/demos) for video tutorials:
+See [demos](demos) for video tutorials:
 - **Getting Started** - Upload documents and ask questions
 - **Cross-Correlation** - Compare answers across documents
 - **Workflow Creation** - Create automated workflows
