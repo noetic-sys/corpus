@@ -338,14 +338,13 @@ class TestQuotaExceededRejection:
         usage_service = UsageService()
         quota_service = QuotaService()
 
-        # FREE tier has 1 workflow limit
+        # FREE tier has 0 workflow limit (workflows not available on free tier)
         limits = free_subscription.tier.get_quota_limits()
         limit = limits["workflows_per_month"]
-        assert limit == 1  # Sanity check
+        assert limit == 0  # Free tier has no workflows
 
-        # Create usage events to exceed the limit (each workflow is quantity=1)
-        for _ in range(limit + 1):
-            await usage_service.track_workflow(company_id=sample_company.id)
+        # Create any usage event to exceed the 0 limit
+        await usage_service.track_workflow(company_id=sample_company.id)
         await test_db.commit()
 
         # Should raise 429 when over limit

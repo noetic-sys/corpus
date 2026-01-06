@@ -331,7 +331,9 @@ class AIResponseParser:
             json_response = code_block_match.group(1).strip()
         else:
             # Fallback: look for ```json without closing ``` (unclosed code block)
-            unclosed_match = re.search(r"```(?:json)?\s*([\{\[].*)", json_response, re.DOTALL)
+            unclosed_match = re.search(
+                r"```(?:json)?\s*([\{\[].*)", json_response, re.DOTALL
+            )
             if unclosed_match:
                 json_response = unclosed_match.group(1).strip()
             elif json_response.startswith("```"):

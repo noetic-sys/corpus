@@ -36,9 +36,7 @@ class TestUsageServiceAgenticQA:
         assert event.quantity == 5
         assert event.event_metadata["question_id"] == 123
 
-    async def test_track_agentic_qa_with_event_metadata(
-        self, test_db, sample_company
-    ):
+    async def test_track_agentic_qa_with_event_metadata(self, test_db, sample_company):
         """Test that track_agentic_qa correctly handles event_metadata."""
         service = UsageService()
 
@@ -55,9 +53,7 @@ class TestUsageServiceAgenticQA:
         # question_id should be None when not provided
         assert event.event_metadata.get("question_id") is None
 
-    async def test_track_agentic_qa_merges_metadata(
-        self, test_db, sample_company
-    ):
+    async def test_track_agentic_qa_merges_metadata(self, test_db, sample_company):
         """Test that question_id and event_metadata are merged correctly."""
         service = UsageService()
 

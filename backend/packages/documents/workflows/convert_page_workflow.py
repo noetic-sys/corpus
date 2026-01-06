@@ -22,7 +22,9 @@ class ConvertPageWorkflow:
         Child workflow that converts a single PDF page to markdown using Gemini.
         No polling needed since Gemini extraction is synchronous!
         """
-        workflow.logger.info(f"Starting page conversion workflow for page {page_number}")
+        workflow.logger.info(
+            f"Starting page conversion workflow for page {page_number}"
+        )
 
         # Convert page directly using Gemini (synchronous)
         markdown_content = await workflow.execute_activity(
