@@ -10,6 +10,7 @@ import { MatrixTabContent } from '@/components/matrix-tab-content'
 import { MatrixCreateDialog } from '@/components/workspaces/matrix-create-dialog'
 import { useWorkspaceTabs } from '@/components/workspaces/use-workspace-tabs'
 import { WorkflowsTabContent } from '@/components/workflows/workflows-tab-content'
+import { WorkspaceGettingStarted } from '@/components/workspaces/workspace-getting-started'
 import { WorkspaceSidebar, type WorkspaceSidebarHandle } from '@/components/workspace-sidebar'
 import { CommandPalette } from '@/components/command-palette'
 
@@ -124,7 +125,10 @@ export function WorkspaceSheets({ workspaceId }: WorkspaceSheetsProps) {
 
         {/* Content Area */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          {activeTab === 'workflows' && (
+          {activeTab === 'workflows' && matrices.length === 0 && (
+            <WorkspaceGettingStarted onCreateMatrix={handleAddMatrix} />
+          )}
+          {activeTab === 'workflows' && matrices.length > 0 && (
             <WorkflowsTabContent workspaceId={parseInt(workspaceId)} />
           )}
           {matrices.map((matrix: any) => {

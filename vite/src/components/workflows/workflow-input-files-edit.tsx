@@ -170,9 +170,9 @@ export function WorkflowInputFilesEdit({ workflowId }: WorkflowInputFilesEditPro
       />
 
       <div className="grid gap-2">
-        <Label>Input Files (Templates, Data)</Label>
+        <Label>Reference Files (Optional)</Label>
         <div className="text-sm text-muted-foreground mb-2">
-          Upload Excel templates or data files that the workflow agent can use
+          Upload templates or style references for the output. Not for source documents—those go in your matrix.
         </div>
 
         <div className="space-y-2">

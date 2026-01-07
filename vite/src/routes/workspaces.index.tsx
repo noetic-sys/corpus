@@ -17,10 +17,13 @@ function WorkspacesPage() {
   return (
     <div className="min-h-screen p-8 bg-muted">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-2">
           <h1 className="text-2xl font-semibold text-text-primary">Workspaces</h1>
           <WorkspaceCreateButton />
         </div>
+        <p className="text-sm text-muted-foreground mb-6">
+          Organize work by project, deal, or client.
+        </p>
         <WorkspaceList />
       </div>
     </div>

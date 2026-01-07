@@ -16,13 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from "sonner"
 import { createMatrixApiV1MatricesPost } from '@/client'
 import { apiClient } from '@/lib/api'
@@ -154,21 +148,53 @@ export function MatrixCreateDialog({ workspace, open, onOpenChange }: MatrixCrea
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="matrixType">Matrix Type</Label>
-            <Select
+            <Label>Matrix Type</Label>
+            <RadioGroup
               value={createFormData.matrixType}
               onValueChange={(value) => setCreateFormData(prev => ({ ...prev, matrixType: value as MatrixType }))}
               disabled={isCreating}
+              className="space-y-2"
             >
-              <SelectTrigger id="matrixType">
-                <SelectValue placeholder="Select matrix type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="standard">Standard (2D: Documents × Questions)</SelectItem>
-                <SelectItem value="cross_correlation">Cross-Correlation (3D: Left Docs × Right Docs × Questions)</SelectItem>
-                <SelectItem value="generic_correlation">Generic Correlation (N-dimensional)</SelectItem>
-              </SelectContent>
-            </Select>
+              <label
+                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                  createFormData.matrixType === 'standard' ? 'border-primary bg-primary/5' : 'border-input hover:bg-muted/50'
+                }`}
+              >
+                <RadioGroupItem value="standard" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-medium text-sm">Standard</div>
+                  <div className="text-xs text-muted-foreground">
+                    Documents × Questions. Extract the same data points across a set of files. Best for contract review, earnings, due diligence.
+                  </div>
+                </div>
+              </label>
+              <label
+                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                  createFormData.matrixType === 'cross_correlation' ? 'border-primary bg-primary/5' : 'border-input hover:bg-muted/50'
+                }`}
+              >
+                <RadioGroupItem value="cross_correlation" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-medium text-sm">Cross-Correlation</div>
+                  <div className="text-xs text-muted-foreground">
+                    Compare two document sets against each other. Best for comparing terms across contracts, finding discrepancies.
+                  </div>
+                </div>
+              </label>
+              <label
+                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                  createFormData.matrixType === 'generic_correlation' ? 'border-primary bg-primary/5' : 'border-input hover:bg-muted/50'
+                }`}
+              >
+                <RadioGroupItem value="generic_correlation" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-medium text-sm">Generic Correlation</div>
+                  <div className="text-xs text-muted-foreground">
+                    Multiple document sets with custom relationships. Best for complex multi-party analysis.
+                  </div>
+                </div>
+              </label>
+            </RadioGroup>
           </div>
 
           {createError && (

@@ -202,10 +202,13 @@ export function WorkflowCreateDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Instructions</Label>
+              <p className="text-sm text-muted-foreground">
+                Tell the agent what to do. It will have access to your matrix data.
+              </p>
               <Textarea
                 id="description"
-                placeholder="Describe what this workflow does..."
+                placeholder="e.g., Generate a summary report comparing payment terms across all contracts..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}

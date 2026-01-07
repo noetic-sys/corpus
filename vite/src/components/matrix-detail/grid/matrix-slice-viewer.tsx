@@ -111,20 +111,58 @@ export function MatrixSliceViewer() {
     // Empty slice axis - show creation UI based on entity type
     if (currentSliceAxis?.role === 'question') {
       return (
-        <div className="flex flex-col items-center justify-center p-8 gap-4">
-          <div className="text-center">
-            <h3 className="text-lg font-medium mb-2">No questions yet</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Create your first question to start building this correlation matrix
-            </p>
+        <>
+          <div className="flex-shrink-0">
+            <MatrixHeader />
           </div>
-          <QuestionCreateClient
-            matrixId={matrixId}
-            entitySetId={currentSliceAxis.entitySetId}
-            aiProviders={aiProviders}
-            aiModels={aiModels}
-          />
-        </div>
+          <div className="flex-1 min-h-0 overflow-auto">
+            {/* Grid-like layout matching standard matrix */}
+            <div className="min-w-max">
+              <table className="border-collapse">
+                <thead>
+                  <tr>
+                    {/* Corner cell with question create */}
+                    <th className="sticky left-0 z-20 border-r border-b border-border p-2 min-w-[180px]">
+                      <QuestionCreateClient
+                        matrixId={matrixId}
+                        entitySetId={currentSliceAxis.entitySetId}
+                        aiProviders={aiProviders}
+                        aiModels={aiModels}
+                      />
+                    </th>
+                    {/* Ghost column headers (questions will go here) */}
+                    {[1, 2, 3].map((i) => (
+                      <th key={i} className="border-r border-b border-border p-2 min-w-[200px] bg-muted/10">
+                        <div className="h-8 flex items-center justify-center">
+                          <div className="w-24 h-2 bg-muted-foreground/10 rounded" />
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Ghost rows (documents will go here) */}
+                  {[1, 2, 3].map((row) => (
+                    <tr key={row}>
+                      <td className="sticky left-0 z-10 bg-muted/10 border-r border-b border-border p-2">
+                        <div className="h-10 flex items-center">
+                          <div className="w-28 h-2 bg-muted-foreground/10 rounded" />
+                        </div>
+                      </td>
+                      {[1, 2, 3].map((col) => (
+                        <td key={col} className="border-r border-b border-border p-2 bg-background">
+                          <div className="h-10 flex items-center justify-center">
+                            <div className="w-32 h-2 bg-muted-foreground/5 rounded" />
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )
     }
 
