@@ -22,7 +22,7 @@ function WorkspacesPage() {
           <WorkspaceCreateButton />
         </div>
         <p className="text-sm text-muted-foreground mb-6">
-          Each workspace is a project—a deal, a client, a research effort. Create one per initiative.
+          Organize work by project, deal, or client.
         </p>
         <WorkspaceList />
       </div>
