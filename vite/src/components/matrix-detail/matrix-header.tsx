@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { TemplateVariablesButton } from '@/components/matrix-detail/template-variables'
 import { MatrixDuplicationDropdown } from "@/components/matrix-detail/matrix-duplication-dropdown.tsx"
 import { SliceAxisCombobox, type SliceAxisComboboxHandle } from './grid/slice-axis-combobox'
@@ -255,35 +256,64 @@ export function MatrixHeader({ sliceControls }: MatrixHeaderProps) {
       )}
 
       {/* Column 4: Action buttons (always visible, right-aligned) */}
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant={sparseView ? "default" : "outline"}
-          style="blocky"
-          onClick={() => setSparseView(!sparseView)}
-          className="h-8 text-xs"
-          title={sparseView ? "Switch to dense view" : "Switch to sparse view"}
-        >
-          {sparseView ? (
-            <>
-              <Grid2x2 className="h-3.5 w-3.5 mr-1.5" />
-              Sparse
-            </>
-          ) : (
-            <>
-              <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
-              Dense
-            </>
-          )}
-        </Button>
-        <TemplateVariablesButton
-          matrixId={matrix.id}
-          questions={questions}
-          questionEntitySetId={questionEntitySet?.id}
-        />
-        <MatrixDuplicationDropdown matrixId={matrix.id} matrixName={matrix.name} />
-        <Badge variant="outline" style="blocky" className="text-xs">ID: {matrix.id}</Badge>
-      </div>
+      <TooltipProvider delayDuration={300}>
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant={sparseView ? "default" : "outline"}
+                style="blocky"
+                onClick={() => setSparseView(!sparseView)}
+                className="h-8 text-xs"
+              >
+                {sparseView ? (
+                  <>
+                    <Grid2x2 className="h-3.5 w-3.5 mr-1.5" />
+                    Sparse
+                  </>
+                ) : (
+                  <>
+                    <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
+                    Dense
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{sparseView ? "Show all cells including empty ones" : "Hide empty cells to focus on extracted data"}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <TemplateVariablesButton
+                  matrixId={matrix.id}
+                  questions={questions}
+                  questionEntitySetId={questionEntitySet?.id}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Define reusable variables to insert into questions dynamically</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <MatrixDuplicationDropdown matrixId={matrix.id} matrixName={matrix.name} />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Create a copy of this matrix with the same structure</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Badge variant="outline" style="blocky" className="text-xs">ID: {matrix.id}</Badge>
+        </div>
+      </TooltipProvider>
     </div>
   )
 }
