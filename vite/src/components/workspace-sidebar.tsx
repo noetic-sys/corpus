@@ -163,6 +163,7 @@ export const WorkspaceSidebar = forwardRef<WorkspaceSidebarHandle, WorkspaceSide
               onClick={onAddMatrix}
               icon={Plus}
               label="New Matrix"
+              badge={matrices.length === 0 ? "Start here" : undefined}
             />
           </div>
 
@@ -170,10 +171,12 @@ export const WorkspaceSidebar = forwardRef<WorkspaceSidebarHandle, WorkspaceSide
 
           {/* Workflows */}
           <NavButton
-            active={activeView === 'workflows'}
+            active={activeView === 'workflows' && matrices.length > 0}
             onClick={() => onViewChange('workflows')}
             icon={Workflow}
             label="Workflows"
+            disabled={matrices.length === 0}
+            badge={matrices.length === 0 ? "Need matrix" : undefined}
           />
 
           {/* Future: Timeline */}
