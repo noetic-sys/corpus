@@ -34,12 +34,59 @@ These serve different purposes—use BOTH:
 
 ---
 
-## Output Format
+## Output Format (CRITICAL FOR SYNOPSIS)
 
-Follow the output format instructions provided with each question. Include:
-- Document references using `[[document:ID]]` markers
-- Inline citations using `[[cite:N]]`
-- Citations array with exact quotes and document IDs
+**Return ONE synthesized answer that covers ALL documents.**
+
+Do NOT return separate items for each document. Synopsis requires a SINGLE unified answer that synthesizes information from ALL provided documents together.
+
+```json
+{
+  "items": [
+    {
+      "value": "ONE synthesized answer covering ALL documents with [[document:ID]] and [[cite:N]] markers",
+      "confidence": 0.9,
+      "citations": [/* citations from ALL documents */]
+    }
+  ]
+}
+```
+
+**WRONG (separate items per document):**
+```json
+{
+  "items": [
+    {"value": "Info about [[document:9]]..."},
+    {"value": "Info about [[document:10]]..."}
+  ]
+}
+```
+
+**CORRECT (one synthesized answer):**
+```json
+{
+  "items": [
+    {"value": "[[document:9]] and [[document:10]] are both confidentiality agreements [[cite:1]], [[cite:2]]..."}
+  ]
+}
+```
+
+### Citation Format (CRITICAL)
+
+Each citation MUST be in its own double-bracket: `[[cite:1]], [[cite:2]], [[cite:3]]`
+
+**WRONG formats:**
+- `[[cite:1], [cite:2]]` - NO, each cite needs its own [[]]
+- `[[cite:1, 2]]` - NO, cannot group numbers
+- `[cite:1], [cite:2]` - NO, must be double brackets
+
+**CORRECT format:**
+- `[[cite:1]], [[cite:2]], [[cite:3]]` - YES, each in separate [[]]
+
+Include in your answer:
+- Document references using `[[document:ID]]` markers for EVERY document mentioned
+- Inline citations using `[[cite:N]]` for each factual claim
+- Citations array with exact quotes and document IDs from ALL relevant documents
 
 ---
 

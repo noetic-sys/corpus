@@ -48,6 +48,7 @@ ANALYSIS_PROMPTS_BY_MATRIX_TYPE: Dict[MatrixType, str] = {
     MatrixType.STANDARD: "analysis/standard_analysis.txt",
     MatrixType.CROSS_CORRELATION: "analysis/correlation_analysis.txt",
     MatrixType.GENERIC_CORRELATION: "analysis/correlation_analysis.txt",
+    MatrixType.SYNOPSIS: "analysis/synopsis_analysis.txt",
 }
 
 # Default analysis prompt (for standard matrices)

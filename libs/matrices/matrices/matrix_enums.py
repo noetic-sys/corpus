@@ -18,6 +18,7 @@ class MatrixType(str, Enum):
     STANDARD = "standard"
     CROSS_CORRELATION = "cross_correlation"
     GENERIC_CORRELATION = "generic_correlation"
+    SYNOPSIS = "synopsis"
 
 
 class CellType(str, Enum):
@@ -25,6 +26,7 @@ class CellType(str, Enum):
 
     STANDARD = "standard"
     CORRELATION = "correlation"
+    SYNOPSIS = "synopsis"
 
 
 class EntityType(str, Enum):
