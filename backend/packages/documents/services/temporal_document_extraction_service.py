@@ -3,6 +3,7 @@ from datetime import datetime
 
 from temporalio.client import Client
 from temporalio.common import WorkflowIDConflictPolicy
+from temporalio.service import RetryConfig
 
 from common.core.config import settings
 from packages.documents.repositories.document_extraction_job_repository import (
@@ -40,7 +41,15 @@ class TemporalDocumentExtractionService:
         if self._temporal_client is None:
             # Connect to Temporal server
             temporal_host = getattr(settings, "temporal_host", "localhost:7233")
-            self._temporal_client = await Client.connect(temporal_host)
+            self._temporal_client = await Client.connect(
+                temporal_host,
+                retry_config=RetryConfig(
+                    initial_interval_millis=100,
+                    max_interval_millis=10_000,
+                    multiplier=2.0,
+                    max_retries=30,
+                ),
+            )
         return self._temporal_client
 
     @trace_span

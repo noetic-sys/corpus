@@ -1,6 +1,7 @@
 from typing import Optional
 
 from temporalio.client import Client
+from temporalio.service import RetryConfig
 from temporalio.worker import Worker
 
 from common.core.otel_axiom_exporter import get_logger
@@ -32,7 +33,15 @@ class WorkflowTemporalWorker:
     async def connect(self):
         """Connect to Temporal server."""
         logger.info(f"Connecting to Temporal server at {self.temporal_host}")
-        self.client = await Client.connect(self.temporal_host)
+        self.client = await Client.connect(
+            self.temporal_host,
+            retry_config=RetryConfig(
+                initial_interval_millis=100,
+                max_interval_millis=10_000,  # 10s max backoff
+                multiplier=2.0,
+                max_retries=30,  # Exit after ~5min of failures so K8s can restart
+            ),
+        )
         logger.info("Connected to Temporal server")
 
     async def create_worker(self):

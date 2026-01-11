@@ -12,6 +12,7 @@ from packages.matrices.services.matrix_service import get_matrix_service
 from packages.qa.temporal.agent_qa_workflow import AgentQAWorkflow
 from common.providers.locking.factory import get_lock_provider
 from temporalio.client import Client
+from temporalio.service import RetryConfig
 
 from datetime import datetime
 
@@ -100,7 +101,15 @@ class QAWorker(BaseWorker[QAJobMessage]):
         document_ids = [doc.document_id for doc in cell_data.documents]
 
         # Connect to Temporal
-        temporal_client = await Client.connect(settings.temporal_host)
+        temporal_client = await Client.connect(
+            settings.temporal_host,
+            retry_config=RetryConfig(
+                initial_interval_millis=100,
+                max_interval_millis=10_000,
+                multiplier=2.0,
+                max_retries=30,
+            ),
+        )
 
         # Start workflow
         workflow_id = f"agent-qa-{job_id}-{matrix_cell_id}"

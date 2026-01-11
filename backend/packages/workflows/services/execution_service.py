@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from temporalio.client import Client
+from temporalio.service import RetryConfig
 
 from packages.workflows.models.domain.execution import (
     WorkflowExecutionModel,
@@ -71,7 +72,15 @@ class WorkflowExecutionService:
 
         # Start Temporal workflow
         temporal_host = getattr(settings, "temporal_host", "localhost:7233")
-        client = await Client.connect(temporal_host)
+        client = await Client.connect(
+            temporal_host,
+            retry_config=RetryConfig(
+                initial_interval_millis=100,
+                max_interval_millis=10_000,
+                multiplier=2.0,
+                max_retries=30,
+            ),
+        )
 
         await client.start_workflow(
             WorkflowExecutionWorkflow.run,
