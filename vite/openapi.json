@@ -13045,7 +13045,8 @@
         "enum": [
           "standard",
           "cross_correlation",
-          "generic_correlation"
+          "generic_correlation",
+          "synopsis"
         ],
         "title": "MatrixType",
         "description": "Types of matrices - determines cell creation strategy."

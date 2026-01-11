@@ -1,4 +1,4 @@
-import type { RefObject } from 'react'
+import { useMemo, type RefObject } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -42,18 +42,28 @@ export function MatrixHeader({ sliceControls }: MatrixHeaderProps) {
   const { getToken } = useAuth()
   const queryClient = useQueryClient()
 
-  // Calculate total cells by multiplying entity set member counts
-  // For cross_correlation, document set is squared (used as both LEFT and RIGHT)
-  const totalCells = entitySets.reduce((product, entitySet) => {
-    const memberCount = entitySet.members?.length || 0
-
-    // For cross-correlation, square the document entity set
-    if (matrixType === 'cross_correlation' && entitySet.entityType === 'document') {
-      return product * memberCount * memberCount
+  // Calculate total cells based on matrix type
+  // - standard: docs × questions
+  // - cross_correlation: docs² × questions (same doc set as LEFT and RIGHT)
+  // - synopsis: just questions (one cell per question, all docs in each cell)
+  const totalCells = useMemo(() => {
+    if (matrixType === 'synopsis') {
+      // Synopsis: one cell per question (all docs are synthesized together)
+      const questionSet = entitySets.find(es => es.entityType === 'question')
+      return questionSet?.members?.length || 0
     }
 
-    return product * memberCount
-  }, 1)
+    return entitySets.reduce((product, entitySet) => {
+      const memberCount = entitySet.members?.length || 0
+
+      // For cross-correlation, square the document entity set
+      if (matrixType === 'cross_correlation' && entitySet.entityType === 'document') {
+        return product * memberCount * memberCount
+      }
+
+      return product * memberCount
+    }, 1)
+  }, [matrixType, entitySets])
 
   // Get question entity set ID
   const questionEntitySet = entitySets.find(es => es.entityType === 'question')

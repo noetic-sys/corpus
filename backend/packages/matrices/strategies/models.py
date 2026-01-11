@@ -121,3 +121,17 @@ class MatrixStructureMetadata(BaseModel):
         ...,
         description="Description of what data is in each cell",
     )
+
+
+class CellUpdateSpec(BaseModel):
+    """Specification for updating an existing cell with new entity references.
+
+    Used by synopsis strategy when documents are added to a matrix.
+    Existing cells need to include the new document and be re-processed.
+    """
+
+    cell_id: int
+    entity_refs_to_add: List[EntityReference]
+    reset_status: bool = True  # Reset to PENDING for reprocessing
+
+    model_config = {"from_attributes": True}

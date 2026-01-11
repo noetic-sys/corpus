@@ -1,6 +1,7 @@
 from typing import Optional
 
 from temporalio.client import Client
+from temporalio.service import RetryConfig
 from temporalio.worker import Worker
 
 from common.temporal.client import get_temporal_client

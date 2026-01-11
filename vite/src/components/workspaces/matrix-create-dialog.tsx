@@ -194,6 +194,19 @@ export function MatrixCreateDialog({ workspace, open, onOpenChange }: MatrixCrea
                   </div>
                 </div>
               </label>
+              <label
+                className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors ${
+                  createFormData.matrixType === 'synopsis' ? 'border-primary bg-primary/5' : 'border-input hover:bg-muted/50'
+                }`}
+              >
+                <RadioGroupItem value="synopsis" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <div className="font-medium text-sm">Synopsis</div>
+                  <div className="text-xs text-muted-foreground">
+                    Synthesize all documents together for each question. Best for research summaries, literature reviews, multi-source analysis.
+                  </div>
+                </div>
+              </label>
             </RadioGroup>
           </div>
 

@@ -23,6 +23,7 @@ from packages.matrices.services.entity_set_service import EntitySetService
 from packages.matrices.models.domain.matrix_entity_set import (
     MatrixCellEntityReferenceCreateModel,
 )
+from packages.matrices.strategies.models import CellUpdateSpec
 from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.messages import QAJobMessage
 from common.providers.messaging.constants import QueueName
@@ -442,6 +443,64 @@ class BatchProcessingService:
         return len(created_jobs)
 
     @trace_span
+    async def _process_cell_updates(
+        self,
+        matrix_id: int,
+        company_id: int,
+        update_specs: List[CellUpdateSpec],
+    ) -> List[MatrixCellModel]:
+        """Process cell updates by adding entity refs and resetting status.
+
+        Used by synopsis strategy when documents are added to a matrix.
+        Existing cells need to include the new document and be re-processed.
+
+        Args:
+            matrix_id: The matrix ID
+            company_id: Company ID for access control
+            update_specs: List of CellUpdateSpec describing updates
+
+        Returns:
+            List of updated cell models
+        """
+        if not update_specs:
+            return []
+
+        logger.info(f"Processing {len(update_specs)} cell updates")
+
+        # Process each update - add entity refs to cells
+        updated_cell_ids = []
+        for spec in update_specs:
+            # Convert EntityReference to MatrixCellEntityReferenceCreateModel
+            ref_creates = []
+            for entity_ref in spec.entity_refs_to_add:
+                ref_create = MatrixCellEntityReferenceCreateModel(
+                    matrix_id=matrix_id,
+                    matrix_cell_id=spec.cell_id,
+                    entity_set_id=entity_ref.entity_set_id,
+                    entity_set_member_id=entity_ref.entity_set_member_id,
+                    company_id=company_id,
+                    role=entity_ref.role,
+                    entity_order=entity_ref.entity_order,
+                )
+                ref_creates.append(ref_create)
+
+            # Add entity refs to cell
+            if ref_creates:
+                await self.cell_entity_ref_repo.create_references_batch(ref_creates)
+            updated_cell_ids.append(spec.cell_id)
+
+        # Reset status to PENDING for all updated cells if requested
+        reset_cell_ids = [spec.cell_id for spec in update_specs if spec.reset_status]
+        if reset_cell_ids:
+            await self.matrix_cell_repo.bulk_update_cells_to_pending(reset_cell_ids)
+            logger.info(f"Reset {len(reset_cell_ids)} cells to PENDING status")
+
+        # Load and return updated cells
+        updated_cells = await self.matrix_cell_repo.get_cells_by_ids(updated_cell_ids)
+        logger.info(f"Successfully updated {len(updated_cells)} cells")
+        return updated_cells
+
+    @trace_span
     async def process_entity_added_to_set(
         self,
         matrix_id: int,
@@ -449,13 +508,14 @@ class BatchProcessingService:
         entity_set_id: int,
         create_qa_jobs: bool = False,
     ) -> Tuple[List[MatrixCellModel], List[QAJobModel]]:
-        """Process a new entity added to an entity set by creating matrix cells.
+        """Process a new entity added to an entity set by creating/updating matrix cells.
 
         This is the core method for entity-set-aware batch processing. It:
         1. Determines which entity set the new entity belongs to
         2. Finds complementary entity sets to pair with based on matrix type
         3. Creates cells using the appropriate strategy
-        4. Optionally creates and queues QA jobs
+        4. Updates existing cells if strategy requires (e.g., synopsis)
+        5. Optionally creates and queues QA jobs
 
         Args:
             matrix_id: The matrix ID
@@ -464,7 +524,7 @@ class BatchProcessingService:
             create_qa_jobs: Whether to create QA jobs immediately (True for questions, False for documents)
 
         Returns:
-            Tuple of (created cells, created jobs)
+            Tuple of (created/updated cells, created jobs)
         """
         # Get matrix to determine type
         matrix = await self.matrix_repo.get(matrix_id)
@@ -486,6 +546,15 @@ class BatchProcessingService:
         )
 
         logger.info(f"Strategy generated {len(cell_models)} cell models")
+
+        # Get cell updates (used by synopsis strategy for document additions)
+        update_specs = await strategy.update_cells_for_new_entity(
+            matrix_id,
+            matrix.company_id,
+            entity_id,
+            entity_set_id,
+        )
+        logger.info(f"Strategy generated {len(update_specs)} cell update specs")
 
         # SANITY CHECK: Validate that all cell models actually reference the new entity
         # This prevents bugs where strategies generate cells unrelated to the new entity
@@ -563,6 +632,7 @@ class BatchProcessingService:
 
         # All DB operations in transaction - commits when exiting context
         created_cells = []
+        updated_cells = []
         created_jobs = []
         async with transaction():
             # Insert the new cells
@@ -571,27 +641,36 @@ class BatchProcessingService:
                 f"Successfully created {len(created_cells)} matrix cells for entity {entity_id}"
             )
 
+            # Process cell updates (synopsis strategy uses this)
+            updated_cells = await self._process_cell_updates(
+                matrix_id, matrix.company_id, update_specs
+            )
+
             # Track usage for billing
             await self._track_usage_for_cells(
                 new_cell_models, matrix.company_id, matrix_id, agentic_count
             )
 
-            # Optionally create QA jobs
-            if create_qa_jobs and created_cells:
-                logger.info("Creating QA jobs for cells")
-                job_models = self._create_qa_job_models(created_cells)
+            # Combine created and updated cells for job processing
+            all_affected_cells = created_cells + updated_cells
+
+            # Optionally create QA jobs for all affected cells
+            if create_qa_jobs and all_affected_cells:
+                logger.info(f"Creating QA jobs for {len(all_affected_cells)} cells")
+                job_models = self._create_qa_job_models(all_affected_cells)
                 created_jobs = await self._batch_insert_qa_jobs(job_models)
 
         # Transaction committed - now safe to publish messages
         logger.info("Committed cells and jobs to database")
 
         if created_jobs:
-            await self._batch_queue_jobs(created_jobs, created_cells)
+            all_affected_cells = created_cells + updated_cells
+            await self._batch_queue_jobs(created_jobs, all_affected_cells)
             logger.info(f"Queued {len(created_jobs)} QA jobs")
         elif not create_qa_jobs:
             logger.info("QA jobs will be created later (create_qa_jobs=False)")
 
-        return created_cells, created_jobs
+        return created_cells + updated_cells, created_jobs
 
 
 def get_batch_processing_service() -> BatchProcessingService:

@@ -8,6 +8,7 @@ from .base_strategy import BaseCellCreationStrategy
 from .standard_matrix_strategy import StandardMatrixStrategy
 from .cross_correlation_strategy import CrossCorrelationStrategy
 from .generic_correlation_strategy import GenericCorrelationStrategy
+from .synopsis_strategy import SynopsisStrategy
 
 
 class CellStrategyFactory:
@@ -17,6 +18,7 @@ class CellStrategyFactory:
         MatrixType.STANDARD: StandardMatrixStrategy,
         MatrixType.CROSS_CORRELATION: CrossCorrelationStrategy,
         MatrixType.GENERIC_CORRELATION: GenericCorrelationStrategy,
+        MatrixType.SYNOPSIS: SynopsisStrategy,
     }
 
     @classmethod

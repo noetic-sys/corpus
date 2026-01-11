@@ -30,6 +30,42 @@ function chunk<T>(array: T[], size: number): T[][] {
 }
 
 /**
+ * Calculate tiles for 1D synopsis matrices (one cell per question).
+ * Each tile contains a chunk of questions, and each cell references ALL documents.
+ *
+ * @param questionEntitySetId - Entity set ID for questions
+ * @param questionMemberIds - Complete list of question member IDs
+ * @param questionsPerTile - Number of questions per tile
+ * @returns Array of tiles covering all questions
+ */
+export function calculateTiles1D(
+  questionEntitySetId: number,
+  questionMemberIds: number[],
+  questionsPerTile: number = 10
+): Tile[] {
+  const tiles: Tile[] = []
+
+  // Split question IDs into chunks
+  const questionChunks = chunk(questionMemberIds, questionsPerTile)
+
+  // Create a tile for each question chunk
+  // Note: Documents are NOT included in filters - they're embedded in each cell
+  for (const questionChunk of questionChunks) {
+    tiles.push({
+      filters: [
+        {
+          entitySetId: questionEntitySetId,
+          entityIds: questionChunk,
+          role: 'question' as EntityRole
+        }
+      ]
+    })
+  }
+
+  return tiles
+}
+
+/**
  * Calculate all tiles needed to cover the complete matrix.
  * This ensures complete coverage with no gaps or overlaps.
  *
