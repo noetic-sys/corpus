@@ -646,10 +646,22 @@ class BatchProcessingService:
                 matrix_id, matrix.company_id, update_specs
             )
 
-            # Track usage for billing
+            # Track usage for billing - both new cells and updated cells
             await self._track_usage_for_cells(
                 new_cell_models, matrix.company_id, matrix_id, agentic_count
             )
+
+            # Track updated cells too (they will be re-processed)
+            if updated_cells:
+                usage_service = UsageService()
+                await usage_service.track_cell_operation(
+                    company_id=matrix.company_id,
+                    quantity=len(updated_cells),
+                    matrix_id=matrix_id,
+                )
+                logger.info(
+                    f"Tracked cell operation usage for {len(updated_cells)} updated cells"
+                )
 
             # Combine created and updated cells for job processing
             all_affected_cells = created_cells + updated_cells
