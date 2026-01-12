@@ -119,15 +119,18 @@ async def get_chunking_strategy_activity(
             "quota_exceeded": False,
         }
     else:
-        # User explicitly requested agentic but quota exceeded - fail
-        activity.logger.error(
+        # User requested agentic but quota exceeded - graceful fallback to sentence
+        activity.logger.warning(
             f"Agentic chunking quota exceeded for company {company_id}, "
-            f"document {document_id} ({result.current_usage}/{result.limit})"
+            f"document {document_id} ({result.current_usage}/{result.limit}), "
+            f"falling back to sentence chunking"
         )
-        raise Exception(
-            f"Agentic chunking quota exceeded ({result.current_usage}/{result.limit}). "
-            "Please upgrade your plan or wait until next billing period."
-        )
+        return {
+            "strategy": ChunkingStrategy.SENTENCE.value,
+            "tier": result.tier.value,
+            "usage_event_id": None,
+            "quota_exceeded": True,
+        }
 
 
 # ============================================================================
