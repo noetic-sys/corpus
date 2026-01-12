@@ -13,6 +13,7 @@ from packages.matrices.strategies.standard_matrix_strategy import StandardMatrix
 from packages.matrices.strategies.cross_correlation_strategy import (
     CrossCorrelationStrategy,
 )
+from packages.matrices.strategies.synopsis_strategy import SynopsisStrategy
 from packages.matrices.strategies.base_strategy import BaseCellCreationStrategy
 from packages.matrices.models.domain.matrix_enums import MatrixType
 
@@ -46,6 +47,19 @@ class TestCellStrategyFactory:
         mock_db = AsyncMock()
         strategy = CellStrategyFactory.get_strategy(MatrixType.CROSS_CORRELATION)
         assert isinstance(strategy, CrossCorrelationStrategy)
+
+    def test_get_strategy_for_synopsis_matrix(self):
+        """Test that SYNOPSIS matrix type returns SynopsisStrategy."""
+        mock_db = AsyncMock()
+        strategy = CellStrategyFactory.get_strategy(MatrixType.SYNOPSIS)
+        assert isinstance(strategy, SynopsisStrategy)
+
+    def test_all_matrix_types_have_strategies(self):
+        """Test that all MatrixType values have a registered strategy."""
+        for matrix_type in MatrixType:
+            strategy = CellStrategyFactory.get_strategy(matrix_type)
+            assert strategy is not None
+            assert isinstance(strategy, BaseCellCreationStrategy)
 
     def test_get_strategy_for_unknown_type_raises_error(self):
         """Test that unknown matrix type raises ValueError."""

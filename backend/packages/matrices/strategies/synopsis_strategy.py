@@ -16,7 +16,12 @@ from packages.matrices.models.domain.matrix_enums import (
 )
 from packages.matrices.models.domain.matrix_entity_set import EntityReference
 from .base_strategy import BaseCellCreationStrategy
-from .models import EntitySetDefinition, CellDataContext, MatrixStructureMetadata, CellUpdateSpec
+from .models import (
+    EntitySetDefinition,
+    CellDataContext,
+    MatrixStructureMetadata,
+    CellUpdateSpec,
+)
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
 logger = get_logger(__name__)
@@ -150,7 +155,11 @@ class SynopsisStrategy(BaseCellCreationStrategy):
             existing_cells = await self.matrix_service.get_matrix_cells(matrix_id)
             existing_cell_question_ids = set()
             for cell in existing_cells:
-                cell_refs = await self.entity_set_service.get_cell_entity_references_by_cell_id(cell.id)
+                cell_refs = (
+                    await self.entity_set_service.get_cell_entity_references_by_cell_id(
+                        cell.id
+                    )
+                )
                 for ref in cell_refs:
                     if ref.role == EntityRole.QUESTION:
                         # Convert member_id back to entity_id
@@ -159,7 +168,9 @@ class SynopsisStrategy(BaseCellCreationStrategy):
                             existing_cell_question_ids.add(entity_id)
 
             # Questions that need new cells (no cell exists yet)
-            questions_needing_cells = [q for q in question_ids if q not in existing_cell_question_ids]
+            questions_needing_cells = [
+                q for q in question_ids if q not in existing_cell_question_ids
+            ]
 
             if not questions_needing_cells:
                 # All questions already have cells - update_cells_for_new_entity handles adding doc
@@ -355,7 +366,9 @@ class SynopsisStrategy(BaseCellCreationStrategy):
         )
 
         if not document_entity_set:
-            raise ValueError(f"Synopsis matrix {matrix_id} requires DOCUMENT entity set")
+            raise ValueError(
+                f"Synopsis matrix {matrix_id} requires DOCUMENT entity set"
+            )
 
         # Get existing cells for this matrix
         existing_cells = await self.matrix_service.get_matrix_cells(matrix_id)
@@ -381,8 +394,10 @@ class SynopsisStrategy(BaseCellCreationStrategy):
         updates = []
         for cell in existing_cells:
             # Get current entity refs to determine next order
-            cell_refs = await self.entity_set_service.get_cell_entity_references_by_cell_id(
-                cell.id
+            cell_refs = (
+                await self.entity_set_service.get_cell_entity_references_by_cell_id(
+                    cell.id
+                )
             )
             current_doc_count = sum(
                 1 for ref in cell_refs if ref.role == EntityRole.DOCUMENT
@@ -423,9 +438,7 @@ class SynopsisStrategy(BaseCellCreationStrategy):
         cell, entity_refs = await self._get_cell_with_refs(cell_id, company_id)
 
         # Find all document refs and question ref
-        document_refs = [
-            ref for ref in entity_refs if ref.role == EntityRole.DOCUMENT
-        ]
+        document_refs = [ref for ref in entity_refs if ref.role == EntityRole.DOCUMENT]
         question_ref = next(
             (ref for ref in entity_refs if ref.role == EntityRole.QUESTION), None
         )

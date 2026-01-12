@@ -178,9 +178,22 @@ class TestGetAnalysisPromptFile:
         result = get_analysis_prompt_file(MatrixType.GENERIC_CORRELATION)
         assert result == "analysis/correlation_analysis.txt"
 
+    def test_get_analysis_prompt_synopsis(self):
+        """Test getting analysis prompt for SYNOPSIS matrix type."""
+        result = get_analysis_prompt_file(MatrixType.SYNOPSIS)
+        assert result == "analysis/synopsis_analysis.txt"
+
     def test_get_analysis_prompt_default_fallback(self):
         """Test getting default analysis prompt."""
         assert DEFAULT_ANALYSIS_PROMPT == "analysis/standard_analysis.txt"
+
+    def test_all_matrix_types_have_analysis_prompts(self):
+        """Test that all matrix types have analysis prompts defined."""
+        for matrix_type in MatrixType:
+            prompt_file = get_analysis_prompt_file(matrix_type)
+            assert isinstance(prompt_file, str)
+            assert prompt_file.endswith(".txt")
+            assert len(prompt_file) > 0
 
 
 class TestConfigurationConsistency:

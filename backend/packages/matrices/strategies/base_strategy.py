@@ -27,7 +27,12 @@ from packages.matrices.models.domain.matrix_entity_set import (
 )
 from packages.qa.models.domain.answer_data import AIAnswerSet
 from packages.qa.utils.document_reference import DocumentReference
-from .models import EntitySetDefinition, CellDataContext, MatrixStructureMetadata, CellUpdateSpec
+from .models import (
+    EntitySetDefinition,
+    CellDataContext,
+    MatrixStructureMetadata,
+    CellUpdateSpec,
+)
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
