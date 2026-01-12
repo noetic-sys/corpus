@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { FileText, Sparkles, Upload } from "lucide-react"
 import { AGENTIC_CHUNKING_SIZE_THRESHOLD } from '@/lib/file-constants'
+import { useUsageStats } from '@/hooks/use-billing'
 
 interface FileUploadItem {
   file: File
@@ -34,16 +35,25 @@ export function BulkUploadDialog({
   isUploading,
 }: BulkUploadDialogProps) {
   const [items, setItems] = useState<FileUploadItem[]>([])
+  const { data: usageStats } = useUsageStats()
 
-  // Initialize items - default based on file size (larger files benefit from AI)
+  // Check if user has agentic chunking quota remaining
+  const hasAgenticQuota = usageStats
+    ? usageStats.agenticChunking < usageStats.agenticChunkingLimit
+    : false
+  const agenticQuotaRemaining = usageStats
+    ? usageStats.agenticChunkingLimit - usageStats.agenticChunking
+    : 0
+
+  // Initialize items - default based on file size if quota available
   useEffect(() => {
     setItems(
       files.map(file => ({
         file,
-        useAgenticChunking: file.size >= AGENTIC_CHUNKING_SIZE_THRESHOLD,
+        useAgenticChunking: hasAgenticQuota && file.size >= AGENTIC_CHUNKING_SIZE_THRESHOLD,
       }))
     )
-  }, [files])
+  }, [files, hasAgenticQuota])
 
   const toggleAgenticChunking = (index: number) => {
     setItems(prev =>
@@ -74,41 +84,43 @@ export function BulkUploadDialog({
         </DialogHeader>
 
         <div className="p-4 space-y-4">
-          {/* AI Chunking option header */}
-          <div className="flex items-center gap-4">
-            <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <Label className="text-sm font-medium">AI-Powered Chunking</Label>
-              <p className="text-xs text-muted-foreground">
-                Better Q&A performance for complex documents
-              </p>
-            </div>
-            {items.length > 1 && (
-              <div className="flex border-2 border-border divide-x-2 divide-border flex-shrink-0">
-                <button
-                  className="px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
-                  onClick={() => toggleAll(false)}
-                  disabled={isUploading}
-                >
-                  None
-                </button>
-                <button
-                  className="px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
-                  onClick={() => toggleAll(true)}
-                  disabled={isUploading}
-                >
-                  All
-                </button>
+          {/* AI Chunking option - only show if user has quota */}
+          {hasAgenticQuota && (
+            <div className="flex items-center gap-4">
+              <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <Label className="text-sm font-medium">AI-Powered Chunking</Label>
+                <p className="text-xs text-muted-foreground">
+                  Better Q&A for complex documents ({agenticQuotaRemaining} remaining)
+                </p>
               </div>
-            )}
-          </div>
+              {items.length > 1 && (
+                <div className="flex border-2 border-border divide-x-2 divide-border flex-shrink-0">
+                  <button
+                    className="px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                    onClick={() => toggleAll(false)}
+                    disabled={isUploading}
+                  >
+                    None
+                  </button>
+                  <button
+                    className="px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                    onClick={() => toggleAll(true)}
+                    disabled={isUploading}
+                  >
+                    All
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* File table */}
           <div className="border-2 border-border">
             {/* Table header */}
             <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b-2 border-border text-xs font-medium text-muted-foreground uppercase tracking-wide">
               <span>File</span>
-              <span>AI</span>
+              {hasAgenticQuota && <span>AI</span>}
             </div>
 
             {/* File rows */}
@@ -125,17 +137,19 @@ export function BulkUploadDialog({
                       {(item.file.size / 1024).toFixed(0)} KB
                     </span>
                   </div>
-                  <Switch
-                    checked={item.useAgenticChunking}
-                    onCheckedChange={() => toggleAgenticChunking(index)}
-                    disabled={isUploading}
-                  />
+                  {hasAgenticQuota && (
+                    <Switch
+                      checked={item.useAgenticChunking}
+                      onCheckedChange={() => toggleAgenticChunking(index)}
+                      disabled={isUploading}
+                    />
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
-          {agenticCount > 0 && (
+          {hasAgenticQuota && agenticCount > 0 && (
             <p className="text-xs text-muted-foreground">
               {agenticCount} of {items.length} file{items.length !== 1 ? 's' : ''} will use AI chunking
             </p>

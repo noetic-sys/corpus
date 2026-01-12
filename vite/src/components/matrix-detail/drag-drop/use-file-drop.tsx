@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { uploadDocumentApiV1MatricesMatrixIdDocumentsPost } from '@/client'
 import { apiClient } from '@/lib/api'
 import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/file-constants'
+import { useUsageStats } from '@/hooks/use-billing'
 import type { DocumentResponse, EntitySetResponse } from '@/client'
 import type { FileUploadItem } from './bulk-upload-dialog'
 
@@ -22,6 +23,7 @@ export function useFileDrop({
   maxFileSize = MAX_FILE_SIZE
 }: UseFileDropOptions) {
   const { getToken } = useAuth()
+  const { data: usageStats } = useUsageStats()
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 })
@@ -31,6 +33,11 @@ export function useFileDrop({
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false)
   const [selectedEntitySetId, setSelectedEntitySetId] = useState<number | null>(null)
   const dragCounter = useRef(0)
+
+  // Check if user has agentic chunking quota
+  const hasAgenticQuota = usageStats
+    ? usageStats.agenticChunking < usageStats.agenticChunkingLimit
+    : false
 
   // Get document entity sets
   const documentEntitySets = entitySets.filter(es => es.entityType === 'document')
@@ -96,7 +103,16 @@ export function useFileDrop({
     }
   }, [matrixId, onFilesUploaded, getToken])
 
-  // Handle dropping files - show bulk upload dialog
+  // Upload files directly without showing dialog (when no quota)
+  const uploadFilesDirectly = useCallback((files: File[], entitySetId: number) => {
+    const items: FileUploadItem[] = files.map(file => ({
+      file,
+      useAgenticChunking: false,
+    }))
+    uploadFilesWithOptions(items, entitySetId)
+  }, [uploadFilesWithOptions])
+
+  // Handle dropping files - show bulk upload dialog only if user has quota
   const handleFilesDropped = useCallback((files: File[]) => {
     // If multiple document entity sets exist, show entity set dialog first
     if (documentEntitySets.length > 1) {
@@ -112,18 +128,31 @@ export function useFileDrop({
       return
     }
 
+    // If no agentic quota, upload directly without dialog
+    if (!hasAgenticQuota) {
+      uploadFilesDirectly(files, targetEntitySetId)
+      return
+    }
+
     setSelectedEntitySetId(targetEntitySetId)
     setPendingFiles(files)
     setShowBulkUploadDialog(true)
-  }, [documentEntitySets])
+  }, [documentEntitySets, hasAgenticQuota, uploadFilesDirectly])
 
   const handleEntitySetSelected = useCallback((entitySetId: number) => {
     if (pendingFiles.length > 0) {
       setShowEntitySetDialog(false)
+
+      // If no agentic quota, upload directly without dialog
+      if (!hasAgenticQuota) {
+        uploadFilesDirectly(pendingFiles, entitySetId)
+        return
+      }
+
       setSelectedEntitySetId(entitySetId)
       setShowBulkUploadDialog(true)
     }
-  }, [pendingFiles])
+  }, [pendingFiles, hasAgenticQuota, uploadFilesDirectly])
 
   const handleDrop = useCallback((e: DragEvent) => {
     console.log('DROP EVENT - Files:', e.dataTransfer?.files?.length)
