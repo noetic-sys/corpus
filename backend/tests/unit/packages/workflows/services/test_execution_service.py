@@ -32,7 +32,7 @@ class TestWorkflowExecutionService:
     ):
         """Test triggering a workflow execution."""
         with patch(
-            "packages.workflows.services.execution_service.Client.connect",
+            "packages.workflows.services.execution_service.get_temporal_client",
             return_value=mock_temporal_client,
         ):
             execution = await service.trigger_execution(
@@ -52,7 +52,7 @@ class TestWorkflowExecutionService:
     ):
         """Test triggering execution for nonexistent workflow raises error."""
         with patch(
-            "packages.workflows.services.execution_service.Client.connect",
+            "packages.workflows.services.execution_service.get_temporal_client",
             return_value=mock_temporal_client,
         ):
             with pytest.raises(ValueError, match="not found"):
@@ -67,7 +67,7 @@ class TestWorkflowExecutionService:
     ):
         """Test triggering execution for workflow from different company raises error."""
         with patch(
-            "packages.workflows.services.execution_service.Client.connect",
+            "packages.workflows.services.execution_service.get_temporal_client",
             return_value=mock_temporal_client,
         ):
             with pytest.raises(ValueError, match="not found"):
@@ -87,7 +87,7 @@ class TestWorkflowExecutionService:
         await test_db.commit()
 
         with patch(
-            "packages.workflows.services.execution_service.Client.connect",
+            "packages.workflows.services.execution_service.get_temporal_client",
             return_value=mock_temporal_client,
         ):
             with pytest.raises(ValueError, match="not found"):

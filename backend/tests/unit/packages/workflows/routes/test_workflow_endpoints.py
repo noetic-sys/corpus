@@ -201,7 +201,7 @@ class TestWorkflowEndpoints:
 
         app.dependency_overrides.clear()
 
-    @patch("packages.workflows.services.execution_service.Client.connect")
+    @patch("packages.workflows.services.execution_service.get_temporal_client")
     async def test_execute_workflow(
         self,
         mock_temporal_connect,
@@ -226,7 +226,7 @@ class TestWorkflowEndpoints:
         assert "executionId" in data
         assert data["status"] == "pending"
 
-    @patch("packages.workflows.services.execution_service.Client.connect")
+    @patch("packages.workflows.services.execution_service.get_temporal_client")
     async def test_execute_deleted_workflow(
         self,
         mock_temporal_connect,
