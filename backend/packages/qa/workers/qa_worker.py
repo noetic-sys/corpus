@@ -12,6 +12,7 @@ from packages.matrices.services.matrix_service import get_matrix_service
 from packages.qa.temporal.agent_qa_workflow import AgentQAWorkflow
 from common.providers.locking.factory import get_lock_provider
 from common.temporal.client import get_temporal_client
+from common.core.config import settings
 
 from datetime import datetime
 
