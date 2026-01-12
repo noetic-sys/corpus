@@ -11,12 +11,12 @@ from packages.questions.services.question_service import get_question_service
 from packages.matrices.services.matrix_service import get_matrix_service
 from packages.qa.temporal.agent_qa_workflow import AgentQAWorkflow
 from common.providers.locking.factory import get_lock_provider
-from temporalio.client import Client
+from common.temporal.client import get_temporal_client
+from common.core.config import settings
 
 from datetime import datetime
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
-from common.core.config import settings
 
 logger = get_logger(__name__)
 
@@ -100,7 +100,7 @@ class QAWorker(BaseWorker[QAJobMessage]):
         document_ids = [doc.document_id for doc in cell_data.documents]
 
         # Connect to Temporal
-        temporal_client = await Client.connect(settings.temporal_host)
+        temporal_client = await get_temporal_client()
 
         # Start workflow
         workflow_id = f"agent-qa-{job_id}-{matrix_cell_id}"

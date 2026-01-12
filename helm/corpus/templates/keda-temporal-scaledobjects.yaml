@@ -5,6 +5,22 @@ KEDA ScaledObjects for Temporal workers
 {{- $fullname := include "corpus.fullname" . -}}
 {{- $labels := include "corpus.labels" . -}}
 
+{{/* TriggerAuthentication for Temporal Cloud API key auth */}}
+{{- if .Values.keda.temporal.apiKeySecretRef }}
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ $fullname }}-temporal-auth
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  secretTargetRef:
+    - parameter: apiKey
+      name: {{ .Values.keda.temporal.apiKeySecretRef.name }}
+      key: {{ .Values.keda.temporal.apiKeySecretRef.key }}
+{{- end }}
+
 {{- if .Values.temporalWorkers.routing.enabled }}
 ---
 apiVersion: keda.sh/v1alpha1
@@ -23,8 +39,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.routing.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.routing.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -32,7 +52,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- if .Values.temporalWorkers.pdf.enabled }}
@@ -53,8 +73,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.pdf.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.pdf.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -62,7 +86,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- if .Values.temporalWorkers.page.enabled }}
@@ -83,8 +107,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.page.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.page.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -92,7 +120,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- if .Values.temporalWorkers.generic.enabled }}
@@ -113,8 +141,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.generic.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.generic.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -122,7 +154,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- if .Values.temporalWorkers.chunking.enabled }}
@@ -143,8 +175,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.chunking.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.chunking.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -152,7 +188,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- if .Values.temporalWorkers.workflow.enabled }}
@@ -173,8 +209,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.workflow.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.workflow.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -182,7 +222,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- if .Values.temporalWorkers.qa.enabled }}
@@ -203,8 +243,12 @@ spec:
   cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
   triggers:
     - type: temporal
+      {{- if .Values.keda.temporal.apiKeySecretRef }}
+      authenticationRef:
+        name: {{ $fullname }}-temporal-auth
+      {{- end }}
       metadata:
-        namespace: default
+        namespace: {{ .Values.keda.temporal.namespace | default "default" }}
         taskQueue: {{ .Values.keda.temporalWorkers.qa.queueName }}
         targetQueueSize: {{ .Values.keda.temporalWorkers.qa.queueLength | quote }}
         activationTargetQueueSize: "1"
@@ -212,7 +256,7 @@ spec:
         queueTypes: workflow,activity
         selectAllActive: "false"
         selectUnversioned: "true"
-        unsafeSsl: "false"
+        unsafeSsl: {{ .Values.keda.temporal.unsafeSsl | default "false" | quote }}
 {{- end }}
 
 {{- end }}

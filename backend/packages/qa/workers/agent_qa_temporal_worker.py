@@ -4,6 +4,7 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from common.core.otel_axiom_exporter import get_logger
+from common.temporal.client import get_temporal_client
 from packages.qa.workflows import AgentQAWorkflow
 from packages.qa.workflows.activities import (
     launch_agent_qa_activity,
@@ -18,11 +19,7 @@ logger = get_logger(__name__)
 class AgentQATemporalWorker:
     """Temporal worker for agent QA execution."""
 
-    def __init__(
-        self,
-        temporal_host: str = "localhost:7233",
-    ):
-        self.temporal_host = temporal_host
+    def __init__(self):
         self.task_queue = "agent-qa-worker"
         self.client: Optional[Client] = None
         self.worker: Optional[Worker] = None
@@ -30,9 +27,7 @@ class AgentQATemporalWorker:
 
     async def connect(self):
         """Connect to Temporal server."""
-        logger.info(f"Connecting to Temporal server at {self.temporal_host}")
-        self.client = await Client.connect(self.temporal_host)
-        logger.info("Connected to Temporal server")
+        self.client = await get_temporal_client()
 
     async def create_worker(self):
         """Create Temporal worker with agent QA workflows and activities."""

@@ -171,7 +171,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       - DEBUG=0
@@ -240,7 +239,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       - PYTHONUNBUFFERED=1
@@ -287,7 +285,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       - PYTHONUNBUFFERED=1
@@ -335,7 +332,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       - PYTHONUNBUFFERED=1
@@ -380,7 +376,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       # Python settings
@@ -425,7 +420,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       - PYTHONUNBUFFERED=1
@@ -470,7 +464,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - ELASTICSEARCH_HOST=elasticsearch
       - GOOGLE_APPLICATION_CREDENTIALS=/app/gen-lang-client-creds.json
       - PYTHONUNBUFFERED=1
@@ -512,7 +505,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - API_ENDPOINT=http://backend:8000
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
@@ -549,7 +541,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - API_ENDPOINT=http://backend:8000
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
@@ -582,7 +573,6 @@ services:
       - S3_ENDPOINT_URL=http://localstack:4566
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      - TEMPORAL_HOST=temporal:7233
       - WORKFLOW_EXECUTION_MODE=docker
       - API_ENDPOINT=http://backend:8000
       - PYTHONUNBUFFERED=1

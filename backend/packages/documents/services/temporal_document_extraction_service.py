@@ -4,7 +4,7 @@ from datetime import datetime
 from temporalio.client import Client
 from temporalio.common import WorkflowIDConflictPolicy
 
-from common.core.config import settings
+from common.temporal.client import get_temporal_client as get_temporal_client_helper
 from packages.documents.repositories.document_extraction_job_repository import (
     DocumentExtractionJobRepository,
 )
@@ -38,9 +38,7 @@ class TemporalDocumentExtractionService:
     async def get_temporal_client(self) -> Client:
         """Get or create Temporal client."""
         if self._temporal_client is None:
-            # Connect to Temporal server
-            temporal_host = getattr(settings, "temporal_host", "localhost:7233")
-            self._temporal_client = await Client.connect(temporal_host)
+            self._temporal_client = await get_temporal_client_helper()
         return self._temporal_client
 
     @trace_span
