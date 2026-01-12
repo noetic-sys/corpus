@@ -7,6 +7,7 @@ from packages.billing.models.domain.usage import QuotaCheck
 from packages.documents.services.document_service import DocumentService
 from packages.documents.models.domain.document import DocumentModel
 from packages.documents.models.database.document import ExtractionStatus
+from packages.documents.models.schemas.document import DocumentUploadOptions
 
 
 @pytest.fixture
@@ -289,7 +290,7 @@ class TestDocumentService:
         ):
             urls = ["https://example.com/page"]
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify results
@@ -350,7 +351,7 @@ class TestDocumentService:
                 "https://example.com/page3",
             ]
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify results
@@ -394,7 +395,7 @@ class TestDocumentService:
         ):
             urls = ["https://example.com/good", "https://example.com/bad"]
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify results
@@ -433,7 +434,7 @@ class TestDocumentService:
                 "https://example.com/bad2",
             ]
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify results
@@ -467,7 +468,7 @@ class TestDocumentService:
         ):
             urls = ["https://example.com/document.pdf"]
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify results
@@ -538,7 +539,7 @@ class TestDocumentService:
                 "https://example.com/data.xlsx",  # Binary Excel
             ]
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify results
@@ -624,7 +625,7 @@ class TestUrlUploadQuotaEnforcement:
 
             # Should include error for the file that exceeded quota
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify the upload was rejected due to quota
@@ -704,7 +705,7 @@ class TestUrlUploadQuotaEnforcement:
             urls = ["https://example.com/small-document.pdf"]
 
             documents, errors = await document_service.upload_documents_from_urls(
-                urls, company_id=1
+                urls, company_id=1, options=DocumentUploadOptions()
             )
 
             # Verify upload succeeded

@@ -7,6 +7,7 @@ from fastapi import UploadFile
 from packages.documents.services.document_service import DocumentService
 from packages.documents.models.domain.document import DocumentModel, DocumentCreateModel
 from packages.documents.models.database.document import ExtractionStatus
+from packages.documents.models.schemas.document import DocumentUploadOptions
 from packages.documents.providers.document_search.interface import (
     DocumentSearchResult,
 )
@@ -201,7 +202,7 @@ class TestDocumentSearchProvider:
 
         # Call the method
         document, is_duplicate = await document_service.upload_document(
-            file, company_id=1
+            file, company_id=1, options=DocumentUploadOptions()
         )
 
         # Assertions
@@ -240,7 +241,7 @@ class TestDocumentSearchProvider:
 
         # Call the method - should not raise
         document, is_duplicate = await document_service.upload_document(
-            file, company_id=1
+            file, company_id=1, options=DocumentUploadOptions()
         )
 
         # Assertions
@@ -278,7 +279,7 @@ class TestDocumentSearchProvider:
 
         # First upload should create document
         doc1, is_duplicate1 = await document_service.upload_document(
-            file1, company_id=1
+            file1, company_id=1, options=DocumentUploadOptions()
         )
         assert not is_duplicate1
         assert doc1.filename == "test.pdf"
@@ -301,7 +302,7 @@ class TestDocumentSearchProvider:
 
         # Second upload should return existing document
         doc2, is_duplicate2 = await document_service.upload_document(
-            file2, company_id=1
+            file2, company_id=1, options=DocumentUploadOptions()
         )
 
         # Assertions - MUST return the same document that already exists
@@ -346,7 +347,7 @@ class TestDocumentSearchProvider:
         mock_indexing_job_service.create_and_queue_job.return_value = mock_indexing_job
 
         doc1, is_duplicate1 = await document_service.upload_document(
-            file1, company_id=1
+            file1, company_id=1, options=DocumentUploadOptions()
         )
         assert not is_duplicate1
         assert doc1.company_id == 1
@@ -368,7 +369,7 @@ class TestDocumentSearchProvider:
         mock_indexing_job_service.create_and_queue_job.return_value = mock_indexing_job2
 
         doc2, is_duplicate2 = await document_service.upload_document(
-            file2, company_id=2
+            file2, company_id=2, options=DocumentUploadOptions()
         )
 
         # Should NOT be duplicate - different company

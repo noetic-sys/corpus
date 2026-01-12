@@ -4,6 +4,7 @@ import io
 import hashlib
 
 from packages.documents.services.document_service import DocumentService
+from packages.documents.models.schemas.document import DocumentUploadOptions
 from fastapi import UploadFile
 
 
@@ -127,7 +128,7 @@ class TestDocumentDeduplication:
 
         # Upload document
         document, is_duplicate = await document_service.upload_document(
-            upload_file, company_id=1
+            upload_file, company_id=1, options=DocumentUploadOptions()
         )
 
         # Assertions
@@ -164,7 +165,7 @@ class TestDocumentDeduplication:
         # Upload first document
         mock_bloom_filter.exists.return_value = False
         existing_doc, _ = await document_service.upload_document(
-            existing_file, company_id=1
+            existing_file, company_id=1, options=DocumentUploadOptions()
         )
         await test_db.commit()
 
@@ -180,7 +181,7 @@ class TestDocumentDeduplication:
 
         # Upload duplicate
         document, is_duplicate = await document_service.upload_document(
-            duplicate_file, company_id=1
+            duplicate_file, company_id=1, options=DocumentUploadOptions()
         )
 
         # Assertions
@@ -213,7 +214,7 @@ class TestDocumentDeduplication:
 
         # Upload document
         document, is_duplicate = await document_service.upload_document(
-            upload_file, company_id=1
+            upload_file, company_id=1, options=DocumentUploadOptions()
         )
 
         # Assertions
@@ -241,18 +242,24 @@ class TestDocumentDeduplication:
         # Upload first file
         file1 = create_mock_upload_file(content, "file1.pdf")
         mock_bloom_filter.exists.return_value = False
-        doc1, is_dup1 = await document_service.upload_document(file1, company_id=1)
+        doc1, is_dup1 = await document_service.upload_document(
+            file1, company_id=1, options=DocumentUploadOptions()
+        )
         await test_db.commit()
 
         # Upload second file with same content
         file2 = create_mock_upload_file(content, "file2.pdf")
         mock_bloom_filter.exists.return_value = True
-        doc2, is_dup2 = await document_service.upload_document(file2, company_id=1)
+        doc2, is_dup2 = await document_service.upload_document(
+            file2, company_id=1, options=DocumentUploadOptions()
+        )
 
         # Upload third file with same content
         file3 = create_mock_upload_file(content, "file3.pdf")
         mock_bloom_filter.exists.return_value = True
-        doc3, is_dup3 = await document_service.upload_document(file3, company_id=1)
+        doc3, is_dup3 = await document_service.upload_document(
+            file3, company_id=1, options=DocumentUploadOptions()
+        )
 
         # Assertions
         assert not is_dup1

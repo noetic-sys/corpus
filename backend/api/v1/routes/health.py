@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from common.db.session import get_db
-from common.core.otel_axiom_exporter import get_logger, log_span_event
+from common.core.otel_axiom_exporter import get_logger
 from common.providers.rate_limiter.limiter import limiter
 
 logger = get_logger(__name__)

@@ -10,14 +10,11 @@ from packages.documents.workflows.activities.chunking_activities import (
 from packages.documents.models.domain.chunking_strategy import ChunkingStrategy
 from packages.billing.models.domain.enums import (
     SubscriptionTier,
-    SubscriptionStatus,
-    PaymentProvider,
     UsageEventType,
 )
 from packages.billing.models.domain.usage import QuotaReservationResult
 from packages.billing.services.usage_service import UsageService
 from packages.billing.repositories.usage_repository import UsageEventRepository
-from packages.billing.models.database.subscription import SubscriptionEntity
 
 
 class TestGetChunkingStrategyActivity:
@@ -25,7 +22,7 @@ class TestGetChunkingStrategyActivity:
 
     The activity checks document.use_agentic_chunking preference:
     - If False: returns sentence chunking (default, no quota check)
-    - If True: checks quota, returns agentic if available, raises exception if exceeded
+    - If True: checks quota, returns agentic if available, falls back to sentence if exceeded
     """
 
     @pytest.mark.asyncio
@@ -101,12 +98,12 @@ class TestGetChunkingStrategyActivity:
         assert result["quota_exceeded"] is False
 
     @pytest.mark.asyncio
-    async def test_raises_exception_when_opted_in_but_quota_exceeded(
+    async def test_falls_back_to_sentence_when_opted_in_but_quota_exceeded(
         self,
         test_db,
         sample_company,
     ):
-        """Test raises exception when opted in but quota exceeded."""
+        """Test gracefully falls back to SENTENCE when opted in but quota exceeded."""
 
         document_id = 123
 
@@ -134,10 +131,15 @@ class TestGetChunkingStrategyActivity:
             )
             mock_quota_class.return_value = mock_quota
 
-            with pytest.raises(Exception) as exc_info:
-                await get_chunking_strategy_activity(sample_company.id, document_id)
+            result = await get_chunking_strategy_activity(
+                sample_company.id, document_id
+            )
 
-            assert "quota exceeded" in str(exc_info.value).lower()
+        # Should gracefully fall back to sentence chunking
+        assert result["strategy"] == ChunkingStrategy.SENTENCE.value
+        assert result["tier"] == SubscriptionTier.FREE.value
+        assert result["usage_event_id"] is None
+        assert result["quota_exceeded"] is True
 
     @pytest.mark.asyncio
     async def test_raises_exception_when_document_not_found(
