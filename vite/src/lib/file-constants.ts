@@ -6,5 +6,5 @@ export const ACCEPTED_FILE_TYPES = [
 ]
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-// AI-powered chunking - recommend for files >= 5KB
-export const AGENTIC_CHUNKING_SIZE_THRESHOLD = 5 * 1024
+// AI-powered chunking - recommend for files >= 100KB
+export const AGENTIC_CHUNKING_SIZE_THRESHOLD = 100 * 1024

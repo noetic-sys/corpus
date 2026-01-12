@@ -35,7 +35,7 @@ export function BulkUploadDialog({
 }: BulkUploadDialogProps) {
   const [items, setItems] = useState<FileUploadItem[]>([])
 
-  // Initialize items with size-based defaults when files change
+  // Initialize items - default based on file size (larger files benefit from AI)
   useEffect(() => {
     setItems(
       files.map(file => ({
@@ -65,77 +65,88 @@ export function BulkUploadDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent variant="blocky" className="sm:max-w-lg p-0">
+        <DialogHeader className="p-4 border-b-2 border-border">
           <DialogTitle>Upload {files.length} document{files.length !== 1 ? 's' : ''}</DialogTitle>
           <DialogDescription>
-            Configure AI-powered chunking for each document. Larger files benefit more from AI processing.
+            Configure processing options for each file.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 max-h-[300px] overflow-y-auto py-2">
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 rounded border bg-secondary/10"
-            >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{item.file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(item.file.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                {item.useAgenticChunking && (
-                  <Sparkles className="h-3 w-3 text-primary" />
-                )}
-                <Switch
-                  checked={item.useAgenticChunking}
-                  onCheckedChange={() => toggleAgenticChunking(index)}
+        <div className="p-4 space-y-4">
+          {/* AI Chunking option header */}
+          <div className="flex items-center gap-4">
+            <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <Label className="text-sm font-medium">AI-Powered Chunking</Label>
+              <p className="text-xs text-muted-foreground">
+                Better Q&A performance for complex documents
+              </p>
+            </div>
+            {items.length > 1 && (
+              <div className="flex border-2 border-border divide-x-2 divide-border flex-shrink-0">
+                <button
+                  className="px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                  onClick={() => toggleAll(false)}
                   disabled={isUploading}
-                />
+                >
+                  None
+                </button>
+                <button
+                  className="px-3 py-1 text-xs hover:bg-muted disabled:opacity-50"
+                  onClick={() => toggleAll(true)}
+                  disabled={isUploading}
+                >
+                  All
+                </button>
               </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </div>
 
-        {items.length > 1 && (
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <Label className="text-sm">
-                AI chunking: {agenticCount} of {items.length} files
-              </Label>
+          {/* File table */}
+          <div className="border-2 border-border">
+            {/* Table header */}
+            <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b-2 border-border text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <span>File</span>
+              <span>AI</span>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toggleAll(false)}
-                disabled={isUploading}
-              >
-                None
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toggleAll(true)}
-                disabled={isUploading}
-              >
-                All
-              </Button>
+
+            {/* File rows */}
+            <div className="max-h-[240px] overflow-y-auto divide-y-2 divide-border">
+              {items.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-muted/30"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="text-sm truncate">{item.file.name}</span>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {(item.file.size / 1024).toFixed(0)} KB
+                    </span>
+                  </div>
+                  <Switch
+                    checked={item.useAgenticChunking}
+                    onCheckedChange={() => toggleAgenticChunking(index)}
+                    disabled={isUploading}
+                  />
+                </div>
+              ))}
             </div>
           </div>
-        )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>
+          {agenticCount > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {agenticCount} of {items.length} file{items.length !== 1 ? 's' : ''} will use AI chunking
+            </p>
+          )}
+        </div>
+
+        <DialogFooter className="p-4 border-t-2 border-border">
+          <Button variant="outline" style="blocky" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={isUploading}>
+          <Button style="blocky" onClick={handleConfirm} disabled={isUploading}>
             {isUploading ? (
               <>
                 <Upload className="mr-2 h-4 w-4 animate-spin" />

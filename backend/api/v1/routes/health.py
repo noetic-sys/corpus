@@ -12,9 +12,8 @@ router = APIRouter()
 
 
 @router.get("/")
-@limiter.limit("100/minute")
 async def health_check(request: Request):
-    log_span_event("Health check")
+    # No rate limiting or logging - k8s probes hit this every 5-10s
     return {"status": "healthy", "service": "corpus-service"}
 
 
