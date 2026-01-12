@@ -1,6 +1,5 @@
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from temporalio.client import Client
 
 from packages.workflows.models.domain.execution import (
     WorkflowExecutionModel,
@@ -16,7 +15,7 @@ from packages.workflows.temporal.workflow_execution_workflow import (
 )
 from common.db.context import transactional
 from common.core.otel_axiom_exporter import trace_span, get_logger
-from common.core.config import settings
+from common.temporal.client import get_temporal_client
 
 logger = get_logger(__name__)
 
@@ -70,8 +69,7 @@ class WorkflowExecutionService:
         logger.info(f"Created execution record {execution.id}")
 
         # Start Temporal workflow
-        temporal_host = getattr(settings, "temporal_host", "localhost:7233")
-        client = await Client.connect(temporal_host)
+        client = await get_temporal_client()
 
         await client.start_workflow(
             WorkflowExecutionWorkflow.run,

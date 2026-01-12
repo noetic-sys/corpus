@@ -1,6 +1,5 @@
 import argparse
 
-from common.core.config import settings
 from common.workers.launcher import WorkerLauncher
 from packages.qa.workers.agent_qa_temporal_worker import AgentQATemporalWorker
 
@@ -8,12 +7,6 @@ from packages.qa.workers.agent_qa_temporal_worker import AgentQATemporalWorker
 def setup_cli():
     """Setup CLI arguments and return parsed args with factory parameters."""
     parser = argparse.ArgumentParser(description="Temporal Agent QA Worker")
-    parser.add_argument(
-        "--temporal-host",
-        type=str,
-        default=getattr(settings, "temporal_host", "localhost:7233"),
-        help="Temporal server host:port (default: from settings or localhost:7233)",
-    )
     parser.add_argument(
         "--log-level",
         type=str,
@@ -24,8 +17,8 @@ def setup_cli():
 
     args = parser.parse_args()
 
-    # Return args and factory parameters
-    factory_args = (args.temporal_host,)
+    # Return args and factory parameters (Temporal config comes from settings)
+    factory_args = ()
     factory_kwargs = {}
 
     return args, factory_args, factory_kwargs

@@ -3,6 +3,7 @@ from typing import Optional
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from common.temporal.client import get_temporal_client
 from packages.documents.workflows import DocumentExtractionWorkflow
 from packages.documents.workflows import PDFToMarkdownWorkflow
 from packages.documents.workflows import GenericDocumentWorkflow
@@ -45,10 +46,8 @@ class TemporalWorker:
 
     def __init__(
         self,
-        temporal_host: str = "localhost:7233",
         task_queue: str = "document-extraction-queue",
     ):
-        self.temporal_host = temporal_host
         self.task_queue = task_queue
         self.client: Optional[Client] = None
         self.worker: Optional[Worker] = None
@@ -56,9 +55,7 @@ class TemporalWorker:
 
     async def connect(self):
         """Connect to Temporal server."""
-        logger.info(f"Connecting to Temporal server at {self.temporal_host}")
-        self.client = await Client.connect(self.temporal_host)
-        logger.info("Connected to Temporal server")
+        self.client = await get_temporal_client()
 
     async def create_worker(self):
         """Create Temporal worker with workflows and activities based on queue type."""
