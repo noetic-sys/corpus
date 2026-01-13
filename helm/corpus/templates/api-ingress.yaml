@@ -24,7 +24,8 @@ spec:
     - host: {{ .Values.api.ingress.host }}
       http:
         paths:
-          - path: /
+          # Only route /api prefix - health endpoints (/healthz) are internal only
+          - path: /api
             pathType: Prefix
             backend:
               service:
@@ -59,7 +60,8 @@ spec:
     - host: {{ .Values.api.websocket.host }}
       http:
         paths:
-          - path: /
+          # Only route /api prefix - health endpoints (/healthz) are internal only
+          - path: /api
             pathType: Prefix
             backend:
               service:

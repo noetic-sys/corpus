@@ -1,8 +1,5 @@
 from fastapi import APIRouter, Depends
 
-from api.v1.routes import (
-    health,
-)
 from packages.qa.routes import qa
 from packages.matrices.routes import matrix_template_variables, matrices, entity_sets
 from packages.workspaces.routes import workspaces
@@ -16,9 +13,6 @@ from packages.auth.dependencies import get_current_active_user, get_subscribed_u
 from packages.billing.routes import billing, webhooks, plans
 
 api_router = APIRouter()
-
-# Health check (no auth required)
-api_router.include_router(health.router, prefix="/health", tags=["health"])
 
 # Webhooks (no auth - signature verified internally)
 api_router.include_router(webhooks.router, tags=["webhooks"])
