@@ -228,27 +228,22 @@ export function MatrixGrid({ config }: MatrixGridProps) {
 
           <TableBody variant="blocky">
             {/* Single row with cells - each cell synthesizes ALL documents */}
-            <TableRow variant="blocky" className="h-auto flex border-b border-border">
+            {/* Only render cells if we have BOTH documents AND questions */}
+            {axis1MemberIds.length > 0 && axis2MemberIds.length > 0 && (
+            <TableRow variant="blocky" className="flex items-stretch border-b border-border">
               {/* Document list sidebar - shows all docs that feed into each cell */}
-              <TableCell variant="blocky" className="w-48 sticky left-0 z-10 bg-muted self-stretch border-r border-border p-0">
-                <div className="p-2 space-y-1 max-h-[300px] overflow-y-auto">
+              <TableCell variant="blocky" className="w-48 sticky left-0 z-10 bg-muted border-r border-border p-0 flex flex-col">
+                <div className="flex-1 flex flex-col">
                   {axis1MemberIds.map((docEntityId) => (
-                    <EntityHeader
-                      key={docEntityId}
-                      entityId={docEntityId}
-                      entityType="document"
-                      entitySetId={axis1Set?.id || 0}
-                      role={axis1.role}
-                    />
-                  ))}
-                  {axis1Set?.entityType && (
-                    <div className="pt-2 border-t mt-2">
-                      <EntitySetAddButton
-                        entityType={axis1Set.entityType}
-                        entitySetId={axis1Set.id}
+                    <div key={docEntityId} className="flex-1 border-b border-border last:border-b-0 flex items-center">
+                      <EntityHeader
+                        entityId={docEntityId}
+                        entityType="document"
+                        entitySetId={axis1Set?.id || 0}
+                        role={axis1.role}
                       />
                     </div>
-                  )}
+                  ))}
                 </div>
               </TableCell>
 
@@ -269,7 +264,7 @@ export function MatrixGrid({ config }: MatrixGridProps) {
                   <TableCell
                     variant="blocky"
                     key={questionId}
-                    className="w-48 p-0 self-stretch border-r border-border relative min-h-[200px]"
+                    className="w-48 p-0 border-r border-border relative"
                   >
                     {isFirstCell && synopsisTile && (
                       <MatrixTileDataProvider
@@ -302,6 +297,28 @@ export function MatrixGrid({ config }: MatrixGridProps) {
                 <TableCell variant="blocky" className="w-24 bg-muted self-stretch border-r border-border" />
               )}
             </TableRow>
+            )}
+
+            {/* Add document row - always show if we have the entity type */}
+            {axis1Set?.entityType && (
+              <TableRow variant="blocky" className="flex border-b border-border">
+                <TableCell variant="blocky" className="w-48 sticky left-0 z-10 bg-muted self-stretch border-r border-border">
+                  <div className="p-2 min-h-[60px] flex items-center justify-center">
+                    <EntitySetAddButton
+                      entityType={axis1Set.entityType}
+                      entitySetId={axis1Set.id}
+                    />
+                  </div>
+                </TableCell>
+                {/* Empty cells to align with questions */}
+                {axis2MemberIds.map((questionId) => (
+                  <TableCell variant="blocky" key={`add-${questionId}`} className="w-48 bg-muted self-stretch border-r border-border" />
+                ))}
+                {axis2Set?.entityType && (
+                  <TableCell variant="blocky" className="w-24 bg-muted self-stretch border-r border-border" />
+                )}
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
