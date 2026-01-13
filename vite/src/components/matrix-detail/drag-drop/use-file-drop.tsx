@@ -5,7 +5,7 @@ import { apiClient } from '@/lib/api'
 import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/file-constants'
 import { useUsageStats } from '@/hooks/use-billing'
 import type { DocumentResponse, EntitySetResponse } from '@/client'
-import type { FileUploadItem } from './bulk-upload-dialog'
+import type { FileUploadItem } from '../shared/file-upload-list'
 
 interface UseFileDropOptions {
   matrixId: number
@@ -29,9 +29,7 @@ export function useFileDrop({
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 })
   const [errors, setErrors] = useState<string[]>([])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [showEntitySetDialog, setShowEntitySetDialog] = useState(false)
-  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false)
-  const [selectedEntitySetId, setSelectedEntitySetId] = useState<number | null>(null)
+  const [showUploadConfigDialog, setShowUploadConfigDialog] = useState(false)
   const dragCounter = useRef(0)
 
   // Check if user has agentic chunking quota
@@ -58,7 +56,7 @@ export function useFileDrop({
   // Upload files with their individual agentic chunking settings
   const uploadFilesWithOptions = useCallback(async (items: FileUploadItem[], entitySetId: number) => {
     setIsUploading(true)
-    setShowBulkUploadDialog(false)
+    setShowUploadConfigDialog(false)
     setErrors([])
     setUploadProgress({ current: 0, total: items.length })
 
@@ -96,79 +94,45 @@ export function useFileDrop({
     setIsUploading(false)
     setUploadProgress({ current: 0, total: 0 })
     setPendingFiles([])
-    setSelectedEntitySetId(null)
 
     if (uploadedDocuments.length > 0) {
       onFilesUploaded?.(uploadedDocuments)
     }
   }, [matrixId, onFilesUploaded, getToken])
 
-  // Upload files directly without showing dialog (when no quota)
-  const uploadFilesDirectly = useCallback((files: File[], entitySetId: number) => {
-    const items: FileUploadItem[] = files.map(file => ({
-      file,
-      useAgenticChunking: false,
-    }))
-    uploadFilesWithOptions(items, entitySetId)
-  }, [uploadFilesWithOptions])
-
-  // Handle dropping files - show bulk upload dialog only if user has quota
+  // Handle dropping files - show combined config dialog
   const handleFilesDropped = useCallback((files: File[]) => {
-    // If multiple document entity sets exist, show entity set dialog first
-    if (documentEntitySets.length > 1) {
-      setPendingFiles(files)
-      setShowEntitySetDialog(true)
-      return
-    }
-
-    // Use the single entity set
     const targetEntitySetId = documentEntitySets[0]?.id
-    if (!targetEntitySetId) {
+    if (!targetEntitySetId && documentEntitySets.length === 0) {
       setErrors(['No document entity set found'])
       return
     }
 
-    // If no agentic quota, upload directly without dialog
-    if (!hasAgenticQuota) {
-      uploadFilesDirectly(files, targetEntitySetId)
+    // If only one entity set AND no agentic quota, upload directly without any dialog
+    if (documentEntitySets.length === 1 && !hasAgenticQuota) {
+      const items: FileUploadItem[] = files.map(file => ({
+        file,
+        useAgenticChunking: false,
+      }))
+      uploadFilesWithOptions(items, targetEntitySetId)
       return
     }
 
-    setSelectedEntitySetId(targetEntitySetId)
+    // Otherwise, show the combined config dialog
     setPendingFiles(files)
-    setShowBulkUploadDialog(true)
-  }, [documentEntitySets, hasAgenticQuota, uploadFilesDirectly])
-
-  const handleEntitySetSelected = useCallback((entitySetId: number) => {
-    if (pendingFiles.length > 0) {
-      setShowEntitySetDialog(false)
-
-      // If no agentic quota, upload directly without dialog
-      if (!hasAgenticQuota) {
-        uploadFilesDirectly(pendingFiles, entitySetId)
-        return
-      }
-
-      setSelectedEntitySetId(entitySetId)
-      setShowBulkUploadDialog(true)
-    }
-  }, [pendingFiles, hasAgenticQuota, uploadFilesDirectly])
+    setShowUploadConfigDialog(true)
+  }, [documentEntitySets, hasAgenticQuota, uploadFilesWithOptions])
 
   const handleDrop = useCallback((e: DragEvent) => {
-    console.log('DROP EVENT - Files:', e.dataTransfer?.files?.length)
     e.preventDefault()
     e.stopPropagation()
 
     dragCounter.current = 0
     setIsDragging(false)
 
-    if (isUploading) {
-      console.log('ALREADY UPLOADING - ignoring drop')
-      return
-    }
+    if (isUploading) return
 
     const files = Array.from(e.dataTransfer?.files || [])
-    console.log('FILES DROPPED:', files.length, files.map(f => f.name))
     if (files.length === 0) return
 
     // Validate all files
@@ -194,27 +158,23 @@ export function useFileDrop({
   }, [isUploading, handleFilesDropped, validateFile])
 
   const handleDragEnter = useCallback((e: DragEvent) => {
-    console.log('DRAG ENTER - Counter:', dragCounter.current, 'Items:', e.dataTransfer?.items?.length)
     e.preventDefault()
     e.stopPropagation()
 
     dragCounter.current++
 
     if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
-      console.log('SETTING isDragging = true')
       setIsDragging(true)
     }
   }, [])
 
   const handleDragLeave = useCallback((e: DragEvent) => {
-    console.log('DRAG LEAVE - Counter:', dragCounter.current)
     e.preventDefault()
     e.stopPropagation()
 
     dragCounter.current--
 
     if (dragCounter.current === 0) {
-      console.log('SETTING isDragging = false')
       setIsDragging(false)
     }
   }, [])
@@ -244,25 +204,14 @@ export function useFileDrop({
     uploadProgress,
     errors,
     clearErrors: () => setErrors([]),
-    showEntitySetDialog,
-    documentEntitySets,
-    onEntitySetSelected: handleEntitySetSelected,
-    onEntitySetDialogClose: () => {
-      setShowEntitySetDialog(false)
-      setPendingFiles([])
-    },
-    // Bulk upload dialog
-    showBulkUploadDialog,
+    // Combined upload config dialog
+    showUploadConfigDialog,
     pendingFiles,
-    onBulkUploadConfirm: (items: FileUploadItem[]) => {
-      if (selectedEntitySetId !== null) {
-        uploadFilesWithOptions(items, selectedEntitySetId)
-      }
-    },
-    onBulkUploadClose: () => {
-      setShowBulkUploadDialog(false)
+    documentEntitySets,
+    onUploadConfigConfirm: uploadFilesWithOptions,
+    onUploadConfigClose: () => {
+      setShowUploadConfigDialog(false)
       setPendingFiles([])
-      setSelectedEntitySetId(null)
     },
     handlers: {
       onDrop: handleDrop,

@@ -296,7 +296,7 @@ export const removeDocumentFromMatrixApiV1MatricesMatrixIdDocumentsDocumentIdDel
 
 /**
  * Associate Existing Document With Matrix
- * Associate an existing document with a matrix (adds to entity set).
+ * Associate an existing document with a matrix by adding it to a specific entity set.
  */
 export const associateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePost = <ThrowOnError extends boolean = false>(options: Options<AssociateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePostData, ThrowOnError>) => {
     return (options.client ?? client).post<AssociateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePostResponses, AssociateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePostErrors, ThrowOnError>({

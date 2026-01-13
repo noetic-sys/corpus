@@ -1,9 +1,8 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { DropZoneOverlay } from './drop-zone-overlay'
 import { useFileDrop } from './use-file-drop'
-import { BulkUploadDialog } from './bulk-upload-dialog'
+import { FileUploadConfigDialog } from '../dialogs/file-upload-config-dialog'
 import { MatrixProvider, useMatrixContext } from '../context/matrix-context'
-import { EntitySetSelectorDialog } from '../dialogs/entity-set-selector-dialog'
 import { toast } from "sonner"
 import type { MatrixDocument, Question } from '../types'
 import type {DocumentResponse, EntitySetResponse, AiProviderResponse, AiModelResponse, MatrixType} from '@/client'
@@ -48,14 +47,11 @@ function MatrixPageWrapperInner({ children }: { children: React.ReactNode }) {
     uploadProgress,
     errors,
     clearErrors,
-    showEntitySetDialog,
-    documentEntitySets: uploadDocumentEntitySets,
-    onEntitySetSelected,
-    onEntitySetDialogClose,
-    showBulkUploadDialog,
+    showUploadConfigDialog,
     pendingFiles,
-    onBulkUploadConfirm,
-    onBulkUploadClose,
+    documentEntitySets: uploadDocumentEntitySets,
+    onUploadConfigConfirm,
+    onUploadConfigClose,
     handlers
   } = useFileDrop({
     matrixId,
@@ -108,20 +104,12 @@ function MatrixPageWrapperInner({ children }: { children: React.ReactNode }) {
         uploadProgress={uploadProgress}
       />
 
-      <EntitySetSelectorDialog
-        isOpen={showEntitySetDialog}
-        onClose={onEntitySetDialogClose}
-        entitySets={uploadDocumentEntitySets}
-        title="Select Document Set"
-        description="Choose which document set to add the files to."
-        onSelect={onEntitySetSelected}
-      />
-
-      <BulkUploadDialog
-        isOpen={showBulkUploadDialog}
-        onClose={onBulkUploadClose}
+      <FileUploadConfigDialog
+        isOpen={showUploadConfigDialog}
+        onClose={onUploadConfigClose}
         files={pendingFiles}
-        onConfirm={onBulkUploadConfirm}
+        documentEntitySets={uploadDocumentEntitySets}
+        onConfirm={onUploadConfigConfirm}
         isUploading={isUploading}
       />
     </div>
