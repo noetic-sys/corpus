@@ -90,6 +90,7 @@ function renderAnswerData(
           questionTypeId={questionTypeId}
           citations={answer.citations}
           cellId={cellId}
+          compact
         />
       ))}
     </div>

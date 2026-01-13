@@ -4,19 +4,37 @@ import { cn } from '@/lib/utils'
 interface LowConfidenceWarningProps {
   confidence: number
   className?: string
+  compact?: boolean
 }
 
-const CONFIDENCE_THRESHOLD = 0.7
+export const CONFIDENCE_THRESHOLD = 0.7
 
 export function LowConfidenceWarning({
   confidence,
   className,
+  compact = false,
 }: LowConfidenceWarningProps) {
   if (confidence >= CONFIDENCE_THRESHOLD) {
     return null
   }
 
   const confidencePercent = Math.round(confidence * 100)
+
+  // Compact mode for matrix cells - just a small indicator
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          'inline-flex items-center gap-1 text-amber-700 dark:text-amber-300',
+          className
+        )}
+        title={`Low confidence: ${confidencePercent}%`}
+      >
+        <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+        <span className="text-[10px] font-medium">Low confidence</span>
+      </div>
+    )
+  }
 
   return (
     <div

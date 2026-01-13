@@ -78,3 +78,10 @@ app.add_middleware(
 
 # Include routers (auth enforced via dependencies at router level)
 app.include_router(api_router, prefix="/api/v1")
+
+
+# Internal health endpoint for k8s probes - not under /api/v1 to avoid external spam
+# K8s probes hit pod IPs directly, but this also reduces visibility to scanners
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    return {"status": "ok"}

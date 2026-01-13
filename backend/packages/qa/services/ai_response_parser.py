@@ -213,6 +213,12 @@ class AIResponseParser:
             raise e
 
     @staticmethod
+    def _is_answer_not_found(value: str) -> bool:
+        """Check if a value is the ANSWER_NOT_FOUND placeholder."""
+        cleaned = value.strip().upper()
+        return cleaned in ["<<ANSWER_NOT_FOUND>>", "ANSWER_NOT_FOUND"]
+
+    @staticmethod
     def _parse_text(json_response: str) -> List[TextAnswerData]:
         """Parse text JSON response - returns list."""
         try:
@@ -221,6 +227,14 @@ class AIResponseParser:
             text_answers = []
             logger.info(f"Found {len(text_resp.items)} text items in response")
             for item in text_resp.items:
+                # Check if this item's value is actually ANSWER_NOT_FOUND
+                # (AI sometimes wraps it in JSON instead of returning it directly)
+                if AIResponseParser._is_answer_not_found(item.value):
+                    logger.info(
+                        "Text item value is ANSWER_NOT_FOUND placeholder, skipping"
+                    )
+                    continue
+
                 # Parse citations from JSON
                 citations = AIResponseParser._parse_citations_from_json(item.citations)
 

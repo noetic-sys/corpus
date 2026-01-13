@@ -4,7 +4,7 @@ import { TextAnswerItem } from './text-answer-item'
 import { DateAnswerItem } from './date-answer-item'
 import { CurrencyAnswerItem } from './currency-answer-item'
 import { SelectAnswerItem } from './select-answer-item'
-import { LowConfidenceWarning } from './low-confidence-warning'
+import { LowConfidenceWarning, CONFIDENCE_THRESHOLD } from './low-confidence-warning'
 import type { AnswerData, Citation } from '../types'
 
 interface AnswerItemRendererProps {
@@ -13,6 +13,7 @@ interface AnswerItemRendererProps {
   className?: string
   citations?: Citation[]
   cellId?: number
+  compact?: boolean
 }
 
 export function AnswerItemRenderer({
@@ -20,12 +21,14 @@ export function AnswerItemRenderer({
   questionTypeId,
   className,
   citations,
-  cellId
+  cellId,
+  compact = false
 }: AnswerItemRendererProps) {
   const commonProps = { answerData, className, citations, cellId }
 
   // Get confidence from answerData (all answer types have confidence)
   const confidence = answerData.confidence ?? 1.0
+  const isLowConfidence = confidence < CONFIDENCE_THRESHOLD
 
   // Render appropriate answer component based on question type
   let answerComponent: JSX.Element
@@ -50,6 +53,16 @@ export function AnswerItemRenderer({
 
     default:
       answerComponent = <TextAnswerItem {...commonProps} />
+  }
+
+  // Compact mode: show low confidence indicator inline above the answer
+  if (compact) {
+    return (
+      <div className={isLowConfidence ? "space-y-1" : ""}>
+        <LowConfidenceWarning confidence={confidence} compact />
+        {answerComponent}
+      </div>
+    )
   }
 
   return (
