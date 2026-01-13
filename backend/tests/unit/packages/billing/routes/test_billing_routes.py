@@ -55,15 +55,15 @@ class TestBillingRoutes:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["company_id"] == sample_subscription.company_id
+        assert data["companyId"] == sample_subscription.company_id
         assert data["tier"] == sample_subscription.tier.value
-        assert "cell_operations" in data
-        assert "agentic_qa" in data
+        assert "cellOperations" in data
+        assert "agenticQa" in data
         assert "workflows" in data
-        assert "storage_bytes" in data
+        assert "storageBytes" in data
         assert "documents" in data
-        assert "documents_limit" in data
-        assert "documents_percentage" in data
+        assert "documentsLimit" in data
+        assert "documentsPercentage" in data
 
     async def test_check_cell_operation_quota(self, client, sample_subscription):
         """Test GET /api/v1/billing/quota/cell-operations."""
