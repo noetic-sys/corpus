@@ -858,6 +858,18 @@
         "operationId": "upload_standalone_document_api_v1_documents__post",
         "parameters": [
           {
+            "name": "useAgenticChunking",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to use AI-powered chunking",
+              "default": false,
+              "title": "Useagenticchunking"
+            },
+            "description": "Whether to use AI-powered chunking"
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1252,6 +1264,18 @@
               "title": "Entitysetid"
             },
             "description": "Entity set ID to add document to"
+          },
+          {
+            "name": "useAgenticChunking",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to use AI-powered chunking",
+              "default": false,
+              "title": "Useagenticchunking"
+            },
+            "description": "Whether to use AI-powered chunking"
           },
           {
             "name": "authorization",
@@ -11428,6 +11452,11 @@
             ],
             "title": "Extractioncompletedat"
           },
+          "useAgenticChunking": {
+            "type": "boolean",
+            "title": "Useagenticchunking",
+            "default": false
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -14755,126 +14784,126 @@
       },
       "UsageStatsResponse": {
         "properties": {
-          "company_id": {
+          "companyId": {
             "type": "integer",
-            "title": "Company Id"
+            "title": "Companyid"
           },
           "tier": {
             "$ref": "#/components/schemas/SubscriptionTier"
           },
-          "cell_operations": {
+          "cellOperations": {
             "type": "integer",
-            "title": "Cell Operations"
+            "title": "Celloperations"
           },
-          "cell_operations_limit": {
+          "cellOperationsLimit": {
             "type": "integer",
-            "title": "Cell Operations Limit"
+            "title": "Celloperationslimit"
           },
-          "cell_operations_percentage": {
+          "cellOperationsPercentage": {
             "type": "number",
-            "title": "Cell Operations Percentage",
+            "title": "Celloperationspercentage",
             "description": "Percentage of monthly cell operations quota used"
           },
-          "agentic_qa": {
+          "agenticQa": {
             "type": "integer",
-            "title": "Agentic Qa"
+            "title": "Agenticqa"
           },
-          "agentic_qa_limit": {
+          "agenticQaLimit": {
             "type": "integer",
-            "title": "Agentic Qa Limit"
+            "title": "Agenticqalimit"
           },
-          "agentic_qa_percentage": {
+          "agenticQaPercentage": {
             "type": "number",
-            "title": "Agentic Qa Percentage",
+            "title": "Agenticqapercentage",
             "description": "Percentage of monthly agentic QA quota used"
           },
           "workflows": {
             "type": "integer",
             "title": "Workflows"
           },
-          "workflows_limit": {
+          "workflowsLimit": {
             "type": "integer",
-            "title": "Workflows Limit"
+            "title": "Workflowslimit"
           },
-          "workflows_percentage": {
+          "workflowsPercentage": {
             "type": "number",
-            "title": "Workflows Percentage",
+            "title": "Workflowspercentage",
             "description": "Percentage of monthly workflows quota used"
           },
-          "storage_bytes": {
+          "storageBytes": {
             "type": "integer",
-            "title": "Storage Bytes"
+            "title": "Storagebytes"
           },
-          "storage_bytes_limit": {
+          "storageBytesLimit": {
             "type": "integer",
-            "title": "Storage Bytes Limit"
+            "title": "Storagebyteslimit"
           },
-          "storage_bytes_percentage": {
+          "storageBytesPercentage": {
             "type": "number",
-            "title": "Storage Bytes Percentage",
+            "title": "Storagebytespercentage",
             "description": "Percentage of monthly storage quota used"
           },
-          "agentic_chunking": {
+          "agenticChunking": {
             "type": "integer",
-            "title": "Agentic Chunking"
+            "title": "Agenticchunking"
           },
-          "agentic_chunking_limit": {
+          "agenticChunkingLimit": {
             "type": "integer",
-            "title": "Agentic Chunking Limit"
+            "title": "Agenticchunkinglimit"
           },
-          "agentic_chunking_percentage": {
+          "agenticChunkingPercentage": {
             "type": "number",
-            "title": "Agentic Chunking Percentage",
+            "title": "Agenticchunkingpercentage",
             "description": "Percentage of monthly AI document processing quota used"
           },
           "documents": {
             "type": "integer",
             "title": "Documents"
           },
-          "documents_limit": {
+          "documentsLimit": {
             "type": "integer",
-            "title": "Documents Limit"
+            "title": "Documentslimit"
           },
-          "documents_percentage": {
+          "documentsPercentage": {
             "type": "number",
-            "title": "Documents Percentage",
+            "title": "Documentspercentage",
             "description": "Percentage of monthly document upload quota used"
           },
-          "period_start": {
+          "periodStart": {
             "type": "string",
             "format": "date-time",
-            "title": "Period Start"
+            "title": "Periodstart"
           },
-          "period_end": {
+          "periodEnd": {
             "type": "string",
             "format": "date-time",
-            "title": "Period End"
+            "title": "Periodend"
           }
         },
         "type": "object",
         "required": [
-          "company_id",
+          "companyId",
           "tier",
-          "cell_operations",
-          "cell_operations_limit",
-          "cell_operations_percentage",
-          "agentic_qa",
-          "agentic_qa_limit",
-          "agentic_qa_percentage",
+          "cellOperations",
+          "cellOperationsLimit",
+          "cellOperationsPercentage",
+          "agenticQa",
+          "agenticQaLimit",
+          "agenticQaPercentage",
           "workflows",
-          "workflows_limit",
-          "workflows_percentage",
-          "storage_bytes",
-          "storage_bytes_limit",
-          "storage_bytes_percentage",
-          "agentic_chunking",
-          "agentic_chunking_limit",
-          "agentic_chunking_percentage",
+          "workflowsLimit",
+          "workflowsPercentage",
+          "storageBytes",
+          "storageBytesLimit",
+          "storageBytesPercentage",
+          "agenticChunking",
+          "agenticChunkingLimit",
+          "agenticChunkingPercentage",
           "documents",
-          "documents_limit",
-          "documents_percentage",
-          "period_start",
-          "period_end"
+          "documentsLimit",
+          "documentsPercentage",
+          "periodStart",
+          "periodEnd"
         ],
         "title": "UsageStatsResponse",
         "description": "Complete usage statistics for the 5 quota types."

@@ -26,6 +26,9 @@ class DocumentModel(BaseModel):
     extraction_started_at: Optional[datetime] = None
     extraction_completed_at: Optional[datetime] = None
 
+    # Chunking preference
+    use_agentic_chunking: bool = False
+
     created_at: datetime
     updated_at: datetime
 
@@ -53,6 +56,7 @@ class DocumentCreateModel(BaseModel):
     checksum: str
     company_id: int
     extraction_status: str = ExtractionStatus.PENDING.value
+    use_agentic_chunking: bool = False
 
     @field_validator("extraction_status", mode="before")
     @classmethod

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from common.db.session import get_db
-from common.core.otel_axiom_exporter import get_logger, log_span_event
+from common.core.otel_axiom_exporter import get_logger
 from common.providers.rate_limiter.limiter import limiter
 
 logger = get_logger(__name__)
@@ -12,9 +12,8 @@ router = APIRouter()
 
 
 @router.get("/")
-@limiter.limit("100/minute")
 async def health_check(request: Request):
-    log_span_event("Health check")
+    # No rate limiting or logging - k8s probes hit this every 5-10s
     return {"status": "healthy", "service": "corpus-service"}
 
 

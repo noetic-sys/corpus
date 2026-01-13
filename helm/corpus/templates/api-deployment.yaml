@@ -48,17 +48,17 @@ spec:
             httpGet:
               path: {{ .Values.api.health.path }}
               port: {{ .Values.api.health.port }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 10
-            timeoutSeconds: 5
+            timeoutSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: {{ .Values.api.health.path }}
               port: {{ .Values.api.health.port }}
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
             periodSeconds: 5
-            timeoutSeconds: 5
+            timeoutSeconds: 10
             failureThreshold: 3
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}

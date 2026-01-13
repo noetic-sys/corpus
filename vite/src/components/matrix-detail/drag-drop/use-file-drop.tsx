@@ -2,7 +2,10 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { uploadDocumentApiV1MatricesMatrixIdDocumentsPost } from '@/client'
 import { apiClient } from '@/lib/api'
+import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/file-constants'
+import { useUsageStats } from '@/hooks/use-billing'
 import type { DocumentResponse, EntitySetResponse } from '@/client'
+import type { FileUploadItem } from './bulk-upload-dialog'
 
 interface UseFileDropOptions {
   matrixId: number
@@ -12,24 +15,29 @@ interface UseFileDropOptions {
   maxFileSize?: number
 }
 
-const DEFAULT_ACCEPTED_TYPES = ['.pdf', '.doc', '.docx', '.txt', '.md', '.xlsx', '.xls', '.pptx', '.ppt', '.csv', '.mp3', '.wav', '.flac', '.ogg', '.webm', '.m4a', '.aac']
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
 export function useFileDrop({
   matrixId,
   entitySets,
   onFilesUploaded,
-  acceptedFileTypes = DEFAULT_ACCEPTED_TYPES,
-  maxFileSize = DEFAULT_MAX_FILE_SIZE
+  acceptedFileTypes = ACCEPTED_FILE_TYPES,
+  maxFileSize = MAX_FILE_SIZE
 }: UseFileDropOptions) {
   const { getToken } = useAuth()
+  const { data: usageStats } = useUsageStats()
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 })
   const [errors, setErrors] = useState<string[]>([])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [showEntitySetDialog, setShowEntitySetDialog] = useState(false)
+  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false)
+  const [selectedEntitySetId, setSelectedEntitySetId] = useState<number | null>(null)
   const dragCounter = useRef(0)
+
+  // Check if user has agentic chunking quota
+  const hasAgenticQuota = usageStats
+    ? usageStats.agenticChunking < usageStats.agenticChunkingLimit
+    : false
 
   // Get document entity sets
   const documentEntitySets = entitySets.filter(es => es.entityType === 'document')
@@ -47,32 +55,19 @@ export function useFileDrop({
     return null
   }, [maxFileSize, acceptedFileTypes])
 
-  const uploadFiles = useCallback(async (files: File[], entitySetId?: number) => {
-    // If multiple document entity sets exist and no entitySetId provided, show dialog
-    if (!entitySetId && documentEntitySets.length > 1) {
-      setPendingFiles(files)
-      setShowEntitySetDialog(true)
-      return
-    }
-
-    // Use the single entity set if only one exists
-    const targetEntitySetId = entitySetId || documentEntitySets[0]?.id
-
-    if (!targetEntitySetId) {
-      setErrors(['No document entity set found'])
-      return
-    }
-
+  // Upload files with their individual agentic chunking settings
+  const uploadFilesWithOptions = useCallback(async (items: FileUploadItem[], entitySetId: number) => {
     setIsUploading(true)
+    setShowBulkUploadDialog(false)
     setErrors([])
-    setUploadProgress({ current: 0, total: files.length })
+    setUploadProgress({ current: 0, total: items.length })
 
     const uploadedDocuments: DocumentResponse[] = []
     const uploadErrors: string[] = []
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      setUploadProgress({ current: i + 1, total: files.length })
+    for (let i = 0; i < items.length; i++) {
+      const { file, useAgenticChunking } = items[i]
+      setUploadProgress({ current: i + 1, total: items.length })
 
       try {
         const token = await getToken()
@@ -80,7 +75,7 @@ export function useFileDrop({
         const response = await uploadDocumentApiV1MatricesMatrixIdDocumentsPost({
           client: apiClient,
           path: { matrixId },
-          query: { entitySetId: targetEntitySetId },
+          query: { entitySetId, useAgenticChunking },
           body: { file },
           headers: {
             authorization: `Bearer ${token}`
@@ -101,17 +96,63 @@ export function useFileDrop({
     setIsUploading(false)
     setUploadProgress({ current: 0, total: 0 })
     setPendingFiles([])
+    setSelectedEntitySetId(null)
 
     if (uploadedDocuments.length > 0) {
       onFilesUploaded?.(uploadedDocuments)
     }
-  }, [matrixId, onFilesUploaded, getToken, documentEntitySets])
+  }, [matrixId, onFilesUploaded, getToken])
+
+  // Upload files directly without showing dialog (when no quota)
+  const uploadFilesDirectly = useCallback((files: File[], entitySetId: number) => {
+    const items: FileUploadItem[] = files.map(file => ({
+      file,
+      useAgenticChunking: false,
+    }))
+    uploadFilesWithOptions(items, entitySetId)
+  }, [uploadFilesWithOptions])
+
+  // Handle dropping files - show bulk upload dialog only if user has quota
+  const handleFilesDropped = useCallback((files: File[]) => {
+    // If multiple document entity sets exist, show entity set dialog first
+    if (documentEntitySets.length > 1) {
+      setPendingFiles(files)
+      setShowEntitySetDialog(true)
+      return
+    }
+
+    // Use the single entity set
+    const targetEntitySetId = documentEntitySets[0]?.id
+    if (!targetEntitySetId) {
+      setErrors(['No document entity set found'])
+      return
+    }
+
+    // If no agentic quota, upload directly without dialog
+    if (!hasAgenticQuota) {
+      uploadFilesDirectly(files, targetEntitySetId)
+      return
+    }
+
+    setSelectedEntitySetId(targetEntitySetId)
+    setPendingFiles(files)
+    setShowBulkUploadDialog(true)
+  }, [documentEntitySets, hasAgenticQuota, uploadFilesDirectly])
 
   const handleEntitySetSelected = useCallback((entitySetId: number) => {
     if (pendingFiles.length > 0) {
-      uploadFiles(pendingFiles, entitySetId)
+      setShowEntitySetDialog(false)
+
+      // If no agentic quota, upload directly without dialog
+      if (!hasAgenticQuota) {
+        uploadFilesDirectly(pendingFiles, entitySetId)
+        return
+      }
+
+      setSelectedEntitySetId(entitySetId)
+      setShowBulkUploadDialog(true)
     }
-  }, [pendingFiles, uploadFiles])
+  }, [pendingFiles, hasAgenticQuota, uploadFilesDirectly])
 
   const handleDrop = useCallback((e: DragEvent) => {
     console.log('DROP EVENT - Files:', e.dataTransfer?.files?.length)
@@ -148,9 +189,9 @@ export function useFileDrop({
     }
 
     if (validFiles.length > 0) {
-      uploadFiles(validFiles)
+      handleFilesDropped(validFiles)
     }
-  }, [isUploading, uploadFiles, validateFile])
+  }, [isUploading, handleFilesDropped, validateFile])
 
   const handleDragEnter = useCallback((e: DragEvent) => {
     console.log('DRAG ENTER - Counter:', dragCounter.current, 'Items:', e.dataTransfer?.items?.length)
@@ -209,6 +250,19 @@ export function useFileDrop({
     onEntitySetDialogClose: () => {
       setShowEntitySetDialog(false)
       setPendingFiles([])
+    },
+    // Bulk upload dialog
+    showBulkUploadDialog,
+    pendingFiles,
+    onBulkUploadConfirm: (items: FileUploadItem[]) => {
+      if (selectedEntitySetId !== null) {
+        uploadFilesWithOptions(items, selectedEntitySetId)
+      }
+    },
+    onBulkUploadClose: () => {
+      setShowBulkUploadDialog(false)
+      setPendingFiles([])
+      setSelectedEntitySetId(null)
     },
     handlers: {
       onDrop: handleDrop,

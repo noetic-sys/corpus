@@ -40,6 +40,17 @@ class DocumentLabelUpdate(BaseModel):
     )
 
 
+class DocumentUploadOptions(BaseModel):
+    """Options for document upload behavior."""
+
+    use_agentic_chunking: bool = False
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
 class DocumentResponse(DocumentBase):
     id: int
     company_id: int
@@ -48,6 +59,7 @@ class DocumentResponse(DocumentBase):
     extraction_status: str
     extraction_started_at: Optional[datetime] = None
     extraction_completed_at: Optional[datetime] = None
+    use_agentic_chunking: bool = False
     created_at: datetime
     updated_at: datetime
 

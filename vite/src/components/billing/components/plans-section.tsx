@@ -26,10 +26,10 @@ export function PlansSection({
   error,
 }: PlansSectionProps) {
   const maxUsage = Math.max(
-    usage.cell_operations_percentage,
-    usage.agentic_qa_percentage,
-    usage.workflows_percentage,
-    usage.storage_bytes_percentage
+    usage.cellOperationsPercentage,
+    usage.agenticQaPercentage,
+    usage.workflowsPercentage,
+    usage.storageBytesPercentage
   )
   const isNearLimit = maxUsage >= 80
 
