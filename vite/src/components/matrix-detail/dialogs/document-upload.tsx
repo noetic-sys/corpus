@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { FileText, Upload, X } from "lucide-react"
 import { uploadDocumentApiV1MatricesMatrixIdDocumentsPost } from '@/client'
 import { apiClient } from '@/lib/api'
-import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE, AGENTIC_CHUNKING_SIZE_THRESHOLD } from '@/lib/file-constants'
+import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/file-constants'
 import type { DocumentResponse } from '@/client'
 import { toast } from "sonner"
 import { BulkUploadDialog, type FileUploadItem } from '../drag-drop/bulk-upload-dialog'
