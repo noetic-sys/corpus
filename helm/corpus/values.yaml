@@ -96,9 +96,9 @@ api:
   # -- Extra environment variables
   env: []
 
-  # -- Health check paths
+  # -- Health check paths (using /healthz to avoid external spam on /api/v1/health)
   health:
-    path: /api/v1/health/
+    path: /healthz
     port: 8000
 
 # =============================================================================

@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from common.core.config import settings
 from api.v1.routes.router import api_router
+from internal.routes.router import internal_router
 from common.db.session import init_db
 from common.providers.rate_limiter.limiter import limiter
 
@@ -79,9 +80,5 @@ app.add_middleware(
 # Include routers (auth enforced via dependencies at router level)
 app.include_router(api_router, prefix="/api/v1")
 
-
-# Internal health endpoint for k8s probes - not under /api/v1 to avoid external spam
-# K8s probes hit pod IPs directly, but this also reduces visibility to scanners
-@app.get("/healthz", include_in_schema=False)
-async def healthz():
-    return {"status": "ok"}
+# Internal routes (k8s probes, metrics, etc.) - not under /api, so not exposed via ingress
+app.include_router(internal_router, include_in_schema=False)
