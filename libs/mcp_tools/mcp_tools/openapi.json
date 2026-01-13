@@ -1824,7 +1824,7 @@
           "documents"
         ],
         "summary": "Associate Existing Document With Matrix",
-        "description": "Associate an existing document with a matrix (adds to entity set).",
+        "description": "Associate an existing document with a matrix by adding it to a specific entity set.",
         "operationId": "associate_existing_document_with_matrix_api_v1_matrices__matrixId__documents__documentId__associate_post",
         "parameters": [
           {
@@ -1844,6 +1844,17 @@
               "type": "integer",
               "title": "Documentid"
             }
+          },
+          {
+            "name": "entitySetId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "description": "Target entity set ID to add the document to.",
+              "title": "Entitysetid"
+            },
+            "description": "Target entity set ID to add the document to."
           },
           {
             "name": "authorization",

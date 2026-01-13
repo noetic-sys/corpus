@@ -4163,7 +4163,13 @@ export type AssociateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDoc
          */
         documentId: number;
     };
-    query?: never;
+    query: {
+        /**
+         * Entitysetid
+         * Target entity set ID to add the document to.
+         */
+        entitySetId: number;
+    };
     url: '/api/v1/matrices/{matrixId}/documents/{documentId}/associate';
 };
 

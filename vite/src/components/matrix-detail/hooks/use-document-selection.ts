@@ -5,7 +5,11 @@ import { associateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocume
 import { apiClient } from '@/lib/api'
 import type { DocumentResponse } from '@/client'
 
-export function useDocumentSelection(matrixId: number, onDocumentAssociated: (doc: DocumentResponse) => void) {
+export function useDocumentSelection(
+  matrixId: number,
+  entitySetId: number,
+  onDocumentAssociated: (doc: DocumentResponse) => void
+) {
   const { getToken } = useAuth()
   const [selectedDocuments, setSelectedDocuments] = useState<DocumentResponse[]>([])
   const [isAssociating, setIsAssociating] = useState(false)
@@ -31,8 +35,11 @@ export function useDocumentSelection(matrixId: number, onDocumentAssociated: (do
     const promises = selectedDocuments.map(doc =>
       associateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePost({
         path: {
-          matrixId: matrixId,
+          matrixId,
           documentId: doc.id
+        },
+        query: {
+          entitySetId
         },
         headers: {
           authorization: `Bearer ${token}`
@@ -68,7 +75,7 @@ export function useDocumentSelection(matrixId: number, onDocumentAssociated: (do
 
     setSelectedDocuments([])
     setIsAssociating(false)
-  }, [selectedDocuments, matrixId, onDocumentAssociated, getToken])
+  }, [selectedDocuments, matrixId, entitySetId, onDocumentAssociated, getToken])
 
   const clearSelection = useCallback(() => {
     setSelectedDocuments([])

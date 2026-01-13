@@ -1,5 +1,4 @@
 export { useFileDrop } from './use-file-drop'
 export { DropZoneOverlay } from './drop-zone-overlay'
 export { MatrixPageWrapper } from './matrix-page-wrapper'
-export { BulkUploadDialog } from './bulk-upload-dialog'
-export type { FileUploadItem } from './bulk-upload-dialog'
+export type { FileUploadItem } from '../shared/file-upload-list'

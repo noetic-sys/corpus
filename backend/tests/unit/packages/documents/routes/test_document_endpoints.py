@@ -498,7 +498,7 @@ class TestDocumentStreamingEndpoints:
         matrix2 = matrix2_response.json()
         matrix2_id = matrix2["id"]
 
-        # Get question entity set for matrix2
+        # Get entity sets for matrix2
         entity_sets_response = await client.get(
             f"/api/v1/matrices/{matrix2_id}/entity-sets"
         )
@@ -507,6 +507,11 @@ class TestDocumentStreamingEndpoints:
             es
             for es in entity_sets_data["entitySets"]
             if es["entityType"] == "question"
+        )
+        document_entity_set = next(
+            es
+            for es in entity_sets_data["entitySets"]
+            if es["entityType"] == "document"
         )
 
         # Add questions to second matrix
@@ -539,7 +544,7 @@ class TestDocumentStreamingEndpoints:
 
         # Associate existing document with second matrix
         response = await client.post(
-            f"/api/v1/matrices/{matrix2_id}/documents/{document_id}/associate"
+            f"/api/v1/matrices/{matrix2_id}/documents/{document_id}/associate?entitySetId={document_entity_set['id']}"
         )
         assert response.status_code == 200
         result = response.json()

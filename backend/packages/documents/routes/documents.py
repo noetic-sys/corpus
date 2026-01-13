@@ -726,10 +726,17 @@ async def remove_document_from_matrix(
 async def associate_existing_document_with_matrix(
     matrix_id: Annotated[int, Path(alias="matrixId")],
     document_id: Annotated[int, Path(alias="documentId")],
+    entity_set_id: Annotated[
+        int,
+        Query(
+            alias="entitySetId",
+            description="Target entity set ID to add the document to.",
+        ),
+    ],
     label_update: DocumentLabelUpdate = None,
     current_user: AuthenticatedUser = Depends(get_current_active_user),
 ):
-    """Associate an existing document with a matrix (adds to entity set)."""
+    """Associate an existing document with a matrix by adding it to a specific entity set."""
     async with transaction():
         question_service = get_question_service()
         batch_processing_service = get_batch_processing_service()
@@ -744,24 +751,27 @@ async def associate_existing_document_with_matrix(
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
-        # Get matrix entity sets
+        # Get matrix entity sets and validate the target entity set
         entity_sets_with_members = (
             await entity_set_service.get_entity_sets_with_members(
                 matrix_id, current_user.company_id
             )
         )
+
+        # Find the specified entity set and validate it's a document type
         document_entity_set = next(
             (
                 es
                 for es, members in entity_sets_with_members
-                if es.entity_type == EntityType.DOCUMENT
+                if es.id == entity_set_id and es.entity_type == EntityType.DOCUMENT
             ),
             None,
         )
 
         if not document_entity_set:
             raise HTTPException(
-                status_code=500, detail="Matrix has no document entity set"
+                status_code=400,
+                detail=f"Entity set {entity_set_id} is not a valid document entity set for this matrix",
             )
 
         # Check if document is already a member

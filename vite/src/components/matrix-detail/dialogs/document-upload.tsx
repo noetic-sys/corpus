@@ -1,16 +1,13 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { FileText, Upload, X } from "lucide-react"
+import { Upload } from "lucide-react"
 import { uploadDocumentApiV1MatricesMatrixIdDocumentsPost } from '@/client'
 import { apiClient } from '@/lib/api'
 import { ACCEPTED_FILE_TYPES, MAX_FILE_SIZE } from '@/lib/file-constants'
 import type { DocumentResponse } from '@/client'
 import { toast } from "sonner"
-import { BulkUploadDialog, type FileUploadItem } from '../drag-drop/bulk-upload-dialog'
-import { useUsageStats } from '@/hooks/use-billing'
+import { FileUploadList, type FileUploadItem } from '../shared/file-upload-list'
 
 interface DocumentUploadProps {
   matrixId: number
@@ -20,16 +17,9 @@ interface DocumentUploadProps {
 
 export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: DocumentUploadProps) {
   const { getToken } = useAuth()
-  const { data: usageStats } = useUsageStats()
   const [files, setFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 })
-  const [showBulkDialog, setShowBulkDialog] = useState(false)
-
-  // Check if user has agentic chunking quota
-  const hasAgenticQuota = usageStats
-    ? usageStats.agenticChunking < usageStats.agenticChunkingLimit
-    : false
 
   const validateFile = useCallback((file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
@@ -67,16 +57,12 @@ export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: Do
     }
 
     if (validFiles.length > 0) {
-      setFiles(validFiles)
-      // Show bulk dialog if user has quota, otherwise upload directly
-      if (hasAgenticQuota) {
-        setShowBulkDialog(true)
-      }
+      setFiles(prev => [...prev, ...validFiles])
     }
 
     // Reset input so same files can be selected again
     event.target.value = ''
-  }, [validateFile, hasAgenticQuota])
+  }, [validateFile])
 
   const removeFile = (index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index))
@@ -84,7 +70,6 @@ export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: Do
 
   const uploadFiles = async (items: FileUploadItem[]) => {
     setIsUploading(true)
-    setShowBulkDialog(false)
     setUploadProgress({ current: 0, total: items.length })
 
     const uploadedDocs: DocumentResponse[] = []
@@ -130,26 +115,6 @@ export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: Do
     setUploadProgress({ current: 0, total: 0 })
   }
 
-  const handleUpload = async () => {
-    if (files.length === 0) return
-
-    // If no quota, upload all with agentic=false
-    if (!hasAgenticQuota) {
-      const items: FileUploadItem[] = files.map(file => ({
-        file,
-        useAgenticChunking: false
-      }))
-      await uploadFiles(items)
-    } else {
-      // Show dialog to configure per-file settings
-      setShowBulkDialog(true)
-    }
-  }
-
-  const handleBulkUploadConfirm = (items: FileUploadItem[]) => {
-    uploadFiles(items)
-  }
-
   return (
     <div className="space-y-4">
       {/* Dropzone-style upload area */}
@@ -182,77 +147,22 @@ export function DocumentUpload({ matrixId, entitySetId, onDocumentUploaded }: Do
         />
       </label>
 
-      {/* Selected files list */}
-      {files.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">
-              {files.length} file{files.length !== 1 ? 's' : ''} selected
-            </Label>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFiles([])}
-              disabled={isUploading}
-              className="text-xs h-7"
-            >
-              Clear all
-            </Button>
-          </div>
-          <div className="max-h-[200px] overflow-y-auto border-2 border-border divide-y-2 divide-border">
-            {files.map((file, index) => (
-              <div key={index} className="flex items-center justify-between text-sm p-2 hover:bg-muted/30">
-                <div className="flex items-center gap-2 min-w-0">
-                  <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                  <span className="truncate">{file.name}</span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {(file.size / 1024).toFixed(0)} KB
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFile(index)}
-                  disabled={isUploading}
-                  className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Upload button */}
-      {files.length > 0 && (
-        <Button
-          style="blocky"
-          onClick={handleUpload}
-          disabled={isUploading}
-          className="w-full"
-        >
-          {isUploading ? (
-            <>
-              <Upload className="mr-2 h-4 w-4 animate-spin" />
-              Uploading {uploadProgress.current}/{uploadProgress.total}...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload {files.length} File{files.length !== 1 ? 's' : ''}
-            </>
-          )}
-        </Button>
-      )}
-
-      <BulkUploadDialog
-        isOpen={showBulkDialog}
-        onClose={() => setShowBulkDialog(false)}
+      {/* Inline file list with agentic toggle - no separate dialog */}
+      <FileUploadList
         files={files}
-        onConfirm={handleBulkUploadConfirm}
         isUploading={isUploading}
+        onUpload={uploadFiles}
+        onClear={() => setFiles([])}
+        onRemoveFile={removeFile}
+        showUploadButton={true}
       />
+
+      {/* Upload progress indicator */}
+      {isUploading && uploadProgress.total > 1 && (
+        <p className="text-xs text-muted-foreground text-center">
+          Uploading {uploadProgress.current}/{uploadProgress.total}...
+        </p>
+      )}
     </div>
   )
 }
