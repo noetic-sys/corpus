@@ -39,11 +39,11 @@ function UsageTooltipContent() {
   }
 
   const maxUsage = Math.max(
-    usage.cell_operations_percentage,
-    usage.agentic_qa_percentage,
-    usage.workflows_percentage,
-    usage.storage_bytes_percentage,
-    usage.agentic_chunking_percentage
+    usage.cellOperationsPercentage,
+    usage.agenticQaPercentage,
+    usage.workflowsPercentage,
+    usage.storageBytesPercentage,
+    usage.agenticChunkingPercentage
   )
 
   const isNearLimit = (pct: number) => pct >= 80
@@ -59,32 +59,32 @@ function UsageTooltipContent() {
       <div className="border-t pt-2 space-y-1.5">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Cells</span>
-          <span className={isNearLimit(usage.cell_operations_percentage) ? 'text-destructive font-medium' : ''}>
-            {usage.cell_operations.toLocaleString()}/{usage.cell_operations_limit.toLocaleString()}
+          <span className={isNearLimit(usage.cellOperationsPercentage) ? 'text-destructive font-medium' : ''}>
+            {usage.cellOperations.toLocaleString()}/{usage.cellOperationsLimit.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Agentic QA</span>
-          <span className={isNearLimit(usage.agentic_qa_percentage) ? 'text-destructive font-medium' : ''}>
-            {usage.agentic_qa.toLocaleString()}/{usage.agentic_qa_limit.toLocaleString()}
+          <span className={isNearLimit(usage.agenticQaPercentage) ? 'text-destructive font-medium' : ''}>
+            {usage.agenticQa.toLocaleString()}/{usage.agenticQaLimit.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Workflows</span>
-          <span className={isNearLimit(usage.workflows_percentage) ? 'text-destructive font-medium' : ''}>
-            {usage.workflows.toLocaleString()}/{usage.workflows_limit.toLocaleString()}
+          <span className={isNearLimit(usage.workflowsPercentage) ? 'text-destructive font-medium' : ''}>
+            {usage.workflows.toLocaleString()}/{usage.workflowsLimit.toLocaleString()}
           </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Storage</span>
-          <span className={isNearLimit(usage.storage_bytes_percentage) ? 'text-destructive font-medium' : ''}>
-            {formatBytes(usage.storage_bytes)}
+          <span className={isNearLimit(usage.storageBytesPercentage) ? 'text-destructive font-medium' : ''}>
+            {formatBytes(usage.storageBytes)}
           </span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">AI Docs</span>
-          <span className={isNearLimit(usage.agentic_chunking_percentage) ? 'text-destructive font-medium' : ''}>
-            {usage.agentic_chunking.toLocaleString()}/{usage.agentic_chunking_limit.toLocaleString()}
+          <span className={isNearLimit(usage.agenticChunkingPercentage) ? 'text-destructive font-medium' : ''}>
+            {usage.agenticChunking.toLocaleString()}/{usage.agenticChunkingLimit.toLocaleString()}
           </span>
         </div>
       </div>

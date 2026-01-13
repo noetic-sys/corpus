@@ -139,7 +139,7 @@ export function BillingDashboard() {
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <TrendingUp className="h-4 w-4" />
         <span>
-          Usage period: {formatDate(usage.period_start)} - {formatDate(usage.period_end)}
+          Usage period: {formatDate(usage.periodStart)} - {formatDate(usage.periodEnd)}
         </span>
       </div>
     </div>

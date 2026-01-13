@@ -2977,96 +2977,96 @@ export type UploadManifestResponse = {
  */
 export type UsageStatsResponse = {
     /**
-     * Company Id
+     * Companyid
      */
-    company_id: number;
+    companyId: number;
     tier: SubscriptionTier;
     /**
-     * Cell Operations
+     * Celloperations
      */
-    cell_operations: number;
+    cellOperations: number;
     /**
-     * Cell Operations Limit
+     * Celloperationslimit
      */
-    cell_operations_limit: number;
+    cellOperationsLimit: number;
     /**
-     * Cell Operations Percentage
+     * Celloperationspercentage
      * Percentage of monthly cell operations quota used
      */
-    cell_operations_percentage: number;
+    cellOperationsPercentage: number;
     /**
-     * Agentic Qa
+     * Agenticqa
      */
-    agentic_qa: number;
+    agenticQa: number;
     /**
-     * Agentic Qa Limit
+     * Agenticqalimit
      */
-    agentic_qa_limit: number;
+    agenticQaLimit: number;
     /**
-     * Agentic Qa Percentage
+     * Agenticqapercentage
      * Percentage of monthly agentic QA quota used
      */
-    agentic_qa_percentage: number;
+    agenticQaPercentage: number;
     /**
      * Workflows
      */
     workflows: number;
     /**
-     * Workflows Limit
+     * Workflowslimit
      */
-    workflows_limit: number;
+    workflowsLimit: number;
     /**
-     * Workflows Percentage
+     * Workflowspercentage
      * Percentage of monthly workflows quota used
      */
-    workflows_percentage: number;
+    workflowsPercentage: number;
     /**
-     * Storage Bytes
+     * Storagebytes
      */
-    storage_bytes: number;
+    storageBytes: number;
     /**
-     * Storage Bytes Limit
+     * Storagebyteslimit
      */
-    storage_bytes_limit: number;
+    storageBytesLimit: number;
     /**
-     * Storage Bytes Percentage
+     * Storagebytespercentage
      * Percentage of monthly storage quota used
      */
-    storage_bytes_percentage: number;
+    storageBytesPercentage: number;
     /**
-     * Agentic Chunking
+     * Agenticchunking
      */
-    agentic_chunking: number;
+    agenticChunking: number;
     /**
-     * Agentic Chunking Limit
+     * Agenticchunkinglimit
      */
-    agentic_chunking_limit: number;
+    agenticChunkingLimit: number;
     /**
-     * Agentic Chunking Percentage
+     * Agenticchunkingpercentage
      * Percentage of monthly AI document processing quota used
      */
-    agentic_chunking_percentage: number;
+    agenticChunkingPercentage: number;
     /**
      * Documents
      */
     documents: number;
     /**
-     * Documents Limit
+     * Documentslimit
      */
-    documents_limit: number;
+    documentsLimit: number;
     /**
-     * Documents Percentage
+     * Documentspercentage
      * Percentage of monthly document upload quota used
      */
-    documents_percentage: number;
+    documentsPercentage: number;
     /**
-     * Period Start
+     * Periodstart
      */
-    period_start: string;
+    periodStart: string;
     /**
-     * Period End
+     * Periodend
      */
-    period_end: string;
+    periodEnd: string;
 };
 
 /**

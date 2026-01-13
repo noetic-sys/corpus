@@ -14,49 +14,49 @@ export function UsageMetricsGrid({ usage }: UsageMetricsGridProps) {
         icon={Grid3X3}
         title="Cell Operations"
         description="Monthly usage"
-        value={usage.cell_operations.toLocaleString()}
-        limit={usage.cell_operations_limit.toLocaleString()}
-        percentage={usage.cell_operations_percentage}
+        value={usage.cellOperations.toLocaleString()}
+        limit={usage.cellOperationsLimit.toLocaleString()}
+        percentage={usage.cellOperationsPercentage}
       />
       <UsageMetricCard
         icon={Bot}
         title="Agentic QA"
         description="AI agent queries"
-        value={usage.agentic_qa.toLocaleString()}
-        limit={usage.agentic_qa_limit.toLocaleString()}
-        percentage={usage.agentic_qa_percentage}
+        value={usage.agenticQa.toLocaleString()}
+        limit={usage.agenticQaLimit.toLocaleString()}
+        percentage={usage.agenticQaPercentage}
       />
       <UsageMetricCard
         icon={Workflow}
         title="Workflows"
         description="Workflow executions"
         value={usage.workflows.toLocaleString()}
-        limit={usage.workflows_limit.toLocaleString()}
-        percentage={usage.workflows_percentage}
+        limit={usage.workflowsLimit.toLocaleString()}
+        percentage={usage.workflowsPercentage}
       />
       <UsageMetricCard
         icon={FileText}
         title="Documents"
         description="Document uploads"
         value={usage.documents.toLocaleString()}
-        limit={usage.documents_limit.toLocaleString()}
-        percentage={usage.documents_percentage}
+        limit={usage.documentsLimit.toLocaleString()}
+        percentage={usage.documentsPercentage}
       />
       <UsageMetricCard
         icon={HardDrive}
         title="Storage"
         description="File storage used"
-        value={formatBytes(usage.storage_bytes)}
-        limit={formatBytes(usage.storage_bytes_limit)}
-        percentage={usage.storage_bytes_percentage}
+        value={formatBytes(usage.storageBytes)}
+        limit={formatBytes(usage.storageBytesLimit)}
+        percentage={usage.storageBytesPercentage}
       />
       <UsageMetricCard
         icon={FileStack}
         title="AI Doc Processing"
         description="Smart document chunking"
-        value={usage.agentic_chunking.toLocaleString()}
-        limit={usage.agentic_chunking_limit.toLocaleString()}
-        percentage={usage.agentic_chunking_percentage}
+        value={usage.agenticChunking.toLocaleString()}
+        limit={usage.agenticChunkingLimit.toLocaleString()}
+        percentage={usage.agenticChunkingPercentage}
       />
     </div>
   )

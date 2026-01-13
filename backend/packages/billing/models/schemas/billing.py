@@ -6,7 +6,8 @@ Request and response models for billing endpoints.
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic.alias_generators import to_camel
 
 from packages.billing.models.domain.enums import SubscriptionTier, SubscriptionStatus
 
@@ -94,6 +95,8 @@ class QuotaStatusResponse(BaseModel):
 
 class UsageStatsResponse(BaseModel):
     """Complete usage statistics for the 5 quota types."""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     company_id: int
     tier: SubscriptionTier
