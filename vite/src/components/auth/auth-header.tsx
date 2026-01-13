@@ -6,7 +6,7 @@ import { BackButton } from '@/components/ui/back-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { useSubscriptionStatus, useUsageStats } from '@/hooks/use-billing'
-import { LogIn, LogOut, User, ChevronRight, Github, Star } from 'lucide-react'
+import { LogIn, LogOut, User, ChevronRight, Github } from 'lucide-react'
 
 // X (Twitter) icon - lucide doesn't have the new X logo
 function XIcon({ className }: { className?: string }) {
