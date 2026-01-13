@@ -59,15 +59,6 @@ class AIResponseParser:
                 f"After cleaning (len={len(json_response)}): {repr(json_response)}"
             )
 
-            # Check for not found format - now returns empty answer set
-            if json_response in [
-                "<<ANSWER_NOT_FOUND>>",
-                '"<<ANSWER_NOT_FOUND>>"',
-                "'<<ANSWER_NOT_FOUND>>'",
-            ]:
-                logger.info("Response indicates no answer found")
-                return AIAnswerSet.not_found()
-
             # Parse based on question type - all return AIAnswerSet now
             if question_type == QuestionTypeName.CURRENCY:
                 logger.info("Parsing as CURRENCY type")

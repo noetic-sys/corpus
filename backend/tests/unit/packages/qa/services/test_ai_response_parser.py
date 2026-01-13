@@ -18,7 +18,7 @@ class TestAIResponseParser:
     """Unit tests for AIResponseParser."""
 
     def test_parse_not_found_response(self):
-        """Test parsing <<ANSWER_NOT_FOUND>> responses."""
+        """Test parsing empty items array as not found."""
         not_found_response = AI_RESPONSE_SAMPLES["not_found"]
 
         result = AIResponseParser.parse_response(
@@ -31,7 +31,7 @@ class TestAIResponseParser:
         assert result.answer_count == 0
 
     def test_parse_not_found_response_currency(self):
-        """Test parsing <<ANSWER_NOT_FOUND>> for currency questions."""
+        """Test parsing empty items array for currency questions."""
         not_found_response = AI_RESPONSE_SAMPLES["not_found"]
 
         result = AIResponseParser.parse_response(
@@ -44,7 +44,7 @@ class TestAIResponseParser:
         assert result.answer_count == 0
 
     def test_parse_not_found_response_date(self):
-        """Test parsing <<ANSWER_NOT_FOUND>> for date questions."""
+        """Test parsing empty items array for date questions."""
         not_found_response = AI_RESPONSE_SAMPLES["not_found"]
 
         result = AIResponseParser.parse_response(
@@ -57,8 +57,8 @@ class TestAIResponseParser:
         assert result.answer_count == 0
 
     def test_parse_not_found_response_single_select(self):
-        """Test parsing <<ANSWER_NOT_FOUND>> for single select questions."""
-        not_found_response = AI_RESPONSE_SAMPLES["not_found"]
+        """Test parsing empty options array for single select questions."""
+        not_found_response = AI_RESPONSE_SAMPLES["not_found_select"]
 
         result = AIResponseParser.parse_response(
             not_found_response, QuestionTypeName.SELECT, SAMPLE_OPTIONS
@@ -70,8 +70,8 @@ class TestAIResponseParser:
         assert result.answer_count == 0
 
     def test_parse_not_found_response_select(self):
-        """Test parsing <<ANSWER_NOT_FOUND>> for multi select questions."""
-        not_found_response = AI_RESPONSE_SAMPLES["not_found"]
+        """Test parsing empty options array for multi select questions."""
+        not_found_response = AI_RESPONSE_SAMPLES["not_found_select"]
 
         result = AIResponseParser.parse_response(
             not_found_response, QuestionTypeName.SELECT, SAMPLE_OPTIONS
@@ -379,16 +379,17 @@ class TestAIResponseParser:
         assert result.answer_found is True
         assert result.answers[0].value == "This is the answer text"
 
-    def test_parse_response_quoted_not_found(self):
-        """Test parsing quoted not found responses."""
-        quoted_responses = [
-            '"<<ANSWER_NOT_FOUND>>"',
-            "'<<ANSWER_NOT_FOUND>>'",
+    def test_parse_response_empty_array_variants(self):
+        """Test parsing empty array responses with whitespace variants."""
+        empty_responses = [
+            '{"items": []}',
+            '{ "items": [] }',
+            '{"items":[]}',
         ]
 
-        for quoted_response in quoted_responses:
+        for empty_response in empty_responses:
             result = AIResponseParser.parse_response(
-                quoted_response, QuestionTypeName.SHORT_ANSWER
+                empty_response, QuestionTypeName.SHORT_ANSWER
             )
 
             assert isinstance(result, AIAnswerSet)
@@ -696,9 +697,9 @@ class TestAIResponseParserEdgeCases:
 
     def test_answer_set_boolean_conversion(self):
         """Test that AIAnswerSet boolean conversion works correctly."""
-        # Test not found
+        # Test not found (empty array)
         not_found = AIResponseParser.parse_response(
-            "<<ANSWER_NOT_FOUND>>", QuestionTypeName.SHORT_ANSWER
+            '{"items": []}', QuestionTypeName.SHORT_ANSWER
         )
         assert not not_found  # Should be False when used as boolean
         assert not_found.answer_found is False

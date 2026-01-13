@@ -26,7 +26,11 @@ Respond ONLY with valid JSON if an answer is found:
 }
 ```
 
-If no answer can be found: `<<ANSWER_NOT_FOUND>>`
+If no answer can be found, return an empty items array:
+
+```json
+{"items": []}
+```
 
 ---
 
@@ -115,9 +119,9 @@ Option C - Cite a document summary:
 | 0.60-0.79 | Minor interpretation required | "Annual rate" = "interest rate" |
 | 0.40-0.59 | Indirect evidence | Must calculate or combine information |
 | 0.20-0.39 | Significant inference | Answer implied but not stated |
-| < 0.20 | Speculative | Return `<<ANSWER_NOT_FOUND>>` instead |
+| < 0.20 | Speculative | Return empty array instead |
 
-**Rule:** If confidence would be below 0.3, return `<<ANSWER_NOT_FOUND>>`.
+**Rule:** If confidence would be below 0.3, return `{"items": []}`.
 
 ---
 

@@ -27,7 +27,11 @@ Respond ONLY with valid JSON if amounts are found:
 }
 ```
 
-If no amounts can be found: `<<ANSWER_NOT_FOUND>>`
+If no amounts can be found, return an empty items array:
+
+```json
+{"items": []}
+```
 
 ---
 
@@ -123,7 +127,7 @@ Document: "Annual Fee: $50,000 USD"
 | 0.80-0.94 | Clear amount, inferred currency | "$50,000" (USD assumed) |
 | 0.60-0.79 | Amount requires conversion | "five million dollars" |
 | 0.40-0.59 | Approximate or range | "approximately $1M" |
-| < 0.40 | Speculative | Return `<<ANSWER_NOT_FOUND>>` |
+| < 0.40 | Speculative | Return empty array instead |
 
 ---
 
