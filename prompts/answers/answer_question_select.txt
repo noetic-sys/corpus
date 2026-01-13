@@ -26,7 +26,11 @@ Respond ONLY with valid JSON if options are found:
 }
 ```
 
-If no options match: `<<ANSWER_NOT_FOUND>>`
+If no options match, return an empty options array:
+
+```json
+{"options": []}
+```
 
 ---
 

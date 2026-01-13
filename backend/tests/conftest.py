@@ -855,7 +855,8 @@ AI_RESPONSE_SAMPLES = {
             ]
         }""",
     },
-    "not_found": "<<ANSWER_NOT_FOUND>>",
+    "not_found": '{"items": []}',
+    "not_found_select": '{"options": []}',
 }
 
 # Sample option lists for select questions

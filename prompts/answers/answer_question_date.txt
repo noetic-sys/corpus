@@ -26,7 +26,11 @@ Respond ONLY with valid JSON if dates are found:
 }
 ```
 
-If no dates can be found: `<<ANSWER_NOT_FOUND>>`
+If no dates can be found, return an empty items array:
+
+```json
+{"items": []}
+```
 
 ---
 
@@ -104,7 +108,7 @@ Document: "Effective Date: January 1, 2024"
 | 0.80-0.94 | Clear date in context | "signed on March 15, 2024" |
 | 0.60-0.79 | Date requires interpretation | "Q1 2024" → specific date |
 | 0.40-0.59 | Partial date info | Only year mentioned |
-| < 0.40 | Speculative | Return `<<ANSWER_NOT_FOUND>>` |
+| < 0.40 | Speculative | Return empty array instead |
 
 ---
 

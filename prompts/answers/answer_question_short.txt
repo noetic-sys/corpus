@@ -26,7 +26,11 @@ Respond ONLY with valid JSON if an answer is found:
 }
 ```
 
-If no answer can be found: `<<ANSWER_NOT_FOUND>>`
+If no answer can be found, return an empty items array:
+
+```json
+{"items": []}
+```
 
 ---
 
@@ -104,7 +108,7 @@ Every citation must:
 | 0.80-0.94 | Clear evidence | Explicit but single source |
 | 0.60-0.79 | Minor interpretation | Terminology differs |
 | 0.40-0.59 | Indirect evidence | Must infer slightly |
-| < 0.40 | Weak evidence | Return `<<ANSWER_NOT_FOUND>>` |
+| < 0.40 | Weak evidence | Return empty array instead |
 
 ---
 
