@@ -27,7 +27,12 @@ from packages.matrices.models.domain.matrix_entity_set import (
 )
 from packages.qa.models.domain.answer_data import AIAnswerSet
 from packages.qa.utils.document_reference import DocumentReference
-from .models import EntitySetDefinition, CellDataContext, MatrixStructureMetadata
+from .models import (
+    EntitySetDefinition,
+    CellDataContext,
+    MatrixStructureMetadata,
+    CellUpdateSpec,
+)
 
 from common.core.otel_axiom_exporter import trace_span, get_logger
 
@@ -428,6 +433,32 @@ class BaseCellCreationStrategy(ABC):
             List of MatrixCellCreateModel with entity_refs populated
         """
         pass
+
+    async def update_cells_for_new_entity(
+        self,
+        matrix_id: int,
+        company_id: int,
+        new_entity_id: int,
+        entity_set_id: int,
+    ) -> List[CellUpdateSpec]:
+        """Update existing cells when a new entity is added.
+
+        Override in strategies that need to modify existing cells when
+        new entities are added (e.g., synopsis adds new documents to all
+        existing cells).
+
+        Most strategies return empty list (default behavior).
+
+        Args:
+            matrix_id: Matrix ID
+            company_id: Company ID for access control
+            new_entity_id: ID of entity being added
+            entity_set_id: Entity set the entity was added to
+
+        Returns:
+            List of CellUpdateSpec for cells to update
+        """
+        return []
 
     @abstractmethod
     async def load_cell_data(self, cell_id: int, company_id: int) -> CellDataContext:

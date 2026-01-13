@@ -1917,7 +1917,7 @@ export type MatrixTemplateVariableUpdate = {
  * MatrixType
  * Types of matrices - determines cell creation strategy.
  */
-export type MatrixType = 'standard' | 'cross_correlation' | 'generic_correlation';
+export type MatrixType = 'standard' | 'cross_correlation' | 'generic_correlation' | 'synopsis';
 
 /**
  * MatrixUpdate

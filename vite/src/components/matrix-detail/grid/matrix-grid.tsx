@@ -14,7 +14,7 @@ import { MatrixCellFromTileCache } from '../cells/matrix-cell-from-tile-cache'
 import { useMatrixContext } from '../context/matrix-context'
 import { useReprocessCell } from '@/hooks/use-reprocess-cell'
 import { useGridNavigation } from '@/hooks/use-grid-navigation'
-import { calculateTiles, buildTileIndex } from '../utils/tile-utils'
+import { calculateTiles, calculateTiles1D, buildTileIndex } from '../utils/tile-utils'
 import { computeMatrixDimensions } from '../utils/matrix-dimensions'
 import type { EntityRole, MatrixType } from '@/client/types.gen'
 
@@ -56,11 +56,48 @@ export function MatrixGrid({ config }: MatrixGridProps) {
     }
   }, [config, dimensions])
 
+  // Check if this is a synopsis matrix (1D: single axis of questions)
+  const isSynopsis = matrixType === 'synopsis'
+
   // Calculate all tiles upfront based on grid configuration
   const tiles = useMemo(() => {
     const { gridAxes, sliceFilter } = gridConfig
 
-    // Grid axes define the 2D grid (DOC×QUESTION for standard, LEFT×RIGHT for correlation)
+    // Synopsis matrices: 1D tiling (questions only - cells don't vary by document)
+    if (isSynopsis) {
+      // For synopsis, we tile by questions only (axis2 = questions)
+      const questionAxis = gridAxes.find(a => a.role === 'question')
+      const questionSet = entitySets?.find(es => es.id === questionAxis?.entitySetId)
+
+      if (!questionSet) {
+        console.warn('Missing question entity set for synopsis')
+        return []
+      }
+
+      const questionEntityIds = questionSet.members?.map(m => m.entityId) || []
+
+      const baseTiles = calculateTiles1D(
+        questionSet.id,
+        questionEntityIds,
+        10 // questions per tile
+      )
+
+      console.log(
+        `Matrix tiling (${matrixType}): ${baseTiles.length} tiles for ${questionEntityIds.length} questions`,
+        'Tiles:', baseTiles
+      )
+
+      // Build tile index synchronously when tiles change
+      const index = buildTileIndex(baseTiles, matrixId)
+      console.log('[MatrixGrid] Built tile index with', index.size, 'cell keys')
+
+      // Update ref immediately (synchronous, no re-render)
+      tileIndexRef.current = index
+
+      return baseTiles
+    }
+
+    // Standard 2D matrices: Grid axes define the 2D grid (DOC×QUESTION for standard, LEFT×RIGHT for correlation)
     if (gridAxes.length !== 2) {
       console.warn('Matrix must have exactly 2 grid axes')
       return []
@@ -113,13 +150,13 @@ export function MatrixGrid({ config }: MatrixGridProps) {
     tileIndexRef.current = index
 
     return finalTiles
-  }, [gridConfig, entitySets, matrixId, tileIndexRef])
+  }, [gridConfig, entitySets, matrixId, tileIndexRef, isSynopsis])
 
   // Extract grid axes and slice filter from config
   const { gridAxes, sliceFilter } = gridConfig
   const [axis1, axis2] = gridAxes
   const axis1Set = entitySets.find(es => es.id === axis1?.entitySetId)
-  const axis2Set = entitySets.find(es => es.id === axis2?.entitySetId)
+  const axis2Set = axis2 ? entitySets.find(es => es.id === axis2?.entitySetId) : undefined
 
   const axis1MemberIds = axis1Set?.members?.map(m => m.entityId) || []
   const axis2MemberIds = axis2Set?.members?.map(m => m.entityId) || []
@@ -128,10 +165,11 @@ export function MatrixGrid({ config }: MatrixGridProps) {
   const currentSliceEntityId = sliceFilter?.entityIds[0]
 
   // Grid navigation with vim-style keyboard shortcuts
+  // For synopsis, cols = 1 (single cell per question row)
   const { isSelected } = useGridNavigation(
     {
       rows: axis1MemberIds.length,
-      cols: axis2MemberIds.length
+      cols: isSynopsis ? 1 : axis2MemberIds.length
     },
     {
       onOpenDetail: (position) => {
@@ -139,6 +177,153 @@ export function MatrixGrid({ config }: MatrixGridProps) {
       }
     }
   )
+
+  // Synopsis matrices: Questions as columns, Documents listed on side
+  // ONE cell per question that synthesizes ALL documents
+  if (isSynopsis) {
+    // Calculate tile for synopsis (1D - questions only)
+    const synopsisTile = tiles[0] // Synopsis uses single tile for all questions
+
+    return (
+      <div className="relative">
+        <Table noWrapper>
+          <TableHeader variant="blocky" className="sticky top-0 z-20">
+            <TableRow variant="blocky" className="flex h-20 border-b border-border">
+              {/* Corner cell - shows documents info */}
+              <TableHead variant="blocky" className="w-48 sticky left-0 z-30 bg-muted border-r border-b border-border h-20 p-0">
+                <span className="text-sm font-medium text-muted-foreground p-2">
+                  {axis1?.entitySetName} ({axis1MemberIds.length})
+                </span>
+              </TableHead>
+
+              {/* Question headers (columns) */}
+              {axis2MemberIds.map((questionId) => (
+                <TableHead variant="blocky"
+                  key={questionId}
+                  className="w-48 bg-muted border-r border-b border-border h-20 p-0"
+                >
+                  <EntityHeader
+                    entityId={questionId}
+                    entityType="question"
+                    entitySetId={axis2Set?.id || 0}
+                    role={axis2.role}
+                    className="p-2 h-full flex flex-col justify-center"
+                  />
+                </TableHead>
+              ))}
+
+              {/* Add question button */}
+              {axis2Set?.entityType && (
+                <TableHead variant="blocky" className="w-24 p-0 bg-muted border-b border-border h-20">
+                  <div className="p-2 h-full flex items-center justify-center">
+                    <EntitySetAddButton
+                      entityType={axis2Set.entityType}
+                      entitySetId={axis2Set.id}
+                    />
+                  </div>
+                </TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+
+          <TableBody variant="blocky">
+            {/* Single row with cells - each cell synthesizes ALL documents */}
+            {/* Only render cells if we have BOTH documents AND questions */}
+            {axis1MemberIds.length > 0 && axis2MemberIds.length > 0 && (
+            <TableRow variant="blocky" className="flex items-stretch border-b border-border">
+              {/* Document list sidebar - shows all docs that feed into each cell */}
+              <TableCell variant="blocky" className="w-48 sticky left-0 z-10 bg-muted border-r border-border p-0 flex flex-col">
+                <div className="flex-1 flex flex-col">
+                  {axis1MemberIds.map((docEntityId) => (
+                    <div key={docEntityId} className="flex-1 border-b border-border last:border-b-0 flex items-center">
+                      <EntityHeader
+                        entityId={docEntityId}
+                        entityType="document"
+                        entitySetId={axis1Set?.id || 0}
+                        role={axis1.role}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </TableCell>
+
+              {/* Synopsis cells - one per question */}
+              {axis2MemberIds.map((questionId, colIndex) => {
+                // Cell entity refs for synopsis: only the question (docs are embedded in cell)
+                const cellEntityRefs = [
+                  { entitySetId: axis2Set!.id, entityId: questionId, role: axis2!.role }
+                ]
+
+                const isCellSelected = isSelected(0, colIndex)
+                const isCellDetailOpen = detailSheetCell?.row === 0 && detailSheetCell?.col === colIndex
+
+                // Load tile data on first cell
+                const isFirstCell = colIndex === 0
+
+                return (
+                  <TableCell
+                    variant="blocky"
+                    key={questionId}
+                    className="w-48 p-0 border-r border-border relative"
+                  >
+                    {isFirstCell && synopsisTile && (
+                      <MatrixTileDataProvider
+                        key={JSON.stringify(synopsisTile.filters)}
+                        matrixId={matrixId}
+                        filters={synopsisTile.filters}
+                      />
+                    )}
+                    <MatrixCellFromTileCache
+                      matrixId={matrixId}
+                      entityRefs={cellEntityRefs}
+                      isDiagonal={false}
+                      isSelected={isCellSelected}
+                      onReprocess={handleReprocessCell}
+                      isDetailOpen={isCellDetailOpen}
+                      onDetailOpenChange={(open) => {
+                        if (open) {
+                          setDetailSheetCell({ row: 0, col: colIndex })
+                        } else {
+                          setDetailSheetCell(null)
+                        }
+                      }}
+                    />
+                  </TableCell>
+                )
+              })}
+
+              {/* Empty cell for add button column */}
+              {axis2Set?.entityType && (
+                <TableCell variant="blocky" className="w-24 bg-muted self-stretch border-r border-border" />
+              )}
+            </TableRow>
+            )}
+
+            {/* Add document row - always show if we have the entity type */}
+            {axis1Set?.entityType && (
+              <TableRow variant="blocky" className="flex border-b border-border">
+                <TableCell variant="blocky" className="w-48 sticky left-0 z-10 bg-muted self-stretch border-r border-border">
+                  <div className="p-2 min-h-[60px] flex items-center justify-center">
+                    <EntitySetAddButton
+                      entityType={axis1Set.entityType}
+                      entitySetId={axis1Set.id}
+                    />
+                  </div>
+                </TableCell>
+                {/* Empty cells to align with questions */}
+                {axis2MemberIds.map((questionId) => (
+                  <TableCell variant="blocky" key={`add-${questionId}`} className="w-48 bg-muted self-stretch border-r border-border" />
+                ))}
+                {axis2Set?.entityType && (
+                  <TableCell variant="blocky" className="w-24 bg-muted self-stretch border-r border-border" />
+                )}
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
 
   return (
     <div className="relative">

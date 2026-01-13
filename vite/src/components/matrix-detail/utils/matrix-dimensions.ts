@@ -144,6 +144,42 @@ export function computeMatrixDimensions(
       }
     }
 
+    case 'synopsis': {
+      // Synopsis: Questions as columns, Documents as rows (like standard)
+      // BUT: One cell per question that synthesizes ALL documents
+      // Grid looks like standard but cells work differently
+      const docSet = entitySets.find(es => es.entityType === 'document')
+      const questionSet = entitySets.find(es => es.entityType === 'question')
+
+      const gridAxes: MatrixDimensions['gridAxes'] = []
+
+      // Documents as rows (axis1) - for display
+      if (docSet) {
+        gridAxes.push({
+          role: 'document',
+          entitySetId: docSet.id,
+          entitySetName: docSet.name,
+          count: docSet.members?.length || 0
+        })
+      }
+
+      // Questions as columns (axis2)
+      if (questionSet) {
+        gridAxes.push({
+          role: 'question',
+          entitySetId: questionSet.id,
+          entitySetName: questionSet.name,
+          count: questionSet.members?.length || 0
+        })
+      }
+
+      return {
+        type: matrixType,
+        gridAxes,
+        sliceAxis: null
+      }
+    }
+
     default:
       throw new Error(`Unsupported matrix type: ${matrixType}`)
   }

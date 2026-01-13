@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
@@ -5,7 +6,36 @@ import { BackButton } from '@/components/ui/back-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { useSubscriptionStatus, useUsageStats } from '@/hooks/use-billing'
-import { LogIn, LogOut, User, ChevronRight } from 'lucide-react'
+import { LogIn, LogOut, User, ChevronRight, Github } from 'lucide-react'
+
+// X (Twitter) icon - lucide doesn't have the new X logo
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
+
+// Hook to fetch GitHub stars
+function useGitHubStars(owner: string, repo: string) {
+  const [stars, setStars] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch(`https://api.github.com/repos/${owner}/${repo}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.stargazers_count !== undefined) {
+          setStars(data.stargazers_count)
+        }
+      })
+      .catch(() => {
+        // Silently fail - stars just won't show
+      })
+  }, [owner, repo])
+
+  return stars
+}
 
 function formatBytes(bytes: number) {
   if (bytes === 0) return '0 B'
@@ -101,6 +131,7 @@ function UsageTooltipContent() {
 export function AuthHeader() {
   const { user, isLoading, login, logout } = useAuth()
   const routerState = useRouterState()
+  const stars = useGitHubStars('noetic-sys', 'corpus')
 
   // Check if we're on a workspace detail page
   const isWorkspaceDetailPage = routerState.location.pathname.startsWith('/workspaces/') &&
@@ -108,7 +139,7 @@ export function AuthHeader() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between px-4 py-2 border-b h-12">
         <div className="text-sm text-gray-500">Loading...</div>
       </div>
     )
@@ -116,25 +147,93 @@ export function AuthHeader() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between px-4 py-2 border-b h-12">
         <div className="text-sm font-medium">Corpus</div>
-        <Button style="blocky" onClick={() => login()}>
-          <LogIn className="w-4 h-4 mr-2" />
-          Sign in with Google
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Social links */}
+          <Button
+            variant="ghost"
+            style="blocky"
+            size="sm"
+            asChild
+          >
+            <a
+              href="https://github.com/noetic-sys/corpus"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Github className="w-4 h-4 mr-1.5" />
+              {stars !== null && <span className="text-xs">{stars}</span>}
+            </a>
+          </Button>
+          <Button
+            variant="ghost"
+            style="blocky"
+            size="sm"
+            asChild
+          >
+            <a
+              href="https://x.com/one_corpus"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <XIcon className="w-3.5 h-3.5 mr-1.5" />
+              <span className="text-xs">Follow</span>
+            </a>
+          </Button>
+          <Button style="blocky" size="sm" onClick={() => login()}>
+            <LogIn className="w-4 h-4 mr-2" />
+            Sign in with Google
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex items-center justify-between p-4 border-b">
-      {/* Left side - Conditionally show back button */}
+    <div className="flex items-center justify-between px-4 py-2 border-b h-12">
+      {/* Left side - Back button */}
       <div className="flex items-center gap-4">
         {isWorkspaceDetailPage && <BackButton toMatricesList={true} label="Back to Workspaces" />}
       </div>
 
-      {/* Right side - Always show user info + logout */}
-      <div className="flex items-center gap-4">
+      {/* Right side - Social links + User info + logout */}
+      <div className="flex items-center gap-2">
+        {/* Social links */}
+        <Button
+          variant="ghost"
+          style="blocky"
+          size="sm"
+          asChild
+        >
+          <a
+            href="https://github.com/noetic-sys/corpus"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Github className="w-4 h-4 mr-1.5" />
+            {stars !== null && <span className="text-xs">{stars}</span>}
+          </a>
+        </Button>
+        <Button
+          variant="ghost"
+          style="blocky"
+          size="sm"
+          asChild
+        >
+          <a
+            href="https://x.com/one_corpus"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <XIcon className="w-3.5 h-3.5 mr-1.5" />
+            <span className="text-xs">Follow</span>
+          </a>
+        </Button>
+
+        <div className="w-px h-5 bg-border mx-1" />
+
+        {/* User info */}
         <Tooltip>
           <TooltipTrigger asChild>
             <Link
