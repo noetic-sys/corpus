@@ -32,10 +32,39 @@ def mock_message_queue():
     queue = AsyncMock()
     queue.declare_queue = AsyncMock(return_value=True)
     queue.publish = AsyncMock(return_value=True)
+    queue.publish_batch = AsyncMock(return_value=True)
     queue.consume = AsyncMock()
     queue.connect = AsyncMock(return_value=None)
     queue.disconnect = AsyncMock(return_value=None)
     return queue
+
+
+@pytest.fixture
+def mock_lock_provider():
+    """Create a mock lock provider instance for testing."""
+    lock = AsyncMock()
+    lock.acquire_lock = AsyncMock(return_value="test-lock-token")
+    lock.acquire_lock_with_retry = AsyncMock(return_value="test-lock-token")
+    lock.release_lock = AsyncMock(return_value=True)
+    lock.extend_lock = AsyncMock(return_value=True)
+    lock.is_locked = AsyncMock(return_value=False)
+    return lock
+
+
+@pytest.fixture(autouse=True)
+def mock_get_lock_provider(mock_lock_provider):
+    """Automatically mock get_lock_provider for all unit tests."""
+    with patch(
+        "common.providers.locking.factory.get_lock_provider",
+        return_value=mock_lock_provider,
+    ), patch(
+        "packages.matrices.services.batch_processing_service.get_lock_provider",
+        return_value=mock_lock_provider,
+    ), patch(
+        "packages.matrices.routes.matrices.get_lock_provider",
+        return_value=mock_lock_provider,
+    ):
+        yield
 
 
 @pytest.fixture

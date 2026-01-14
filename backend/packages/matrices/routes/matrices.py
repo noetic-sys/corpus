@@ -48,6 +48,12 @@ from packages.auth.dependencies import get_current_active_user, get_service_acco
 from packages.auth.models.domain.authenticated_user import AuthenticatedUser
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from common.db.scoped import transaction
+from common.providers.locking.factory import get_lock_provider
+from packages.matrices.lock_keys import (
+    matrix_structure_lock_key,
+    MATRIX_STRUCTURE_LOCK_TTL,
+    MATRIX_STRUCTURE_LOCK_ACQUIRE_TIMEOUT,
+)
 from packages.matrices.mappers.matrix_cell_mappers import (
     build_matrix_cell_answer_response,
 )
@@ -525,25 +531,42 @@ async def soft_delete_matrix_entities(
         if not matrix:
             raise HTTPException(status_code=404, detail="Matrix not found")
 
-    async with transaction():
-        soft_delete_service = get_soft_delete_service()
-        (
-            entities_deleted,
-            cells_deleted,
-        ) = await soft_delete_service.soft_delete_entities(matrix_id, request)
-
-        if entities_deleted == 0:
-            return MatrixSoftDeleteResponse(
-                entities_deleted=0,
-                cells_deleted=0,
-                message="No entities found matching the specified criteria",
-            )
-
-        return MatrixSoftDeleteResponse(
-            entities_deleted=entities_deleted,
-            cells_deleted=cells_deleted,
-            message=f"Successfully soft deleted {entities_deleted} entities and {cells_deleted} related cells",
+    # Acquire structural lock to prevent race conditions
+    lock_provider = get_lock_provider()
+    lock_key = matrix_structure_lock_key(matrix_id)
+    lock_token = await lock_provider.acquire_lock_with_retry(
+        lock_key,
+        lock_ttl_seconds=MATRIX_STRUCTURE_LOCK_TTL,
+        acquire_timeout_seconds=MATRIX_STRUCTURE_LOCK_ACQUIRE_TIMEOUT,
+    )
+    if not lock_token:
+        raise HTTPException(
+            status_code=409,
+            detail="Matrix is being modified by another request. Please try again.",
         )
+
+    try:
+        async with transaction():
+            soft_delete_service = get_soft_delete_service()
+            (
+                entities_deleted,
+                cells_deleted,
+            ) = await soft_delete_service.soft_delete_entities(matrix_id, request)
+
+            if entities_deleted == 0:
+                return MatrixSoftDeleteResponse(
+                    entities_deleted=0,
+                    cells_deleted=0,
+                    message="No entities found matching the specified criteria",
+                )
+
+            return MatrixSoftDeleteResponse(
+                entities_deleted=entities_deleted,
+                cells_deleted=cells_deleted,
+                message=f"Successfully soft deleted {entities_deleted} entities and {cells_deleted} related cells",
+            )
+    finally:
+        await lock_provider.release_lock(lock_key, lock_token)
 
 
 @router.post("/matrices/{matrixId}/duplicate", response_model=MatrixDuplicateResponse)
