@@ -109,6 +109,79 @@ class TestRedisLock:
             mock_connect.assert_called_once()
 
 
+class TestAcquireLockWithRetry:
+    """Tests for acquire_lock_with_retry method."""
+
+    @pytest.fixture
+    def redis_lock(self):
+        with patch("common.providers.locking.redis_lock.settings") as mock_settings:
+            mock_settings.redis_host = "localhost"
+            mock_settings.redis_port = 6379
+            mock_settings.redis_password = None
+            mock_settings.redis_db = 0
+            return RedisLock()
+
+    @pytest.fixture
+    def mock_redis_client(self):
+        return AsyncMock(spec=redis.Redis)
+
+    async def test_acquire_with_retry_success_first_try(
+        self, redis_lock, mock_redis_client
+    ):
+        """Test successful acquisition on first try."""
+        redis_lock._client = mock_redis_client
+        redis_lock._connected = True
+        mock_redis_client.set = AsyncMock(return_value=True)
+
+        token = await redis_lock.acquire_lock_with_retry(
+            "test_resource",
+            lock_ttl_seconds=30,
+            acquire_timeout_seconds=5.0,
+            retry_interval_ms=50,
+        )
+
+        assert token is not None
+        assert len(token) == 36  # UUID length
+        # Should only be called once since it succeeded immediately
+        assert mock_redis_client.set.call_count == 1
+
+    async def test_acquire_with_retry_success_after_retries(
+        self, redis_lock, mock_redis_client
+    ):
+        """Test successful acquisition after initial failures."""
+        redis_lock._client = mock_redis_client
+        redis_lock._connected = True
+        # Fail twice, then succeed
+        mock_redis_client.set = AsyncMock(side_effect=[False, False, True])
+
+        token = await redis_lock.acquire_lock_with_retry(
+            "test_resource",
+            lock_ttl_seconds=30,
+            acquire_timeout_seconds=5.0,
+            retry_interval_ms=10,  # Short interval for fast test
+        )
+
+        assert token is not None
+        assert mock_redis_client.set.call_count == 3
+
+    async def test_acquire_with_retry_timeout(self, redis_lock, mock_redis_client):
+        """Test timeout when lock cannot be acquired."""
+        redis_lock._client = mock_redis_client
+        redis_lock._connected = True
+        mock_redis_client.set = AsyncMock(return_value=False)  # Always fail
+
+        token = await redis_lock.acquire_lock_with_retry(
+            "test_resource",
+            lock_ttl_seconds=30,
+            acquire_timeout_seconds=0.1,  # Very short timeout
+            retry_interval_ms=20,
+        )
+
+        assert token is None
+        # Should have tried multiple times before timing out
+        assert mock_redis_client.set.call_count >= 2
+
+
 class TestLockFactory:
     """Test the lock provider factory."""
 

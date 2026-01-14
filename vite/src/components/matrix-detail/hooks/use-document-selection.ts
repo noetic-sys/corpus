@@ -32,8 +32,11 @@ export function useDocumentSelection(
 
     const token = await getToken()
 
-    const promises = selectedDocuments.map(doc =>
-      associateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePost({
+    // Associate documents SEQUENTIALLY to ensure proper cell creation
+    // (parallel calls cause race conditions with cross-correlation matrices)
+    let successful = 0
+    for (const doc of selectedDocuments) {
+      const response = await associateExistingDocumentWithMatrixApiV1MatricesMatrixIdDocumentsDocumentIdAssociatePost({
         path: {
           matrixId,
           documentId: doc.id
@@ -46,15 +49,6 @@ export function useDocumentSelection(
         },
         client: apiClient
       })
-    )
-
-    const responses = await Promise.all(promises)
-
-    // Process each response
-    let successful = 0
-    for (let i = 0; i < responses.length; i++) {
-      const response = responses[i]
-      const doc = selectedDocuments[i]
 
       if (response.error) {
         const errorMessage = response.error.detail || 'Association failed'

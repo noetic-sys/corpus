@@ -1,3 +1,5 @@
+import asyncio
+import time
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -64,3 +66,32 @@ class DistributedLockInterface(ABC):
             True if locked, False otherwise
         """
         pass
+
+    async def acquire_lock_with_retry(
+        self,
+        resource_key: str,
+        lock_ttl_seconds: int = 30,
+        acquire_timeout_seconds: float = 5.0,
+        retry_interval_ms: int = 50,
+    ) -> Optional[str]:
+        """
+        Acquire a distributed lock with retry logic.
+
+        Retries acquisition until timeout is exceeded.
+
+        Args:
+            resource_key: The resource to lock
+            lock_ttl_seconds: Lock expiration time (TTL) in seconds
+            acquire_timeout_seconds: Max time to wait for lock acquisition
+            retry_interval_ms: Milliseconds between retry attempts
+
+        Returns:
+            Lock token if acquired, None if timeout exceeded
+        """
+        end_time = time.time() + acquire_timeout_seconds
+        while time.time() < end_time:
+            token = await self.acquire_lock(resource_key, lock_ttl_seconds)
+            if token:
+                return token
+            await asyncio.sleep(retry_interval_ms / 1000)
+        return None

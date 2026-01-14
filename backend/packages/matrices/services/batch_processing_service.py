@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+from fastapi import HTTPException
+
 from packages.matrices.strategies.factory import CellStrategyFactory
 from packages.matrices.models.domain.matrix import (
     MatrixCellModel,
@@ -27,8 +29,14 @@ from packages.matrices.strategies.models import CellUpdateSpec
 from common.providers.messaging.factory import get_message_queue
 from common.providers.messaging.messages import QAJobMessage
 from common.providers.messaging.constants import QueueName
+from common.providers.locking.factory import get_lock_provider
 from common.core.otel_axiom_exporter import trace_span, get_logger
 from common.db.scoped import transaction
+from packages.matrices.lock_keys import (
+    matrix_structure_lock_key,
+    MATRIX_STRUCTURE_LOCK_TTL,
+    MATRIX_STRUCTURE_LOCK_ACQUIRE_TIMEOUT,
+)
 from packages.billing.services.usage_service import UsageService
 from packages.billing.services.quota_service import QuotaService
 from packages.matrices.models.domain.matrix_enums import EntityType
@@ -51,6 +59,7 @@ class BatchProcessingService:
         # TODO: i think this actually needs to be a service call here
         self.qa_job_repo = QAJobRepository()
         self.message_queue = get_message_queue()
+        self.lock_provider = get_lock_provider()
         self._queue_declared = False
 
     async def _check_quota_for_cells(
@@ -526,163 +535,182 @@ class BatchProcessingService:
         Returns:
             Tuple of (created/updated cells, created jobs)
         """
-        # Get matrix to determine type
-        matrix = await self.matrix_repo.get(matrix_id)
-        if not matrix:
-            raise ValueError(f"Matrix {matrix_id} not found")
-
-        logger.info(
-            f"Processing entity {entity_id} added to entity set {entity_set_id} "
-            f"in matrix {matrix_id} ({matrix.matrix_type.value})"
+        # Acquire structural lock to prevent race conditions with concurrent modifications
+        lock_key = matrix_structure_lock_key(matrix_id)
+        lock_token = await self.lock_provider.acquire_lock_with_retry(
+            lock_key,
+            lock_ttl_seconds=MATRIX_STRUCTURE_LOCK_TTL,
+            acquire_timeout_seconds=MATRIX_STRUCTURE_LOCK_ACQUIRE_TIMEOUT,
         )
-
-        # Get strategy and let it handle everything
-        strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
-        cell_models = await strategy.create_cells_for_new_entity(
-            matrix_id,
-            matrix.company_id,
-            entity_id,
-            entity_set_id,
-        )
-
-        logger.info(f"Strategy generated {len(cell_models)} cell models")
-
-        # Get cell updates (used by synopsis strategy for document additions)
-        update_specs = await strategy.update_cells_for_new_entity(
-            matrix_id,
-            matrix.company_id,
-            entity_id,
-            entity_set_id,
-        )
-        logger.info(f"Strategy generated {len(update_specs)} cell update specs")
-
-        # SANITY CHECK: Validate that all cell models actually reference the new entity
-        # This prevents bugs where strategies generate cells unrelated to the new entity
-        invalid_cells = []
-        for i, cell_model in enumerate(cell_models):
-            entity_ids_in_cell = [ref.entity_id for ref in cell_model.entity_refs]
-            if entity_id not in entity_ids_in_cell:
-                invalid_cells.append(i)
-
-        if invalid_cells:
-            raise ValueError(
-                f"Strategy bug: Generated {len(invalid_cells)}/{len(cell_models)} cells that don't reference new entity {entity_id}. "
-                f"This indicates the strategy is creating too many cells. "
-                f"First invalid cell refs: {[cell_models[invalid_cells[0]].entity_refs if invalid_cells else None]}"
+        if not lock_token:
+            logger.warning(
+                f"Failed to acquire structure lock for matrix {matrix_id} - concurrent modification"
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Matrix is being modified by another request. Please try again.",
             )
 
-        # FAST PATH DEDUPLICATION: Check if entity already has cells
-        entity_set = await self.entity_set_service.get_entity_set(
-            entity_set_id, matrix.company_id
-        )
-        if not entity_set:
-            raise ValueError(f"Entity set {entity_set_id} not found")
+        try:
+            # Get matrix to determine type
+            matrix = await self.matrix_repo.get(matrix_id)
+            if not matrix:
+                raise ValueError(f"Matrix {matrix_id} not found")
 
-        # Get entity set members for this entity (service layer orchestrates repositories)
-        members = await self.entity_set_member_repo.get_members_by_entity_id(
-            entity_id, entity_set.entity_type, matrix.company_id
-        )
-
-        if not members:
-            logger.info(f"Entity {entity_id} has no members, skipping deduplication")
-            existing_combos = set()
-        else:
-            member_ids = [m.id for m in members]
-
-            # Check if any of these members have cells in the matrix
-            members_have_cells = (
-                await self.cell_entity_ref_repo.members_have_cells_in_matrix(
-                    matrix_id, member_ids, matrix.company_id
-                )
+            logger.info(
+                f"Processing entity {entity_id} added to entity set {entity_set_id} "
+                f"in matrix {matrix_id} ({matrix.matrix_type.value})"
             )
 
-            if members_have_cells:
-                logger.info(
-                    f"Entity {entity_id} already has cells, using targeted deduplication"
+            # Get strategy and let it handle everything
+            strategy = CellStrategyFactory.get_strategy(matrix.matrix_type)
+            cell_models = await strategy.create_cells_for_new_entity(
+                matrix_id,
+                matrix.company_id,
+                entity_id,
+                entity_set_id,
+            )
+
+            logger.info(f"Strategy generated {len(cell_models)} cell models")
+
+            # Get cell updates (used by synopsis strategy for document additions)
+            update_specs = await strategy.update_cells_for_new_entity(
+                matrix_id,
+                matrix.company_id,
+                entity_id,
+                entity_set_id,
+            )
+            logger.info(f"Strategy generated {len(update_specs)} cell update specs")
+
+            # SANITY CHECK: Validate that all cell models actually reference the new entity
+            # This prevents bugs where strategies generate cells unrelated to the new entity
+            invalid_cells = []
+            for i, cell_model in enumerate(cell_models):
+                entity_ids_in_cell = [ref.entity_id for ref in cell_model.entity_refs]
+                if entity_id not in entity_ids_in_cell:
+                    invalid_cells.append(i)
+
+            if invalid_cells:
+                raise ValueError(
+                    f"Strategy bug: Generated {len(invalid_cells)}/{len(cell_models)} cells that don't reference new entity {entity_id}. "
+                    f"This indicates the strategy is creating too many cells. "
+                    f"First invalid cell refs: {[cell_models[invalid_cells[0]].entity_refs if invalid_cells else None]}"
                 )
-                existing_combos = (
-                    await self.cell_entity_ref_repo.get_cell_combinations_for_members(
+
+            # FAST PATH DEDUPLICATION: Check if entity already has cells
+            entity_set = await self.entity_set_service.get_entity_set(
+                entity_set_id, matrix.company_id
+            )
+            if not entity_set:
+                raise ValueError(f"Entity set {entity_set_id} not found")
+
+            # Get entity set members for this entity (service layer orchestrates repositories)
+            members = await self.entity_set_member_repo.get_members_by_entity_id(
+                entity_id, entity_set.entity_type, matrix.company_id
+            )
+
+            if not members:
+                logger.info(f"Entity {entity_id} has no members, skipping deduplication")
+                existing_combos = set()
+            else:
+                member_ids = [m.id for m in members]
+
+                # Check if any of these members have cells in the matrix
+                members_have_cells = (
+                    await self.cell_entity_ref_repo.members_have_cells_in_matrix(
                         matrix_id, member_ids, matrix.company_id
                     )
                 )
-            else:
-                logger.info(
-                    f"Entity {entity_id} is new to matrix, skipping deduplication"
-                )
-                existing_combos = set()
 
-        # Filter out cells that already exist
-        new_cell_models = []
-        skipped_count = 0
-        for cell_model in cell_models:
-            cell_key = self._get_entity_ref_key(cell_model.entity_refs)
-            if cell_key not in existing_combos:
-                new_cell_models.append(cell_model)
-            else:
-                skipped_count += 1
+                if members_have_cells:
+                    logger.info(
+                        f"Entity {entity_id} already has cells, using targeted deduplication"
+                    )
+                    existing_combos = (
+                        await self.cell_entity_ref_repo.get_cell_combinations_for_members(
+                            matrix_id, member_ids, matrix.company_id
+                        )
+                    )
+                else:
+                    logger.info(
+                        f"Entity {entity_id} is new to matrix, skipping deduplication"
+                    )
+                    existing_combos = set()
 
-        logger.info(
-            f"Creating {len(new_cell_models)} new cells, skipped {skipped_count} duplicates"
-        )
+            # Filter out cells that already exist
+            new_cell_models = []
+            skipped_count = 0
+            for cell_model in cell_models:
+                cell_key = self._get_entity_ref_key(cell_model.entity_refs)
+                if cell_key not in existing_combos:
+                    new_cell_models.append(cell_model)
+                else:
+                    skipped_count += 1
 
-        # Check quota before creating cells (raises 429 if exceeded)
-        agentic_count = await self._check_quota_for_cells(
-            new_cell_models, matrix.company_id
-        )
-
-        # All DB operations in transaction - commits when exiting context
-        created_cells = []
-        updated_cells = []
-        created_jobs = []
-        async with transaction():
-            # Insert the new cells
-            created_cells = await self._batch_insert_matrix_cells(new_cell_models)
             logger.info(
-                f"Successfully created {len(created_cells)} matrix cells for entity {entity_id}"
+                f"Creating {len(new_cell_models)} new cells, skipped {skipped_count} duplicates"
             )
 
-            # Process cell updates (synopsis strategy uses this)
-            updated_cells = await self._process_cell_updates(
-                matrix_id, matrix.company_id, update_specs
+            # Check quota before creating cells (raises 429 if exceeded)
+            agentic_count = await self._check_quota_for_cells(
+                new_cell_models, matrix.company_id
             )
 
-            # Track usage for billing - both new cells and updated cells
-            await self._track_usage_for_cells(
-                new_cell_models, matrix.company_id, matrix_id, agentic_count
-            )
-
-            # Track updated cells too (they will be re-processed)
-            if updated_cells:
-                usage_service = UsageService()
-                await usage_service.track_cell_operation(
-                    company_id=matrix.company_id,
-                    quantity=len(updated_cells),
-                    matrix_id=matrix_id,
-                )
+            # All DB operations in transaction - commits when exiting context
+            created_cells = []
+            updated_cells = []
+            created_jobs = []
+            async with transaction():
+                # Insert the new cells
+                created_cells = await self._batch_insert_matrix_cells(new_cell_models)
                 logger.info(
-                    f"Tracked cell operation usage for {len(updated_cells)} updated cells"
+                    f"Successfully created {len(created_cells)} matrix cells for entity {entity_id}"
                 )
 
-            # Combine created and updated cells for job processing
-            all_affected_cells = created_cells + updated_cells
+                # Process cell updates (synopsis strategy uses this)
+                updated_cells = await self._process_cell_updates(
+                    matrix_id, matrix.company_id, update_specs
+                )
 
-            # Optionally create QA jobs for all affected cells
-            if create_qa_jobs and all_affected_cells:
-                logger.info(f"Creating QA jobs for {len(all_affected_cells)} cells")
-                job_models = self._create_qa_job_models(all_affected_cells)
-                created_jobs = await self._batch_insert_qa_jobs(job_models)
+                # Track usage for billing - both new cells and updated cells
+                await self._track_usage_for_cells(
+                    new_cell_models, matrix.company_id, matrix_id, agentic_count
+                )
 
-        # Transaction committed - now safe to publish messages
-        logger.info("Committed cells and jobs to database")
+                # Track updated cells too (they will be re-processed)
+                if updated_cells:
+                    usage_service = UsageService()
+                    await usage_service.track_cell_operation(
+                        company_id=matrix.company_id,
+                        quantity=len(updated_cells),
+                        matrix_id=matrix_id,
+                    )
+                    logger.info(
+                        f"Tracked cell operation usage for {len(updated_cells)} updated cells"
+                    )
 
-        if created_jobs:
-            all_affected_cells = created_cells + updated_cells
-            await self._batch_queue_jobs(created_jobs, all_affected_cells)
-            logger.info(f"Queued {len(created_jobs)} QA jobs")
-        elif not create_qa_jobs:
-            logger.info("QA jobs will be created later (create_qa_jobs=False)")
+                # Combine created and updated cells for job processing
+                all_affected_cells = created_cells + updated_cells
 
-        return created_cells + updated_cells, created_jobs
+                # Optionally create QA jobs for all affected cells
+                if create_qa_jobs and all_affected_cells:
+                    logger.info(f"Creating QA jobs for {len(all_affected_cells)} cells")
+                    job_models = self._create_qa_job_models(all_affected_cells)
+                    created_jobs = await self._batch_insert_qa_jobs(job_models)
+
+            # Transaction committed - now safe to publish messages
+            logger.info("Committed cells and jobs to database")
+
+            if created_jobs:
+                all_affected_cells = created_cells + updated_cells
+                await self._batch_queue_jobs(created_jobs, all_affected_cells)
+                logger.info(f"Queued {len(created_jobs)} QA jobs")
+            elif not create_qa_jobs:
+                logger.info("QA jobs will be created later (create_qa_jobs=False)")
+
+            return created_cells + updated_cells, created_jobs
+        finally:
+            await self.lock_provider.release_lock(lock_key, lock_token)
 
 
 def get_batch_processing_service() -> BatchProcessingService:
