@@ -190,7 +190,7 @@ class Settings(BaseSettings):
         return [
             "https://onecorpus.com",
             "https://api.onecorpus.com",
-            "https://ws.onecorpus.com",
+            "https://agent.onecorpus.com",
         ]
 
     # Document Chunking (always enabled - small docs become single chunk)

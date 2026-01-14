@@ -25,8 +25,10 @@ export function useWebSocket({ onMessage, onStatusChange }: UseWebSocketProps) {
       // Get access token for WebSocket authentication
       const token = await getToken()
 
-      // Use dedicated WebSocket URL from environment
-      const wsBaseUrl = import.meta.env.VITE_WS_URL!
+      // Use dedicated Agent service URL from environment (supports both HTTP and WebSocket)
+      const agentBaseUrl = import.meta.env.VITE_AGENT_URL!
+      // Convert https:// to wss:// or http:// to ws://
+      const wsBaseUrl = agentBaseUrl.replace(/^http/, 'ws')
       const wsUrl = `${wsBaseUrl}/api/v1/agents/conversations/${conversationId}/ws?token=${encodeURIComponent(token)}`
 
       const ws = new WebSocket(wsUrl)

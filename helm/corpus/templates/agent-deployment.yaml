@@ -1,0 +1,63 @@
+{{- if .Values.agent.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "corpus.fullname" . }}-agent
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: agent
+spec:
+  {{- if not .Values.agent.autoscaling.enabled }}
+  replicas: {{ .Values.agent.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "corpus.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: agent
+  template:
+    metadata:
+      labels:
+        {{- include "corpus.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: agent
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "corpus.serviceAccountName" . }}
+      containers:
+        - name: agent
+          image: "{{ .Values.image.registry }}/{{ .Values.agent.image.name }}:{{ .Values.agent.image.tag | default .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.agent.service.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.agent.health.path }}
+              port: {{ .Values.agent.health.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.agent.health.path }}
+              port: {{ .Values.agent.health.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.agent.resources | nindent 12 }}
+          envFrom:
+            {{- range .Values.agent.secrets }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          {{- with .Values.agent.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

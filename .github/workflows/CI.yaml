@@ -136,7 +136,10 @@ jobs:
         image:
           - name: api
             context: .
-            dockerfile: ./backend/api/Dockerfile
+            dockerfile: ./backend/apps/api/Dockerfile
+          - name: agent
+            context: .
+            dockerfile: ./backend/apps/agent/Dockerfile
           - name: worker
             context: .
             dockerfile: ./backend/workers/Dockerfile
@@ -166,7 +169,7 @@ jobs:
         run: |
           cat > vite/.env.production << EOF
           VITE_API_URL=https://api.example.com
-          VITE_WS_URL=wss://ws.example.com
+          VITE_AGENT_URL=https://agent.example.com
           VITE_FIREBASE_API_KEY=test-key
           VITE_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
           VITE_FIREBASE_PROJECT_ID=test-project

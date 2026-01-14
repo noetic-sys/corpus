@@ -1,0 +1,36 @@
+{{- if and .Values.agent.enabled .Values.agent.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "corpus.fullname" . }}-agent
+  labels:
+    {{- include "corpus.labels" . | nindent 4 }}
+    app.kubernetes.io/component: agent
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    {{- with .Values.agent.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if .Values.agent.ingress.className }}
+  ingressClassName: {{ .Values.agent.ingress.className }}
+  {{- end }}
+  {{- if .Values.agent.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.agent.ingress.host }}
+      secretName: {{ .Values.agent.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.agent.ingress.host }}
+      http:
+        paths:
+          # Route /api prefix to agent service
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "corpus.fullname" . }}-agent
+                port:
+                  number: {{ .Values.agent.service.port }}
+{{- end }}

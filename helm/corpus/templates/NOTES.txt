@@ -8,10 +8,16 @@ API:
 {{- else }}
   kubectl port-forward svc/{{ include "corpus.fullname" . }}-api 8000:{{ .Values.api.service.port }}
 {{- end }}
+{{- end }}
 
-{{- if .Values.api.websocket.enabled }}
-WebSocket:
-  URL: wss://{{ .Values.api.websocket.host }}
+{{- if .Values.agent.enabled }}
+
+Agent Service:
+{{- if .Values.agent.ingress.enabled }}
+  URL: https://{{ .Values.agent.ingress.host }}
+  WebSocket: wss://{{ .Values.agent.ingress.host }}
+{{- else }}
+  kubectl port-forward svc/{{ include "corpus.fullname" . }}-agent 8001:{{ .Values.agent.service.port }}
 {{- end }}
 {{- end }}
 

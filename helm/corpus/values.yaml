@@ -57,15 +57,6 @@ api:
       enabled: false
       secretName: ""
 
-  # -- Websocket ingress (if different from main API)
-  websocket:
-    enabled: false
-    host: ""
-    annotations: {}
-    tls:
-      enabled: false
-      secretName: ""
-
   resources:
     requests:
       memory: "512Mi"
@@ -97,6 +88,71 @@ api:
   env: []
 
   # -- Health check paths (using /healthz to avoid external spam on /api/v1/health)
+  health:
+    path: /healthz
+    port: 8000
+
+# =============================================================================
+# Agent Service (WebSocket + Agent Loop)
+# =============================================================================
+agent:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    name: agent
+    tag: ""  # Defaults to global tag
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  ingress:
+    enabled: false
+    className: nginx
+    host: ""
+    annotations:
+      # Long timeouts for WebSocket connections
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      # Sticky sessions for WebSocket
+      nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_workspace_id"
+    tls:
+      enabled: false
+      secretName: ""
+
+  # -- Higher resources for agent workloads (LLM calls, tool execution)
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+  # -- Pod Disruption Budget
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+  # -- Secret names to mount as envFrom
+  secrets:
+    - corpus-database-env
+    - corpus-project-env
+    - corpus-api-keys-env
+    - corpus-infrastructure-env
+    - corpus-agent-env
+
+  # -- Extra environment variables
+  env: []
+
+  # -- Health check paths
   health:
     path: /healthz
     port: 8000
