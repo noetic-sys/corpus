@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview --port 3001",
-    "generate-client": "openapi-ts"
+    "generate-client": "npm run generate-client:api && npm run generate-client:agent",
+    "generate-client:api": "openapi-ts -f openapi-ts.api.config.js",
+    "generate-client:agent": "openapi-ts -f openapi-ts.agent.config.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

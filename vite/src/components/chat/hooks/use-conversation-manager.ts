@@ -1,12 +1,12 @@
 import {useCallback} from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {toast} from 'sonner'
-import type {ConversationCreate, ConversationResponse} from '@/client'
+import type {ConversationCreate, ConversationResponse} from '@/client/agent'
 import {
   createConversationApiV1AgentsConversationsPost,
   getActiveConversationsApiV1AgentsConversationsGet
-} from '@/client'
-import {apiClient} from '@/lib/api'
+} from '@/client/agent'
+import {agentClient} from '@/lib/api'
 import type {ChatAction, Conversation, PageContext} from '../types'
 import { throwApiError } from '@/lib/api-error'
 
@@ -43,7 +43,7 @@ export function useConversationManager({ dispatch, switchConversation }: UseConv
         headers: {
           authorization: `Bearer ${token}`
         },
-        client: apiClient
+        client: agentClient
       })
 
       if (response.error) {
@@ -87,7 +87,7 @@ export function useConversationManager({ dispatch, switchConversation }: UseConv
         headers: {
           authorization: `Bearer ${token}`
         },
-        client: apiClient
+        client: agentClient
       })
 
       if (response.error) {

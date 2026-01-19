@@ -3,61 +3,72 @@
 set -e
 set -x
 
-echo "Generating API client..."
+echo "Generating API clients..."
 
 # Change to the backend directory
 cd backend
 
-# Generate OpenAPI JSON by importing the FastAPI app and extracting its OpenAPI spec
-# Suppress stdout during import to avoid telemetry/logging messages in output
+# Create specs directory in vite
+mkdir -p ../vite/specs
+
+# Generate API service OpenAPI spec
 poetry run python -c "
 import sys
 import io
 import json
 
-# Capture stdout during import
 old_stdout = sys.stdout
 sys.stdout = io.StringIO()
 
 sys.path.append('.')
-from api.main import app
+from apps.api.main import app
 
-# Restore stdout and print only the JSON
 sys.stdout = old_stdout
 print(json.dumps(app.openapi(), indent=2))
-" > openapi.json
+" > ../vite/specs/api.openapi.json
 
-echo "Generated OpenAPI specification"
+echo "Generated API OpenAPI specification"
 
-# Copy the OpenAPI JSON to the frontend directory
-cp openapi.json ../vite/
+# Generate Agent service OpenAPI spec
+poetry run python -c "
+import sys
+import io
+import json
 
-echo "Copied OpenAPI spec to frontend directory"
+old_stdout = sys.stdout
+sys.stdout = io.StringIO()
 
-# Copy the OpenAPI JSON to libs/mcp_tools/mcp_tools for agent builds
-cp openapi.json ../libs/mcp_tools/mcp_tools/
+sys.path.append('.')
+from apps.agent.main import app
+
+sys.stdout = old_stdout
+print(json.dumps(app.openapi(), indent=2))
+" > ../vite/specs/agent.openapi.json
+
+echo "Generated Agent OpenAPI specification"
+
+# Copy combined spec to libs/mcp_tools for agent builds (use API spec for now)
+cp ../vite/specs/api.openapi.json ../libs/mcp_tools/mcp_tools/openapi.json
 
 echo "Copied OpenAPI spec to libs/mcp_tools/mcp_tools for agents"
 
-# Clean up
-rm openapi.json
-
-# Change to the frontend directory (from backend, go back to root then to vite)
+# Change to the frontend directory
 cd ../vite
 
-# Generate the TypeScript client
-npm run generate-client
+# Generate both TypeScript clients
+npm run generate-client:api
+npm run generate-client:agent
 
-echo "Generated TypeScript API client"
+echo "Generated TypeScript API clients"
 
 # Format the generated code (if prettier is available)
 if command -v npx &> /dev/null; then
     if npm list --depth=0 prettier &> /dev/null; then
         echo "Formatting generated client code..."
-        npx prettier --write srcclient/
+        npx prettier --write src/client/
         echo "Formatted generated client code"
     fi
 fi
 
 echo "API client generation completed successfully!"
-echo "Generated client files are available in vite/src/client/"
+echo "Generated client files are available in vite/src/client/api/ and vite/src/client/agent/"
