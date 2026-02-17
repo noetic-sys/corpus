@@ -7,6 +7,7 @@ class DocumentSearchProvider(StrEnum):
 
     POSTGRES = "postgres"
     ELASTICSEARCH = "elasticsearch"
+    TURBOPUFFER = "turbopuffer"
 
 
 class KeywordSearchProvider(StrEnum):
@@ -14,12 +15,14 @@ class KeywordSearchProvider(StrEnum):
 
     ELASTICSEARCH = "elasticsearch"
     POSTGRES = "postgres"
+    TURBOPUFFER = "turbopuffer"
 
 
 class VectorSearchProvider(StrEnum):
     """Vector search provider types."""
 
     ELASTICSEARCH = "elasticsearch"
+    TURBOPUFFER = "turbopuffer"
 
 
 class ChunkSearchHit:

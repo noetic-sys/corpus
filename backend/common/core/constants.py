@@ -22,3 +22,4 @@ class WorkflowExecutionMode(str, Enum):
 
     DOCKER = "docker"
     K8S = "k8s"
+    MODAL = "modal"

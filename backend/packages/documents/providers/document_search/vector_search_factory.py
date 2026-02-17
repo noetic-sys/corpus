@@ -8,6 +8,9 @@ from packages.documents.providers.document_search.vector_search_interface import
 from packages.documents.providers.document_search.elasticsearch_vector_search import (
     ElasticsearchVectorSearch,
 )
+from packages.documents.providers.document_search.turbopuffer_vector_search import (
+    TurbopufferVectorSearch,
+)
 from packages.documents.providers.document_search.types import VectorSearchProvider
 from common.core.config import settings
 
@@ -21,7 +24,7 @@ def get_vector_search_provider(
     Get vector search provider instance.
 
     Args:
-        provider_type: Type of provider ('elasticsearch').
+        provider_type: Type of provider ('elasticsearch', 'turbopuffer').
                       If None, defaults to elasticsearch.
         elasticsearch_url: Elasticsearch URL (if using elasticsearch provider)
         embedding_dim: Embedding dimension size
@@ -44,6 +47,10 @@ def get_vector_search_provider(
             )
             return ElasticsearchVectorSearch(
                 elasticsearch_url=es_url, embedding_dim=embedding_dim
+            )
+        case VectorSearchProvider.TURBOPUFFER:
+            return TurbopufferVectorSearch(
+                api_key=settings.turbopuffer_api_key, embedding_dim=embedding_dim
             )
         case _:
             raise ValueError(f"Unknown vector search provider type: {provider_type}")

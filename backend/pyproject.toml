@@ -72,6 +72,8 @@ qa = {path = "../libs/qa", develop = true}
 workflows = {path = "../libs/workflows", develop = true}
 ai-config = {path = "../libs/ai_config", develop = true}
 firebase-admin = ">=6.0.0,<7.0.0"
+turbopuffer = "^0.4.0"
+modal = "^0.74.0"
 
 [build-system]
 requires = ["poetry-core"]
