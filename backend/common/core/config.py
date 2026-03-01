@@ -156,23 +156,9 @@ class Settings(BaseSettings):
     workflow_agent_image_tag: str = (
         "latest"  # Workflow agent image tag (set by deployment)
     )
+    workflow_execution_mode: WorkflowExecutionMode = WorkflowExecutionMode.DOCKER
 
-    # Environment-aware properties
-    @property
-    def workflow_execution_mode(self) -> WorkflowExecutionMode:
-        """Auto-select workflow execution mode based on environment."""
-        return (
-            WorkflowExecutionMode.DOCKER
-            if self.environment == Environment.LOCAL
-            else WorkflowExecutionMode.K8S
-        )
-
-    @property
-    def api_endpoint(self) -> str:
-        """Auto-select API endpoint based on environment."""
-        if self.environment == Environment.LOCAL:
-            return "http://backend:8000"
-        return "http://corpus-api:8000"
+    api_endpoint: str = "http://backend:8000"
 
     @property
     def cors_allowed_origins(self) -> List[str]:
