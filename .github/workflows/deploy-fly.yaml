@@ -121,7 +121,6 @@ jobs:
             ${{ env.REGISTRY }}/migrate:${{ needs.setup.outputs.version_tag }} \
             --app corpus-api \
             --rm \
-            --env DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -- alembic upgrade head
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
