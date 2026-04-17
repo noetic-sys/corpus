@@ -49,9 +49,6 @@ jobs:
           - name: worker
             dockerfile: ./backend/workers/Dockerfile
             context: .
-          - name: migrate
-            dockerfile: ./backend/alembic/Dockerfile
-            context: .
           - name: workflow-agent
             dockerfile: ./agents/workflow/Dockerfile
             context: .
@@ -107,35 +104,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  migrate:
-    needs: [setup, build-and-push]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Register GHCR credentials with Fly
-        run: |
-          flyctl registry save \
-            --registry ghcr.io \
-            --username ${{ github.actor }} \
-            --password ${{ secrets.GHCR_TOKEN }}
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Run database migrations
-        run: |
-          flyctl machines run \
-            ${{ env.REGISTRY }}/migrate:${{ needs.setup.outputs.version_tag }} \
-            --app corpus-api \
-            --rm \
-            -- alembic upgrade head
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
   deploy:
-    needs: [setup, build-and-push, migrate]
+    needs: [setup, build-and-push]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -177,6 +147,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Deploy ${{ matrix.service.name }}
         run: |
