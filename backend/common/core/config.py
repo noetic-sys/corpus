@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     temporal_host: str
     temporal_namespace: str = "default"
     temporal_api_key: Optional[str] = None
-    temporal_task_queue: str
+    temporal_task_queue: Optional[str] = None
 
     # Google Gemini
     gemini_api_keys: List[str]
