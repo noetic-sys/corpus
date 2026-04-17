@@ -115,6 +115,15 @@ jobs:
 
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Register GHCR credentials with Fly
+        run: |
+          flyctl registry save \
+            --registry ghcr.io \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GHCR_TOKEN }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
       - name: Run database migrations
         run: |
           flyctl machines run \
