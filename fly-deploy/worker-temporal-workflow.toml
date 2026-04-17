@@ -1,0 +1,16 @@
+app = "corpus-temporal-workflow"
+primary_region = "iad"
+
+[build]
+  dockerfile = "backend/workers/Dockerfile"
+
+[processes]
+  worker = "python -m workers.run_workflow_worker"
+
+[env]
+  ENVIRONMENT = "production"
+  STORAGE_PROVIDER = "s3"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

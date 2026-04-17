@@ -75,7 +75,8 @@ class RabbitMQClient(MessageQueueInterface):
     async def connect(self) -> bool:
         try:
             # Create connection URL
-            url = f"amqp://{quote(self.username)}:{quote(self.password)}@{self.host}:{self.port}/{self.vhost}"
+            scheme = "amqps" if self.port == 5671 else "amqp"
+            url = f"{scheme}://{quote(self.username)}:{quote(self.password)}@{self.host}:{self.port}/{self.vhost}"
 
             # Create robust connection (will auto-reconnect)
             self.connection = await connect_robust(url, loop=asyncio.get_event_loop())

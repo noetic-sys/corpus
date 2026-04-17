@@ -34,6 +34,7 @@ class RabbitMQClient(MessageQueueInterface):
     async def connect(self) -> bool:
         try:
             credentials = pika.PlainCredentials(self.username, self.password)
+            ssl_options = pika.SSLOptions() if self.port == 5671 else None
             parameters = pika.ConnectionParameters(
                 host=self.host,
                 port=self.port,
@@ -41,6 +42,7 @@ class RabbitMQClient(MessageQueueInterface):
                 credentials=credentials,
                 heartbeat=600,
                 blocked_connection_timeout=300,
+                ssl_options=ssl_options,
             )
 
             self.connection = pika.BlockingConnection(parameters)

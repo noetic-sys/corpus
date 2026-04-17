@@ -24,6 +24,7 @@ build/
 .env
 .env.local
 .env.*.local
+scripts/.env.fly
 
 # Logs
 *.log

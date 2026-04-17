@@ -8,6 +8,9 @@ from packages.documents.providers.document_search.keyword_search_interface impor
 from packages.documents.providers.document_search.elasticsearch_keyword_search import (
     ElasticsearchKeywordSearch,
 )
+from packages.documents.providers.document_search.turbopuffer_keyword_search import (
+    TurbopufferKeywordSearch,
+)
 from packages.documents.providers.document_search.types import KeywordSearchProvider
 from common.core.config import settings
 
@@ -20,7 +23,7 @@ def get_keyword_search_provider(
     Get keyword search provider instance.
 
     Args:
-        provider_type: Type of provider ('elasticsearch', 'postgres').
+        provider_type: Type of provider ('elasticsearch', 'postgres', 'turbopuffer').
                       If None, defaults to elasticsearch.
         elasticsearch_url: Elasticsearch URL (if using elasticsearch provider)
 
@@ -41,8 +44,9 @@ def get_keyword_search_provider(
                 elasticsearch_url if elasticsearch_url else settings.elasticsearch_url
             )
             return ElasticsearchKeywordSearch(elasticsearch_url=es_url)
+        case KeywordSearchProvider.TURBOPUFFER:
+            return TurbopufferKeywordSearch(api_key=settings.turbopuffer_api_key)
         case KeywordSearchProvider.POSTGRES:
-            # TODO: Implement PostgresKeywordSearch when needed
             raise NotImplementedError("Postgres keyword search not yet implemented")
         case _:
             raise ValueError(f"Unknown keyword search provider type: {provider_type}")

@@ -1,0 +1,179 @@
+name: Deploy to Fly.io
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: false
+        default: "production"
+
+env:
+  REGISTRY: ghcr.io/noetic-sys/corpus
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.tag.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create version tag
+        id: tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: v
+
+  build-and-push:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: api
+            dockerfile: ./backend/api/Dockerfile
+            context: .
+          - name: agent
+            dockerfile: ./backend/api/Dockerfile
+            context: .
+          - name: worker
+            dockerfile: ./backend/workers/Dockerfile
+            context: .
+          - name: migrate
+            dockerfile: ./backend/alembic/Dockerfile
+            context: .
+          - name: workflow-agent
+            dockerfile: ./agents/workflow/Dockerfile
+            context: .
+          - name: agent-qa
+            dockerfile: ./agents/qa/Dockerfile
+            context: .
+          - name: document-chunker
+            dockerfile: ./agents/chunking/Dockerfile
+            context: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Generate frontend environment file
+        if: matrix.image.name == 'frontend'
+        run: |
+          cat > vite/.env.production << EOF
+          VITE_API_URL=${{ secrets.VITE_API_URL }}
+          VITE_WS_URL=${{ secrets.VITE_WS_URL }}
+          VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          EOF
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ matrix.image.name }}
+          tags: |
+            type=raw,value=${{ needs.setup.outputs.version_tag }}
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  migrate:
+    needs: [setup, build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Run database migrations
+        run: |
+          flyctl machines run \
+            ${{ env.REGISTRY }}/migrate:${{ needs.setup.outputs.version_tag }} \
+            --app corpus-api \
+            --rm \
+            -- alembic upgrade head
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy:
+    needs: [setup, build-and-push, migrate]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: corpus-api
+            config: fly-deploy/api.toml
+            image: api
+          - name: corpus-agent
+            config: fly-deploy/agent.toml
+            image: agent
+          - name: corpus-worker-qa
+            config: fly-deploy/worker-qa.toml
+            image: worker
+          - name: corpus-worker-document-indexing
+            config: fly-deploy/worker-document-indexing.toml
+            image: worker
+          - name: corpus-temporal-routing
+            config: fly-deploy/worker-temporal-routing.toml
+            image: worker
+          - name: corpus-temporal-pdf
+            config: fly-deploy/worker-temporal-pdf.toml
+            image: worker
+          - name: corpus-temporal-page
+            config: fly-deploy/worker-temporal-page.toml
+            image: worker
+          - name: corpus-temporal-generic
+            config: fly-deploy/worker-temporal-generic.toml
+            image: worker
+          - name: corpus-temporal-chunking
+            config: fly-deploy/worker-temporal-chunking.toml
+            image: worker
+          - name: corpus-temporal-workflow
+            config: fly-deploy/worker-temporal-workflow.toml
+            image: worker
+          - name: corpus-temporal-qa
+            config: fly-deploy/worker-temporal-qa.toml
+            image: worker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy ${{ matrix.service.name }}
+        run: |
+          flyctl deploy \
+            --config ${{ matrix.service.config }} \
+            --image ${{ env.REGISTRY }}/${{ matrix.service.image }}:${{ needs.setup.outputs.version_tag }} \
+            --app ${{ matrix.service.name }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -1,0 +1,16 @@
+app = "corpus-temporal-chunking"
+primary_region = "iad"
+
+[build]
+  dockerfile = "backend/workers/Dockerfile"
+
+[processes]
+  worker = "python -m workers.run_temporal_worker --queue document-chunking-queue"
+
+[env]
+  ENVIRONMENT = "production"
+  STORAGE_PROVIDER = "s3"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

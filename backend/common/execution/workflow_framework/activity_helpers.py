@@ -11,6 +11,7 @@ from temporalio import activity
 from common.core.constants import WorkflowExecutionMode
 from common.execution.executors.docker import DockerExecutor
 from common.execution.executors.k8s import K8sExecutor
+from common.execution.executors.modal_executor import ModalExecutor
 
 
 def get_executor():
@@ -18,7 +19,7 @@ def get_executor():
     Get appropriate executor based on execution mode.
 
     Returns:
-        DockerExecutor or K8sExecutor based on settings
+        DockerExecutor, K8sExecutor, or ModalExecutor based on settings
     """
     # Import settings here to avoid workflow sandbox issues
     from common.core.config import settings  # noqa: PLC0415
@@ -26,6 +27,8 @@ def get_executor():
     execution_mode = WorkflowExecutionMode(settings.workflow_execution_mode)
     if execution_mode == WorkflowExecutionMode.DOCKER:
         return DockerExecutor()
+    elif execution_mode == WorkflowExecutionMode.MODAL:
+        return ModalExecutor()
     else:
         return K8sExecutor()
 

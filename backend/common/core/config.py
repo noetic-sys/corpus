@@ -32,12 +32,15 @@ class Settings(BaseSettings):
         """Construct database URL from components."""
         return f"postgresql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
 
-    # AWS/S3
+    # Storage provider (s3 or gcs — set STORAGE_PROVIDER env var to override)
+    storage_provider: StorageProvider = StorageProvider.GCS
+
+    # AWS/S3 (also used for S3-compatible backends like Cloudflare R2)
     aws_access_key_id: str
     aws_secret_access_key: str
     aws_region: str
     s3_bucket_name: str
-    s3_endpoint_url: Optional[str] = None  # For LocalStack
+    s3_endpoint_url: Optional[str] = None  # For LocalStack / R2
 
     # RabbitMQ
     rabbitmq_host: str
@@ -102,7 +105,7 @@ class Settings(BaseSettings):
     temporal_host: str
     temporal_namespace: str = "default"
     temporal_api_key: Optional[str] = None
-    temporal_task_queue: str
+    temporal_task_queue: Optional[str] = None
 
     # Google Gemini
     gemini_api_keys: List[str]
@@ -125,6 +128,7 @@ class Settings(BaseSettings):
     elasticsearch_username: Optional[str] = None
     elasticsearch_password: Optional[str] = None
     elasticsearch_scheme: str = "http"
+    turbopuffer_api_key: Optional[str] = None
 
     @property
     def elasticsearch_url(self) -> str:
@@ -152,32 +156,9 @@ class Settings(BaseSettings):
     workflow_agent_image_tag: str = (
         "latest"  # Workflow agent image tag (set by deployment)
     )
+    workflow_execution_mode: WorkflowExecutionMode = WorkflowExecutionMode.DOCKER
 
-    # Environment-aware properties
-    @property
-    def storage_provider(self) -> StorageProvider:
-        """Auto-select storage provider based on environment."""
-        return (
-            StorageProvider.S3
-            if self.environment == Environment.LOCAL
-            else StorageProvider.GCS
-        )
-
-    @property
-    def workflow_execution_mode(self) -> WorkflowExecutionMode:
-        """Auto-select workflow execution mode based on environment."""
-        return (
-            WorkflowExecutionMode.DOCKER
-            if self.environment == Environment.LOCAL
-            else WorkflowExecutionMode.K8S
-        )
-
-    @property
-    def api_endpoint(self) -> str:
-        """Auto-select API endpoint based on environment."""
-        if self.environment == Environment.LOCAL:
-            return "http://backend:8000"
-        return "http://corpus-api:8000"
+    api_endpoint: str = "http://backend:8000"
 
     @property
     def cors_allowed_origins(self) -> List[str]:
