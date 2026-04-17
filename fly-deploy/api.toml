@@ -4,6 +4,9 @@ primary_region = "iad"
 [build]
   dockerfile = "backend/api/Dockerfile"
 
+[deploy]
+  release_command = "alembic upgrade head"
+
 [http_service]
   internal_port = 8000
   force_https = true
