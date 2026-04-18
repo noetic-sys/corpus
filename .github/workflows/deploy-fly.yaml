@@ -41,24 +41,28 @@ jobs:
     strategy:
       matrix:
         image:
+          # api image → registry.fly.io/corpus-api (canonical for API)
           - name: api
             dockerfile: ./backend/api/Dockerfile
-            context: .
+            fly_app: corpus-api
+          # agent image → registry.fly.io/corpus-agent (canonical for agent)
           - name: agent
             dockerfile: ./backend/api/Dockerfile
-            context: .
+            fly_app: corpus-agent
+          # worker image → registry.fly.io/corpus-worker-qa (canonical for all workers)
           - name: worker
             dockerfile: ./backend/workers/Dockerfile
-            context: .
+            fly_app: corpus-worker-qa
+          # Modal agent images → GHCR only (Modal pulls from there)
           - name: workflow-agent
             dockerfile: ./agents/workflow/Dockerfile
-            context: .
+            fly_app: ""
           - name: agent-qa
             dockerfile: ./agents/qa/Dockerfile
-            context: .
+            fly_app: ""
           - name: document-chunker
             dockerfile: ./agents/chunking/Dockerfile
-            context: .
+            fly_app: ""
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,6 +76,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Fly registry
+        if: matrix.image.fly_app != ''
         uses: docker/login-action@v3
         with:
           registry: registry.fly.io
@@ -81,16 +86,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push to GHCR + Fly registry
+      - name: Build and push (GHCR only)
+        if: matrix.image.fly_app == ''
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.image.context }}
+          context: .
           file: ${{ matrix.image.dockerfile }}
           push: true
           tags: |
             ${{ env.GHCR }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version_tag }}
             ${{ env.GHCR }}/${{ matrix.image.name }}:latest
-            ${{ env.FLY_REGISTRY }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push (GHCR + Fly registry)
+        if: matrix.image.fly_app != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.GHCR }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version_tag }}
+            ${{ env.GHCR }}/${{ matrix.image.name }}:latest
+            ${{ env.FLY_REGISTRY }}/${{ matrix.image.fly_app }}:${{ needs.setup.outputs.version_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -102,37 +121,38 @@ jobs:
         service:
           - name: corpus-api
             config: fly-deploy/api.toml
-            image: api
+            image: corpus-api
           - name: corpus-agent
             config: fly-deploy/agent.toml
-            image: agent
+            image: corpus-agent
+          # All workers reference the canonical worker image (corpus-worker-qa)
           - name: corpus-worker-qa
             config: fly-deploy/worker-qa.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-worker-document-indexing
             config: fly-deploy/worker-document-indexing.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-routing
             config: fly-deploy/worker-temporal-routing.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-pdf
             config: fly-deploy/worker-temporal-pdf.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-page
             config: fly-deploy/worker-temporal-page.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-generic
             config: fly-deploy/worker-temporal-generic.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-chunking
             config: fly-deploy/worker-temporal-chunking.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-workflow
             config: fly-deploy/worker-temporal-workflow.toml
-            image: worker
+            image: corpus-worker-qa
           - name: corpus-temporal-qa
             config: fly-deploy/worker-temporal-qa.toml
-            image: worker
+            image: corpus-worker-qa
     steps:
       - uses: actions/checkout@v4
 
