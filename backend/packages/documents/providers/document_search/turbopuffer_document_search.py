@@ -22,7 +22,7 @@ DOCUMENT_SCHEMA = {
     "company_id": {"type": "uint", "filterable": True},
     "filename": {
         "type": "string",
-        "full_text_search": {"tokenizer": "unicode61", "stemming": False},
+        "full_text_search": {"tokenizer": "word_v3", "stemming": False},
     },
     "content_type": {"type": "string", "filterable": True},
     "extraction_status": {"type": "string", "filterable": True},
@@ -32,7 +32,7 @@ DOCUMENT_SCHEMA = {
     "extracted_content": {
         "type": "string",
         "full_text_search": {
-            "tokenizer": "unicode61",
+            "tokenizer": "word_v3",
             "stemming": True,
             "language": "english",
         },
@@ -50,7 +50,7 @@ CHUNKS_SCHEMA = {
     "content": {
         "type": "string",
         "full_text_search": {
-            "tokenizer": "unicode61",
+            "tokenizer": "word_v3",
             "stemming": True,
             "language": "english",
         },
