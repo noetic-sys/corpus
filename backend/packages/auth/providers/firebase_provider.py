@@ -1,5 +1,6 @@
 """Firebase Auth provider implementation."""
 
+import json
 from typing import Optional
 
 import firebase_admin
@@ -35,6 +36,10 @@ def _get_firebase_app() -> firebase_admin.App:
         cred = None
         if settings.google_application_credentials:
             cred = credentials.Certificate(settings.google_application_credentials)
+        elif settings.google_application_credentials_json:
+            cred = credentials.Certificate(
+                json.loads(settings.google_application_credentials_json)
+            )
 
         _firebase_app = firebase_admin.initialize_app(
             credential=cred, options={"projectId": project_id}

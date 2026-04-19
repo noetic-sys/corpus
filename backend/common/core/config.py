@@ -114,9 +114,8 @@ class Settings(BaseSettings):
     # Vertex ai
     google_project_id: str
     google_region: str
-    google_application_credentials: Optional[str] = (
-        None  # Optional - falls back to pod identity with Workload Identity
-    )
+    google_application_credentials: Optional[str] = None
+    google_application_credentials_json: Optional[str] = None
 
     # PDF Processing
     pdf_page_split_size: int = 1
