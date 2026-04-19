@@ -93,6 +93,7 @@ jobs:
           context: .
           file: ${{ matrix.image.dockerfile }}
           push: true
+          provenance: false
           tags: |
             ${{ env.GHCR }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version_tag }}
             ${{ env.GHCR }}/${{ matrix.image.name }}:latest
@@ -106,6 +107,7 @@ jobs:
           context: .
           file: ${{ matrix.image.dockerfile }}
           push: true
+          provenance: false
           tags: |
             ${{ env.GHCR }}/${{ matrix.image.name }}:${{ needs.setup.outputs.version_tag }}
             ${{ env.GHCR }}/${{ matrix.image.name }}:latest
