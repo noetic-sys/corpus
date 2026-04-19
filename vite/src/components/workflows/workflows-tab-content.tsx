@@ -63,6 +63,7 @@ export function WorkflowsTabContent({ workspaceId }: WorkflowsTabContentProps) {
           authorization: `Bearer ${token}`,
         },
       })
+      if (response.error) throw response.error
       return response.data
     },
     onSuccess: (data: ExecutionStartedResponse | undefined) => {

@@ -187,6 +187,8 @@ async def execute_workflow(
             started_at=execution.started_at,
         )
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
