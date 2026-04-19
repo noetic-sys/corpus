@@ -26,7 +26,7 @@ SCHEMA = {
     "content": {
         "type": "string",
         "full_text_search": {
-            "tokenizer": "unicode61",
+            "tokenizer": "word_v3",
             "stemming": True,
             "language": "english",
         },

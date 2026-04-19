@@ -91,26 +91,20 @@ preflight() {
     ok "Found $ENV_FILE"
 }
 
-# -- Parse .env.fly into secrets string --
+# -- Parse .env.fly into newline-separated KEY=VALUE lines --
+# Uses newlines (not spaces) so fly secrets import preserves JSON array values.
 parse_env_file() {
-    local secrets=""
     while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip comments and blank lines
         [[ "$line" =~ ^#.*$ ]] && continue
         [[ -z "$line" ]] && continue
-        # Skip lines without =
         [[ "$line" != *"="* ]] && continue
 
         local key="${line%%=*}"
         local val="${line#*=}"
-
-        # Skip empty values
         [[ -z "$val" ]] && continue
 
-        secrets+="${key}=${val} "
+        printf '%s=%s\n' "$key" "$val"
     done < "$ENV_FILE"
-
-    echo "$secrets"
 }
 
 # -- Create apps --
@@ -134,45 +128,38 @@ create_apps() {
 
 # -- Set shared secrets --
 set_secrets() {
-    local secrets
-    secrets=$(parse_env_file)
+    local base_secrets
+    base_secrets=$(parse_env_file)
 
-    if [[ -z "$secrets" ]]; then
+    if [[ -z "$base_secrets" ]]; then
         err "No secrets parsed from $ENV_FILE — is it filled in?"
         exit 1
     fi
 
-    # Count secrets
     local count
-    count=$(echo "$secrets" | tr ' ' '\n' | grep -c '=' || true)
+    count=$(echo "$base_secrets" | grep -c '=' || true)
     info "Setting $count shared secrets across ${#ALL_APPS[@]} apps..."
     echo ""
 
     for app in "${ALL_APPS[@]}"; do
-        # Build per-app secrets (shared + app-specific)
-        local app_secrets="$secrets"
+        # Start with shared secrets then append per-app overrides
+        local app_secrets="$base_secrets"
+        app_secrets+=$'\n'"OTEL_SERVICE_NAME=${app}"
+        app_secrets+=$'\n'"ENVIRONMENT=production"
+        app_secrets+=$'\n'"WORKFLOW_EXECUTION_MODE=modal"
+        app_secrets+=$'\n'"API_ENDPOINT=http://corpus-api.internal:8000"
 
-        # Add OTEL service name (same as app name)
-        app_secrets+="OTEL_SERVICE_NAME=${app} "
-
-        # Add Temporal task queue (only for temporal workers)
         local queue
         queue=$(get_task_queue "$app")
         if [[ -n "$queue" ]]; then
-            app_secrets+="TEMPORAL_TASK_QUEUE=${queue} "
+            app_secrets+=$'\n'"TEMPORAL_TASK_QUEUE=${queue}"
         fi
 
-        # Add environment + execution mode
-        app_secrets+="ENVIRONMENT=production "
-        app_secrets+="WORKFLOW_EXECUTION_MODE=modal "
-
-        # API endpoint for Fly internal networking
-        app_secrets+="API_ENDPOINT=http://corpus-api.internal:8000 "
-
         if $DRY_RUN; then
-            info "[DRY RUN] fly secrets set <${count}+ secrets> -a $app"
+            info "[DRY RUN] fly secrets import <${count}+ secrets> -a $app"
         else
-            echo "$app_secrets" | xargs fly secrets set -a "$app" --stage 2>/dev/null \
+            # fly secrets import reads KEY=VALUE from stdin — preserves JSON array values
+            printf '%s\n' "$app_secrets" | fly secrets import -a "$app" --stage 2>/dev/null \
                 && ok "$app — secrets staged" \
                 || warn "$app — failed to set secrets"
         fi
