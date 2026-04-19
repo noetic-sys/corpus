@@ -3,6 +3,7 @@ primary_region = "iad"
 
 [build]
   dockerfile = "backend/api/Dockerfile"
+  build-context = "."
 
 [deploy]
   release_command = "alembic upgrade head"
@@ -21,8 +22,8 @@ primary_region = "iad"
 
 [[http_service.checks]]
   path = "/healthz"
-  interval = 30000
-  timeout = 5000
+  interval = "30s"
+  timeout = "5s"
   grace_period = "10s"
 
 [env]
