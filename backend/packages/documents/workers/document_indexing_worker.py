@@ -63,23 +63,21 @@ class DocumentIndexingWorker(BaseWorker[DocumentIndexingMessage]):
                 f"Indexing document: {document.filename} (extraction_status: {document.extraction_status})"
             )
 
-            # Index document in search provider
-            # This will index basic metadata immediately, and content if extraction is complete
-            await search_provider.index_document(document)
-            logger.info(
-                f"Successfully indexed document {document_id} in search provider"
-            )
-
-            # If document has extracted content, also index the content
+            # Download extracted content if available
+            extracted_content = None
             if (
                 document.extraction_status == ExtractionStatus.COMPLETED
                 and document.extracted_content_path
             ):
-                logger.info(
-                    f"Document {document_id} has extracted content, indexing full content"
-                )
-                # The search provider's index_document method should handle both metadata and content
-                # based on the document's extraction status
+                extracted_content = await document_service.get_extracted_content(document)
+                if extracted_content:
+                    logger.info(f"Document {document_id} has {len(extracted_content)} chars of extracted content to index")
+
+            # Index document in search provider (metadata + content)
+            success = await search_provider.index_document(document, extracted_content)
+            if not success:
+                raise RuntimeError(f"Search provider failed to index document {document_id}")
+            logger.info(f"Successfully indexed document {document_id} in search provider")
 
             # Mark job as completed
             await indexing_job_service.update_job_status(
