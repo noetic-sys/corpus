@@ -11,6 +11,7 @@ primary_region = "iad"
   ENVIRONMENT = "production"
   STORAGE_PROVIDER = "s3"
 
+# Dedicated CPU: in-process extraction starves the Temporal heartbeat on shared CPU.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = "performance-1x"
+  memory = "2048mb"
