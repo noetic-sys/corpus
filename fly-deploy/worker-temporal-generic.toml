@@ -11,6 +11,9 @@ primary_region = "iad"
   ENVIRONMENT = "production"
   STORAGE_PROVIDER = "s3"
 
+# Generic extraction parses documents (e.g. docx) in-process; on shared-cpu-1x the
+# CPU-heavy parse saturates the vCPU and starves the Temporal SDK heartbeat, causing
+# the worker to be dropped as a poller ("No workers polling"). Dedicated CPU fixes it.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = "performance-1x"
+  memory = "2048mb"

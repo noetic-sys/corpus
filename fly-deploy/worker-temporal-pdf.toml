@@ -11,6 +11,9 @@ primary_region = "iad"
   ENVIRONMENT = "production"
   STORAGE_PROVIDER = "s3"
 
+# PDF page-splitting is CPU/memory-heavy and runs in-process; on shared-cpu-1x it
+# saturates the vCPU and starves the Temporal SDK heartbeat, causing the worker to
+# get dropped as a poller ("No workers polling"). Dedicated CPU keeps it connected.
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = "performance-1x"
+  memory = "2048mb"
