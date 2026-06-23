@@ -71,6 +71,7 @@ class OpenRouterProvider(AIProviderInterface):
         tools: Optional[List[Dict[str, Any]]] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> Message:
         """Send a list of messages to OpenRouter with optional tools."""
         try:
@@ -88,6 +89,12 @@ class OpenRouterProvider(AIProviderInterface):
 
             if tools:
                 request_params["tools"] = tools
+
+            # Force structured JSON output when requested (e.g. QA answer
+            # generation). Without this, some models wrap JSON in markdown
+            # fences or emit prose, breaking downstream json.loads.
+            if response_format:
+                request_params["response_format"] = response_format
 
             logger.info(
                 f"Sending messages request to OpenRouter with model: {self.model_name}"

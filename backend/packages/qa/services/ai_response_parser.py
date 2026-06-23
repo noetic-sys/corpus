@@ -52,6 +52,16 @@ class AIResponseParser:
 
             # Clean up the response
             json_response = AIResponseParser._clean_response(json_response)
+
+            # An empty or non-JSON response (model returned prose, a refusal, or
+            # nothing) is not a hard error - treat it as "no answer found" so a
+            # single bad generation degrades gracefully instead of failing the cell.
+            if not json_response or json_response[0] not in "{[":
+                logger.warning(
+                    f"AI response was empty or not JSON after cleaning; treating as not found: {json_response!r}"
+                )
+                return AIAnswerSet.not_found()
+
             logger.info(
                 f"Parsing AI response for type {question_type.name if question_type else 'DEFAULT'}"
             )
