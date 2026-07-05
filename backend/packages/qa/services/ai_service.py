@@ -149,6 +149,7 @@ class AIService:
                 messages=all_messages,
                 temperature=ai_params.temperature,
                 max_tokens=ai_params.max_tokens,
+                response_format={"type": "json_object"},
             )
 
             response = response_message.content

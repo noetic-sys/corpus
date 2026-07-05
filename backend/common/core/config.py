@@ -69,7 +69,7 @@ class Settings(BaseSettings):
 
     # OpenRouter (unified AI provider)
     openrouter_api_key: str
-    default_model: str = "google/gemini-2.0-flash-001"
+    default_model: str = "google/gemini-2.5-flash-lite"
 
     # Anthropic (for workflow agent execution)
     anthropic_api_key: str

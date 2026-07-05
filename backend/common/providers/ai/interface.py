@@ -37,6 +37,7 @@ class AIProviderInterface(ABC):
         tools: Optional[List[Dict[str, Any]]] = None,
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> Message:
         """
         Send a list of structured messages to the AI provider with optional tools.
