@@ -224,6 +224,32 @@ services:
       backend:
         condition: service_started
 
+  # HTTP MCP server (FastMCP Streamable HTTP) wrapping Corpus OpenAPI tools.
+  # Connect clients to http://localhost:8100/mcp — set CORPUS_API_KEY in backend/.env
+  # or override here. See libs/mcp_tools/README.md.
+  corpus-mcp:
+    build:
+      context: .
+      dockerfile: libs/mcp_tools/Dockerfile
+    ports:
+      - "8100:8100"
+    env_file:
+      - ./backend/.env
+    environment:
+      - CORPUS_API_ENDPOINT=http://backend:8000
+      - CORPUS_MCP_HOST=0.0.0.0
+      - CORPUS_MCP_PORT=8100
+      - CORPUS_MCP_PATH=/mcp
+      # Prefer explicit MCP key; fall back to CORPUS_API_KEY from env_file if present.
+      - CORPUS_API_KEY=${CORPUS_API_KEY:-}
+    volumes:
+      - ./libs/mcp_tools/mcp_tools:/app/mcp_tools
+    depends_on:
+      backend:
+        condition: service_started
+    profiles:
+      - mcp
+
   qa_worker:
     build:
       context: .

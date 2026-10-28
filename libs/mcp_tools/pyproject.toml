@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "mcp-tools"
 version = "0.1.0"
-description = "OpenAPI to MCP tools generator - shared across agents"
+description = "Corpus MCP tools: OpenAPI→Claude Agent SDK generator + FastMCP HTTP server"
 authors = ["Kyle Sandell"]
 packages = [{include = "mcp_tools"}]
 
@@ -10,6 +10,12 @@ python = "^3.11"
 pydantic = "^2.10.3"
 requests = "^2.31.0"
 claude-agent-sdk = "^0.1.4"
+fastmcp = ">=2.12.0"
+httpx = "^0.28.1"
+httpx2 = ">=2.5.0"
+
+[tool.poetry.scripts]
+corpus-mcp = "mcp_tools.__main__:main"
 
 [build-system]
 requires = ["poetry-core"]

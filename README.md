@@ -90,6 +90,22 @@ npm run dev
 | Temporal | Workflow orchestration |
 | Redis | Cache |
 | S3 (LocalStack locally) | Document storage |
+| FastMCP HTTP server | External model access to Corpus APIs (`libs/mcp_tools`) |
+
+## MCP (model access)
+
+Corpus exposes an HTTP MCP server that wraps the real product OpenAPI (no invented endpoints). See [`libs/mcp_tools/README.md`](libs/mcp_tools/README.md).
+
+```bash
+# With the API running on :8000
+cd libs/mcp_tools && poetry install
+export CORPUS_API_ENDPOINT=http://localhost:8000
+export CORPUS_API_KEY=sa_your_key
+poetry run corpus-mcp   # → http://localhost:8100/mcp
+
+# Or via Compose profile
+CORPUS_API_KEY=sa_your_key docker-compose --profile mcp up corpus-mcp
+```
 
 ## Supported Models
 
